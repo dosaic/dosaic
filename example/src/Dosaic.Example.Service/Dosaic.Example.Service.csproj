@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+    <EmitCompilerGeneratedFiles>false</EmitCompilerGeneratedFiles>
+    <NoDefaultLaunchSettingsFile>true</NoDefaultLaunchSettingsFile>
+    <DocumentationFile>Dosaic.Example.Service.xml</DocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverageAttribute" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\Api\OpenApi\src\Dosaic.Api.OpenApi\Dosaic.Api.OpenApi.csproj" />
+    <ProjectReference Include="..\..\..\Hosting\Generator\src\Dosaic.Hosting.Generator\Dosaic.Hosting.Generator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\..\..\Hosting\WebHost\src\Dosaic.Hosting.WebHost\Dosaic.Hosting.WebHost.csproj" />
+    <ProjectReference Include="..\..\..\Plugins\Jobs\Hangfire\src\Dosaic.Plugins.Jobs.Hangfire\Dosaic.Plugins.Jobs.Hangfire.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="appsettings.ip-rate-limiting.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="appsettings.logging.yaml">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="appsettings.yml">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+</Project>

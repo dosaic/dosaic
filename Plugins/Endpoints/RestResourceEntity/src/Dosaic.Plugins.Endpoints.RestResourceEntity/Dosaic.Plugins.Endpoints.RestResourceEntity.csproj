@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <DocumentationFile>Dosaic.Plugins.Endpoints.RestResourceEntity.xml</DocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\..\..\Api\OpenApi\src\Dosaic.Api.OpenApi\Dosaic.Api.OpenApi.csproj" />
+    <ProjectReference Include="..\..\..\..\..\Hosting\Abstractions\src\Dosaic.Hosting.Abstractions\Dosaic.Hosting.Abstractions.csproj" />
+    <ProjectReference Include="..\..\..\..\Handlers\Cqrs\src\Dosaic.Plugins.Handlers.Cqrs\Dosaic.Plugins.Handlers.Cqrs.csproj" />
+    <ProjectReference Include="..\..\..\Abstractions\src\Dosaic.Plugins.Endpoints.Abstractions\Dosaic.Plugins.Endpoints.Abstractions.csproj" />
+  </ItemGroup>
+
+</Project>

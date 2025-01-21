@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <Nullable>disable</Nullable>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <IsPackable>false</IsPackable>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\..\..\..\..\Testing\NUnit\src\Dosaic.Testing.NUnit\Dosaic.Testing.NUnit.csproj" />
+      <ProjectReference Include="..\..\..\Abstractions\Cqrs\src\Dosaic.Plugins.Handlers.Abstractions.Cqrs\Dosaic.Plugins.Handlers.Abstractions.Cqrs.csproj" />
+      <ProjectReference Include="..\..\src\Dosaic.Plugins.Handlers.Cqrs\Dosaic.Plugins.Handlers.Cqrs.csproj" />
+    </ItemGroup>
+
+</Project>

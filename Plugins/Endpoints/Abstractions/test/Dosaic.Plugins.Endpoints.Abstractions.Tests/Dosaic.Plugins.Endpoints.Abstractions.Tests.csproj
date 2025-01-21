@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <Nullable>disable</Nullable>
+        <ImplicitUsings>enable</ImplicitUsings>
+    </PropertyGroup>
+
+
+    <ItemGroup>
+      <ProjectReference Include="..\..\..\..\..\Extensions\Abstractions\src\Dosaic.Extensions.Abstractions\Dosaic.Extensions.Abstractions.csproj" />
+      <ProjectReference Include="..\..\..\..\..\Testing\NUnit\src\Dosaic.Testing.NUnit\Dosaic.Testing.NUnit.csproj" />
+      <ProjectReference Include="..\..\src\Dosaic.Plugins.Endpoints.Abstractions\Dosaic.Plugins.Endpoints.Abstractions.csproj" />
+    </ItemGroup>
+
+</Project>

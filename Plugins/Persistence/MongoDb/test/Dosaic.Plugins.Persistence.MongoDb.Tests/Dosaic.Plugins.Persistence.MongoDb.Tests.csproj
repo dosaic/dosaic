@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <Nullable>disable</Nullable>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <IsPackable>false</IsPackable>
+        <RootNamespace>Dosaic.Plugins.Persistence.MongoDb</RootNamespace>
+    </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\..\..\Testing\NUnit\src\Dosaic.Testing.NUnit\Dosaic.Testing.NUnit.csproj" />
+    <ProjectReference Include="..\..\src\Dosaic.Plugins.Persistence.MongoDb\Dosaic.Plugins.Persistence.MongoDb.csproj" />
+  </ItemGroup>
+</Project>

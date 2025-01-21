@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <ItemGroup>
+      <ProjectReference Include="..\..\..\..\Testing\NUnit\src\Dosaic.Testing.NUnit\Dosaic.Testing.NUnit.csproj" />
+      <ProjectReference Include="..\..\src\Dosaic.Extensions.RestEase\Dosaic.Extensions.RestEase.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <PackageReference Include="WireMock.Net" />
+    </ItemGroup>
+
+</Project>
