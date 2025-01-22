@@ -84,14 +84,14 @@ namespace Dosaic.Hosting.Abstractions.Extensions
                                                               attr.GetType().GetGenericTypeDefinition() == typeof(ValueObjectAttribute<>)));
         }
 
-        public object ReadYaml(IParser parser, Type type)
+        public object ReadYaml(IParser parser, Type type, ObjectDeserializer rootDeserializer)
         {
             var scalar = parser.Consume<Scalar>();
             var valueType = type.GetProperty("Value")!.PropertyType;
             return TypeDescriptor.GetConverter(valueType).ConvertFromInvariantString(scalar.Value);
         }
 
-        public void WriteYaml(IEmitter emitter, object value, Type type)
+        public void WriteYaml(IEmitter emitter, object value, Type type, ObjectSerializer serializer)
         {
             var val = value!.GetType().GetProperty("Value")!.GetGetMethod()!
                 .Invoke(value, [])!
@@ -114,7 +114,7 @@ namespace Dosaic.Hosting.Abstractions.Extensions
             return typeof(IKindSpecifier).IsAssignableFrom(type);
         }
 
-        public object ReadYaml(IParser parser, Type type)
+        public object ReadYaml(IParser parser, Type type, ObjectDeserializer rootDeserializer)
         {
             if (!_kindTypes.TryGetValue(type, out var possibleTypes))
             {
@@ -139,7 +139,7 @@ namespace Dosaic.Hosting.Abstractions.Extensions
             return _deserializer.Deserialize(yamlValue, kindType);
         }
 
-        public void WriteYaml(IEmitter emitter, object value, Type type)
+        public void WriteYaml(IEmitter emitter, object value, Type type, ObjectSerializer serializer)
         {
             var yamlText = _serializer.Serialize(value);
             emitter.Emit(new Scalar(null, null, yamlText, ScalarStyle.Plain, true, false));

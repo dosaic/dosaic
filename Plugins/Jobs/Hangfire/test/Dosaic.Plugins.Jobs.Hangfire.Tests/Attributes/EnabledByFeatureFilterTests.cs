@@ -8,7 +8,7 @@ using Microsoft.FeatureManagement;
 using NSubstitute;
 using NUnit.Framework;
 using Dosaic.Plugins.Jobs.Hangfire.Attributes;
-using Dosaic.Testing.Assertions;
+using Dosaic.Testing.NUnit.Assertions;
 
 namespace Dosaic.Plugins.Jobs.Hangfire.Tests.Attributes
 {

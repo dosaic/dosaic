@@ -5,6 +5,7 @@ using NUnit.Framework;
 using Dosaic.Hosting.Abstractions.Exceptions;
 using Dosaic.Plugins.Persistence.Abstractions;
 using Dosaic.Testing;
+using Dosaic.Testing.NUnit;
 
 namespace Dosaic.Plugins.Persistence.InMemory.Tests
 {

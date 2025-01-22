@@ -1,8 +1,8 @@
+using Dosaic.Hosting.Abstractions.Plugins;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
-using Dosaic.Hosting.Abstractions.Plugins;
 
-namespace Dosaic.Testing.Assertions
+namespace Dosaic.Testing.NUnit.Assertions
 {
     public static class PluginServiceConfigurationAssertions
     {

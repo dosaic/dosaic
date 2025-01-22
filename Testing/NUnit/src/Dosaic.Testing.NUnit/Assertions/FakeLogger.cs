@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Logging;
 
-namespace Dosaic.Testing.Assertions
+namespace Dosaic.Testing.NUnit.Assertions
 {
     /// <summary>
     /// Stolen from https://alessio.franceschelli.me/posts/dotnet/how-to-test-logging-when-using-microsoft-extensions-logging/

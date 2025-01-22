@@ -5,7 +5,8 @@ using NSubstitute;
 using NSubstitute.ExceptionExtensions;
 using NUnit.Framework;
 using Dosaic.Testing;
-using Dosaic.Testing.Assertions;
+using Dosaic.Testing.NUnit;
+using Dosaic.Testing.NUnit.Assertions;
 using Unleash;
 
 namespace Dosaic.Plugins.Management.Unleash.Tests

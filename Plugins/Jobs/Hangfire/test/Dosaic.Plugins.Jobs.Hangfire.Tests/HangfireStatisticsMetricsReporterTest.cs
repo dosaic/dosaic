@@ -7,7 +7,8 @@ using NSubstitute;
 using NUnit.Framework;
 using Dosaic.Hosting.Abstractions.Metrics;
 using Dosaic.Testing;
-using Dosaic.Testing.Assertions;
+using Dosaic.Testing.NUnit;
+using Dosaic.Testing.NUnit.Assertions;
 
 namespace Dosaic.Plugins.Jobs.Hangfire.Tests
 {

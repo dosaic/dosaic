@@ -8,6 +8,7 @@ using Dosaic.Hosting.Abstractions.Plugins;
 using Dosaic.Hosting.Abstractions.Services;
 using Dosaic.Hosting.WebHost.Services;
 using Dosaic.Testing;
+using Dosaic.Testing.NUnit;
 
 namespace Dosaic.Hosting.WebHost.Tests
 {

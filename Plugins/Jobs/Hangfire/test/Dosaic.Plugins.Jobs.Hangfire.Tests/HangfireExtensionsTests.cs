@@ -3,6 +3,7 @@ using Hangfire;
 using Microsoft.Extensions.DependencyInjection;
 using NUnit.Framework;
 using Dosaic.Testing;
+using Dosaic.Testing.NUnit;
 
 namespace Dosaic.Plugins.Jobs.Hangfire.Tests
 {

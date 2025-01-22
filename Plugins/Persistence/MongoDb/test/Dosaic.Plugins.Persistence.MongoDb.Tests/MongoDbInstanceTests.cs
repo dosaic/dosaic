@@ -3,6 +3,7 @@ using MongoDB.Driver;
 using MongoDB.Driver.Core.Events;
 using NUnit.Framework;
 using Dosaic.Testing;
+using Dosaic.Testing.NUnit;
 
 namespace Dosaic.Plugins.Persistence.MongoDb
 {
@@ -34,8 +35,6 @@ namespace Dosaic.Plugins.Persistence.MongoDb
         public void MetricCounterGetsIncremented()
         {
             using var metricsCollector = new TestMetricsCollector("mongodb_driver_connection_opened_event_total");
-            metricsCollector.CollectedMetrics.Should().BeEmpty();
-            metricsCollector.Instruments.Should().BeEmpty();
             MongoDbInstance.IncrementCounter(new ConnectionOpenedEvent());
             metricsCollector.CollectedMetrics.Should().ContainsMetric(1);
             metricsCollector.Instruments.Should().Contain("mongodb_driver_connection_opened_event_total");

@@ -7,7 +7,8 @@ using NSubstitute;
 using NUnit.Framework;
 using Dosaic.Plugins.Persistence.Abstractions;
 using Dosaic.Testing;
-using Dosaic.Testing.Extensions;
+using Dosaic.Testing.NUnit;
+using Dosaic.Testing.NUnit.Extensions;
 
 namespace Dosaic.Plugins.Persistence.S3.Tests
 {

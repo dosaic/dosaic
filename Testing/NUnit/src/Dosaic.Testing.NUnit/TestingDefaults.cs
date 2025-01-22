@@ -1,9 +1,9 @@
 using Chronos;
-using Microsoft.Extensions.DependencyInjection;
 using Dosaic.Hosting.Abstractions;
 using Dosaic.Hosting.Abstractions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 
-namespace Dosaic.Testing
+namespace Dosaic.Testing.NUnit
 {
     public static class TestingDefaults
     {

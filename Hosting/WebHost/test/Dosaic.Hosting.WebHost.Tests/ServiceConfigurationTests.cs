@@ -7,7 +7,8 @@ using Dosaic.Hosting.Abstractions.Services;
 using Dosaic.Hosting.WebHost.Configurators;
 using Dosaic.Hosting.WebHost.Logging;
 using Dosaic.Testing;
-using Dosaic.Testing.Assertions;
+using Dosaic.Testing.NUnit;
+using Dosaic.Testing.NUnit.Assertions;
 using Serilog.Core;
 
 namespace Dosaic.Hosting.WebHost.Tests

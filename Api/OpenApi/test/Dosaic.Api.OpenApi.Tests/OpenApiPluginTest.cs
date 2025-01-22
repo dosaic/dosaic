@@ -8,6 +8,8 @@ using NSubstitute;
 using NUnit.Framework;
 using Dosaic.Api.OpenApi.Filters.Document;
 using Dosaic.Api.OpenApi.Filters.Schema;
+using Dosaic.Testing.NUnit;
+using Microsoft.AspNetCore.Routing.Template;
 using Swashbuckle.AspNetCore.Annotations;
 using Swashbuckle.AspNetCore.Swagger;
 using Swashbuckle.AspNetCore.SwaggerGen;
@@ -30,16 +32,18 @@ namespace Dosaic.Api.OpenApi.Tests
             _environment.ApplicationName.Returns("AwesomeApp");
             var applicationBuilder = Substitute.For<IApplicationBuilder>();
             var configuration = new OpenApiConfiguration();
-            var services = new ServiceCollection();
+            var services = TestingDefaults.ServiceCollection();
             var swaggerOptions = Substitute.For<IOptionsSnapshot<SwaggerOptions>>();
             swaggerOptions.Value.Returns(new SwaggerOptions());
             var swaggerUiOptions = Substitute.For<IOptionsSnapshot<SwaggerUIOptions>>();
             swaggerUiOptions.Value.Returns(new SwaggerUIOptions());
             services.AddSingleton(swaggerOptions);
             services.AddSingleton(swaggerUiOptions);
+            services.AddMvc();
             var serviceProvider = services.BuildServiceProvider();
             applicationBuilder.ApplicationServices.Returns(serviceProvider);
             var plugin = GetPlugin(configuration);
+            plugin.ConfigureServices(services);
             plugin.ConfigureApplication(applicationBuilder);
 
             swaggerUiOptions.Value.RoutePrefix.Should().BeEmpty();
@@ -53,16 +57,18 @@ namespace Dosaic.Api.OpenApi.Tests
             _environment.ApplicationName.Returns("AwesomeApp");
             var applicationBuilder = Substitute.For<IApplicationBuilder>();
             var configuration = new OpenApiConfiguration();
-            var services = new ServiceCollection();
+            var services = TestingDefaults.ServiceCollection();
             var swaggerOptions = Substitute.For<IOptionsSnapshot<SwaggerOptions>>();
             swaggerOptions.Value.Returns(new SwaggerOptions());
             var swaggerUiOptions = Substitute.For<IOptionsSnapshot<SwaggerUIOptions>>();
             swaggerUiOptions.Value.Returns(new SwaggerUIOptions());
             services.AddSingleton(swaggerOptions);
             services.AddSingleton(swaggerUiOptions);
+            services.AddMvc();
             var serviceProvider = services.BuildServiceProvider();
             applicationBuilder.ApplicationServices.Returns(serviceProvider);
             var plugin = GetPlugin(configuration);
+            plugin.ConfigureServices(services);
             plugin.ConfigureApplication(applicationBuilder);
 
             swaggerUiOptions.Value.HeadContent.Should().NotContain("swagger/custom.css");

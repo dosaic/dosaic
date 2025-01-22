@@ -7,6 +7,8 @@ using Dosaic.Api.OpenApi.Filters.Operation;
 using Dosaic.Api.OpenApi.Filters.Schema;
 using Dosaic.Hosting.Abstractions.Attributes;
 using Dosaic.Hosting.Abstractions.Plugins;
+using Microsoft.AspNetCore.Routing;
+
 // ReSharper disable UnusedAutoPropertyAccessor.Global
 
 namespace Dosaic.Api.OpenApi
@@ -23,7 +25,7 @@ namespace Dosaic.Api.OpenApi
             public string AuthUrl { get; set; }
         }
     }
-    public class OpenApiPlugin : IPluginApplicationConfiguration, IPluginServiceConfiguration
+    public class OpenApiPlugin : IPluginApplicationConfiguration, IPluginServiceConfiguration, IPluginEndpointsConfiguration
     {
         private readonly OpenApiConfiguration _configuration;
         private readonly IHostEnvironment _environment;
@@ -93,6 +95,11 @@ namespace Dosaic.Api.OpenApi
                     }
                 });
             });
+        }
+
+        public void ConfigureEndpoints(IEndpointRouteBuilder endpointRouteBuilder, IServiceProvider serviceProvider)
+        {
+            endpointRouteBuilder.MapSwagger();
         }
     }
 }

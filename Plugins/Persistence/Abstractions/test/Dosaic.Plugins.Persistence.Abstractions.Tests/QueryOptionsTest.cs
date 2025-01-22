@@ -4,7 +4,7 @@ using NUnit.Framework;
 using ODataQueryHelper.Core.Model;
 using Dosaic.Hosting.Abstractions.Exceptions;
 using Dosaic.Plugins.Persistence.Abstractions.Exceptions;
-using Dosaic.Testing.Models;
+using Dosaic.Testing.NUnit.Models;
 
 namespace Dosaic.Plugins.Persistence.Abstractions.Tests
 {
@@ -129,7 +129,7 @@ namespace Dosaic.Plugins.Persistence.Abstractions.Tests
 
             queryOptions.Invoking(x => x.WithOrderBy("NotExistingProp asc"))
                 .Should().Throw<QueryOptionsException>()
-                .WithMessage("Instance property 'NotExistingProp' is not defined for type 'Dosaic.Testing.Models.BaseTestEntity' (Parameter 'propertyName')");
+                .WithMessage("Instance property 'NotExistingProp' is not defined for type 'Dosaic.Testing.NUnit.Models.BaseTestEntity' (Parameter 'propertyName')");
         }
     }
 }

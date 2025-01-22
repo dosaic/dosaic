@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Session;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using NUnit.Framework;
-using Dosaic.Testing;
+using Dosaic.Testing.NUnit;
 using Unleash;
 
 namespace Dosaic.Plugins.Management.Unleash.Tests

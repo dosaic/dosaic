@@ -25,6 +25,7 @@ using Dosaic.Hosting.Abstractions.Middlewares.Models;
 using Dosaic.Hosting.WebHost.Configurators;
 using Dosaic.Hosting.WebHost.Logging;
 using Dosaic.Testing;
+using Dosaic.Testing.NUnit;
 using Serilog.Core;
 using ILogger = Microsoft.Extensions.Logging.ILogger;
 

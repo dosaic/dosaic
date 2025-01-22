@@ -15,7 +15,7 @@ using NSubstitute.Core;
 using NUnit.Framework;
 using Dosaic.Hosting.Abstractions;
 using Dosaic.Plugins.Authorization.Keycloak.Scheme;
-using Dosaic.Testing.Extensions;
+using Dosaic.Testing.NUnit.Extensions;
 
 namespace Dosaic.Plugins.Authorization.Keycloak.Tests
 {

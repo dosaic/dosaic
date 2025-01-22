@@ -7,7 +7,7 @@ using Microsoft.Extensions.Logging;
 using NSubstitute;
 using NUnit.Framework;
 using Dosaic.Hosting.Abstractions;
-using Dosaic.Testing.Assertions;
+using Dosaic.Testing.NUnit.Assertions;
 
 namespace Dosaic.Plugins.Persistence.EntityFramework.Tests
 {

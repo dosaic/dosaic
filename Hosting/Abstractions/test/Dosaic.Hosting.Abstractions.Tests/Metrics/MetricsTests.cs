@@ -2,6 +2,7 @@ using System.Diagnostics.Metrics;
 using FluentAssertions;
 using NUnit.Framework;
 using Dosaic.Testing;
+using Dosaic.Testing.NUnit;
 using Metric = Dosaic.Hosting.Abstractions.Metrics.Metrics;
 
 namespace Dosaic.Hosting.Abstractions.Tests.Metrics

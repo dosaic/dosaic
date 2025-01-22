@@ -1,7 +1,7 @@
 using FluentAssertions;
 using NUnit.Framework;
 using Dosaic.Plugins.Persistence.Abstractions;
-using Dosaic.Testing.Assertions;
+using Dosaic.Testing.NUnit.Assertions;
 
 namespace Dosaic.Plugins.Persistence.Smb.Tests
 {

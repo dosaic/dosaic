@@ -11,6 +11,7 @@ using Dosaic.Extensions.Abstractions;
 using Dosaic.Hosting.Abstractions.Middlewares.Models;
 using Dosaic.Plugins.Endpoints.RestResourceEntity.Endpoints;
 using Dosaic.Testing;
+using Dosaic.Testing.NUnit;
 using HttpMethod = Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http.HttpMethod;
 
 namespace Dosaic.Plugins.Endpoints.RestResourceEntity.Tests.Endpoints
@@ -31,7 +32,8 @@ namespace Dosaic.Plugins.Endpoints.RestResourceEntity.Tests.Endpoints
             _endpointRouteBuilder.DataSources.Returns(_endpoints);
             _endpointRouteBuilder.ServiceProvider.Returns(TestingDefaults.ServiceProvider());
             _globalResponseOptions = new GlobalResponseOptions();
-            _builder = new RestSimpleResourceEndpointBuilder<TestEntity>(_endpointRouteBuilder, Resource, _globalResponseOptions);
+            _builder = new RestSimpleResourceEndpointBuilder<TestEntity>(_endpointRouteBuilder, Resource,
+                _globalResponseOptions);
         }
 
         private IEnumerable<Route> GetRoutes() =>
@@ -52,12 +54,12 @@ namespace Dosaic.Plugins.Endpoints.RestResourceEntity.Tests.Endpoints
             route.Policies.Should().Contain("DEFAULT");
             route.Policies.Should().Contain("test");
             route.Tags.Should().Contain(Resource);
-            route.Responses[200].Should().Be(typeof(TestEntity));
-            route.Responses[400].Should().Be(typeof(ValidationErrorResponse));
-            route.Responses[401].Should().Be(typeof(ErrorResponse));
-            route.Responses[403].Should().Be(typeof(ErrorResponse));
-            route.Responses[404].Should().Be(typeof(ErrorResponse));
-            route.Responses[500].Should().Be(typeof(ErrorResponse));
+            route.Responses.Should().Contain(x => x.StatusCode == 200 && x.Type == typeof(TestEntity));
+            route.Responses.Should().Contain(x => x.StatusCode == 400 && x.Type == typeof(ValidationErrorResponse));
+            route.Responses.Should().Contain(x => x.StatusCode == 401 && x.Type == typeof(ErrorResponse));
+            route.Responses.Should().Contain(x => x.StatusCode == 403 && x.Type == typeof(ErrorResponse));
+            route.Responses.Should().Contain(x => x.StatusCode == 404 && x.Type == typeof(ErrorResponse));
+            route.Responses.Should().Contain(x => x.StatusCode == 500 && x.Type == typeof(ErrorResponse));
         }
 
         [Test]
@@ -73,13 +75,13 @@ namespace Dosaic.Plugins.Endpoints.RestResourceEntity.Tests.Endpoints
             route.NeedsAuth.Should().BeFalse();
             route.Policies.Should().HaveCount(0);
             route.Tags.Should().Contain(Resource);
-            route.Responses[102].Should().Be(typeof(ErrorResponse));
-            route.Responses[200].Should().Be(typeof(PagedList<TestEntity>));
-            route.Responses[400].Should().Be(typeof(ValidationErrorResponse));
-            route.Responses[401].Should().Be(typeof(ErrorResponse));
-            route.Responses[403].Should().Be(typeof(ErrorResponse));
-            route.Responses[404].Should().Be(typeof(ErrorResponse));
-            route.Responses[500].Should().Be(typeof(ErrorResponse));
+            route.Responses.Should().Contain(x => x.StatusCode == 102 && x.Type == typeof(ErrorResponse));
+            route.Responses.Should().Contain(x => x.StatusCode == 200 && x.Type == typeof(PagedList<TestEntity>));
+            route.Responses.Should().Contain(x => x.StatusCode == 400 && x.Type == typeof(ValidationErrorResponse));
+            route.Responses.Should().Contain(x => x.StatusCode == 401 && x.Type == typeof(ErrorResponse));
+            route.Responses.Should().Contain(x => x.StatusCode == 403 && x.Type == typeof(ErrorResponse));
+            route.Responses.Should().Contain(x => x.StatusCode == 404 && x.Type == typeof(ErrorResponse));
+            route.Responses.Should().Contain(x => x.StatusCode == 500 && x.Type == typeof(ErrorResponse));
         }
 
         [Test]
@@ -94,12 +96,13 @@ namespace Dosaic.Plugins.Endpoints.RestResourceEntity.Tests.Endpoints
             route.NeedsAuth.Should().BeTrue();
             route.Policies.Should().Contain("DEFAULT");
             route.Tags.Should().Contain(Resource);
-            route.Responses[201].Should().Be(typeof(TestEntity));
-            route.Responses[400].Should().Be(typeof(ValidationErrorResponse));
-            route.Responses[401].Should().Be(typeof(ErrorResponse));
-            route.Responses[403].Should().Be(typeof(ErrorResponse));
-            route.Responses[404].Should().Be(typeof(ErrorResponse));
-            route.Responses[500].Should().Be(typeof(ErrorResponse));
+
+            route.Responses.Should().Contain(x => x.StatusCode == 201 && x.Type == typeof(TestEntity));
+            route.Responses.Should().Contain(x => x.StatusCode == 400 && x.Type == typeof(ValidationErrorResponse));
+            route.Responses.Should().Contain(x => x.StatusCode == 401 && x.Type == typeof(ErrorResponse));
+            route.Responses.Should().Contain(x => x.StatusCode == 403 && x.Type == typeof(ErrorResponse));
+            route.Responses.Should().Contain(x => x.StatusCode == 404 && x.Type == typeof(ErrorResponse));
+            route.Responses.Should().Contain(x => x.StatusCode == 500 && x.Type == typeof(ErrorResponse));
         }
 
         [Test]
@@ -114,12 +117,13 @@ namespace Dosaic.Plugins.Endpoints.RestResourceEntity.Tests.Endpoints
             route.NeedsAuth.Should().BeTrue();
             route.Policies.Should().Contain("DEFAULT");
             route.Tags.Should().Contain(Resource);
-            route.Responses[200].Should().Be(typeof(TestEntity));
-            route.Responses[400].Should().Be(typeof(ValidationErrorResponse));
-            route.Responses[401].Should().Be(typeof(ErrorResponse));
-            route.Responses[403].Should().Be(typeof(ErrorResponse));
-            route.Responses[404].Should().Be(typeof(ErrorResponse));
-            route.Responses[500].Should().Be(typeof(ErrorResponse));
+
+            route.Responses.Should().Contain(x => x.StatusCode == 200 && x.Type == typeof(TestEntity));
+            route.Responses.Should().Contain(x => x.StatusCode == 400 && x.Type == typeof(ValidationErrorResponse));
+            route.Responses.Should().Contain(x => x.StatusCode == 401 && x.Type == typeof(ErrorResponse));
+            route.Responses.Should().Contain(x => x.StatusCode == 403 && x.Type == typeof(ErrorResponse));
+            route.Responses.Should().Contain(x => x.StatusCode == 404 && x.Type == typeof(ErrorResponse));
+            route.Responses.Should().Contain(x => x.StatusCode == 500 && x.Type == typeof(ErrorResponse));
         }
 
         [Test]
@@ -145,15 +149,16 @@ namespace Dosaic.Plugins.Endpoints.RestResourceEntity.Tests.Endpoints
             route.Policies.Should().Contain("deleter");
             route.Tags.Should().Contain("test");
             route.Tags.Should().Contain("tester");
-            route.Responses[102].Should().Be(typeof(void));
-            route.Responses[200].Should().Be(typeof(ErrorResponse));
-            route.Responses[202].Should().Be(typeof(ErrorResponse));
-            route.Responses[204].Should().Be(typeof(void));
-            route.Responses[400].Should().Be(typeof(ValidationErrorResponse));
-            route.Responses[401].Should().Be(typeof(ErrorResponse));
-            route.Responses[403].Should().Be(typeof(ErrorResponse));
-            route.Responses[404].Should().Be(typeof(ErrorResponse));
-            route.Responses[500].Should().Be(typeof(ErrorResponse));
+
+            route.Responses.Should().Contain(x => x.StatusCode == 102 && x.Type == typeof(void));
+            route.Responses.Should().Contain(x => x.StatusCode == 200 && x.Type == typeof(ErrorResponse));
+            route.Responses.Should().Contain(x => x.StatusCode == 202 && x.Type == typeof(ErrorResponse));
+            route.Responses.Should().Contain(x => x.StatusCode == 204 && x.Type == typeof(void));
+            route.Responses.Should().Contain(x => x.StatusCode == 400 && x.Type == typeof(ValidationErrorResponse));
+            route.Responses.Should().Contain(x => x.StatusCode == 401 && x.Type == typeof(ErrorResponse));
+            route.Responses.Should().Contain(x => x.StatusCode == 403 && x.Type == typeof(ErrorResponse));
+            route.Responses.Should().Contain(x => x.StatusCode == 404 && x.Type == typeof(ErrorResponse));
+            route.Responses.Should().Contain(x => x.StatusCode == 500 && x.Type == typeof(ErrorResponse));
         }
 
         [Test]
@@ -173,9 +178,10 @@ namespace Dosaic.Plugins.Endpoints.RestResourceEntity.Tests.Endpoints
             route.HttpMethod.Should().Be(HttpMethod.Delete);
             route.Path.Should().Be("/test/{id:guid}");
             route.Name.Should().Be("Delete-" + Resource);
-            route.Responses.Should().HaveCount(2 + _globalResponseOptions.DefaultResponses.Count);
-            route.Responses[200].Should().Be(typeof(ErrorResponse));
-            route.Responses[202].Should().Be(typeof(ErrorResponse));
+            route.Responses.Should().HaveCount(3 + _globalResponseOptions.DefaultResponses.Count);
+
+            route.Responses.Should().Contain(x => x.StatusCode == 200 && x.Type == typeof(ErrorResponse));
+            route.Responses.Should().Contain(x => x.StatusCode == 202 && x.Type == typeof(ErrorResponse));
         }
 
         [Test]
@@ -196,7 +202,16 @@ namespace Dosaic.Plugins.Endpoints.RestResourceEntity.Tests.Endpoints
         }
 
         [ExcludeFromCodeCoverage]
-        private record Route(HttpMethod HttpMethod, string Path, string Name, string DisplayName, string Group, bool NeedsAuth, IList<string> Policies, IList<string> Tags, IDictionary<int, Type> Responses)
+        private record Route(
+            HttpMethod HttpMethod,
+            string Path,
+            string Name,
+            string DisplayName,
+            string Group,
+            bool NeedsAuth,
+            IList<string> Policies,
+            IList<string> Tags,
+            IReadOnlyList<IProducesResponseTypeMetadata> Responses)
         {
             public static Route FromRouteEndpoint(RouteEndpoint endpoint)
             {
@@ -205,11 +220,11 @@ namespace Dosaic.Plugins.Endpoints.RestResourceEntity.Tests.Endpoints
                 var name = endpoint.Metadata.GetMetadata<RouteNameMetadata>()!.RouteName!;
                 var groupName = endpoint.Metadata.GetMetadata<EndpointGroupNameAttribute>()?.EndpointGroupName!;
                 var path = endpoint.RoutePattern.RawText!;
-                var policies = endpoint.Metadata.GetOrderedMetadata<AuthorizeAttribute>().Where(x => !string.IsNullOrEmpty(x.Policy)).Select(x => x.Policy!).ToList();
+                var policies = endpoint.Metadata.GetOrderedMetadata<AuthorizeAttribute>()
+                    .Where(x => !string.IsNullOrEmpty(x.Policy)).Select(x => x.Policy!).ToList();
                 var needsAuth = policies.Any();
                 var tags = endpoint.Metadata.GetOrderedMetadata<TagsAttribute>().SelectMany(x => x.Tags).ToList();
-                var responses = endpoint.Metadata.GetOrderedMetadata<IProducesResponseTypeMetadata>()
-                    .ToDictionary(x => x.StatusCode, x => x.Type);
+                var responses = endpoint.Metadata.GetOrderedMetadata<IProducesResponseTypeMetadata>();
                 var displayName = endpoint.DisplayName!;
                 return new Route(httpMethod, path, name, displayName, groupName, needsAuth, policies, tags, responses);
             }

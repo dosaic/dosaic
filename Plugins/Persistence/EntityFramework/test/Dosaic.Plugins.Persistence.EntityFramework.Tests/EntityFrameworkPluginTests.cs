@@ -12,7 +12,7 @@ using NUnit.Framework;
 using OpenTelemetry.Instrumentation.EntityFrameworkCore;
 using Dosaic.Hosting.Abstractions.Services;
 using Dosaic.Plugins.Persistence.Abstractions;
-using Dosaic.Testing.Extensions;
+using Dosaic.Testing.NUnit.Extensions;
 
 namespace Dosaic.Plugins.Persistence.EntityFramework.Tests
 {

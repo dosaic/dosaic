@@ -1,6 +1,6 @@
+using Dosaic.Testing.NUnit.Models;
 using FluentAssertions;
 using NUnit.Framework;
-using Dosaic.Testing.Models;
 
 namespace Dosaic.Plugins.Persistence.Abstractions.Tests
 {

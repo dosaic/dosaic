@@ -8,6 +8,7 @@ using Dosaic.Plugins.Handlers.Abstractions.Cqrs.Models;
 using Dosaic.Plugins.Handlers.Cqrs.SimpleResource.Handlers;
 using Dosaic.Plugins.Persistence.Abstractions;
 using Dosaic.Testing;
+using Dosaic.Testing.NUnit;
 
 namespace Dosaic.Plugins.Handlers.Cqrs.Tests.SimpleResource.Handlers
 {

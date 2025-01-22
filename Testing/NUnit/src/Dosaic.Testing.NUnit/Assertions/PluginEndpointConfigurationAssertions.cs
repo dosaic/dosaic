@@ -1,12 +1,12 @@
 using System.Collections.ObjectModel;
 using System.Globalization;
+using Dosaic.Hosting.Abstractions.Plugins;
 using FluentAssertions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using NSubstitute;
-using Dosaic.Hosting.Abstractions.Plugins;
 
-namespace Dosaic.Testing.Assertions
+namespace Dosaic.Testing.NUnit.Assertions
 {
     public static class PluginEndpointConfigurationAssertions
     {

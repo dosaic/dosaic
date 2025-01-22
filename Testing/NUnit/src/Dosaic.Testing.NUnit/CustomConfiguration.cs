@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Configuration;
 
-namespace Dosaic.Testing
+namespace Dosaic.Testing.NUnit
 {
     public class CustomConfiguration
     {

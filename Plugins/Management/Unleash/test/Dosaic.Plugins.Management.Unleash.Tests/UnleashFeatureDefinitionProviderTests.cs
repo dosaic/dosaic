@@ -14,12 +14,11 @@ namespace Dosaic.Plugins.Management.Unleash.Tests
         public async Task FeatureNameMisMatchReturnsNull()
         {
             var unleash = Substitute.For<IUnleash>();
-            var featureToggles = new List<FeatureToggle>()
+            var featureToggles = new List<ToggleDefinition>()
             {
-                new("test", "release", true, false,
-                    new List<ActivationStrategy>() { new("default", new Dictionary<string, string>()) })
+                new("test", "default", FeatureToggleType.Release)
             };
-            unleash.FeatureToggles.Returns(featureToggles);
+            unleash.ListKnownToggles().Returns(featureToggles);
             var unleashFeatureDefinitionProvider = new UnleashFeatureDefinitionProvider(unleash);
             var featureDefinition = await unleashFeatureDefinitionProvider.GetFeatureDefinitionAsync("myfancyFeature");
 
@@ -30,12 +29,11 @@ namespace Dosaic.Plugins.Management.Unleash.Tests
         public async Task FeatureWithOneStrategyShouldHaveRequirementTypeAll()
         {
             var unleash = Substitute.For<IUnleash>();
-            var featureToggles = new List<FeatureToggle>()
+            var featureToggles = new List<ToggleDefinition>()
             {
-                new("test", "release", true, false,
-                    new List<ActivationStrategy>() { new("default", new Dictionary<string, string>()) })
+                new("test", "default", FeatureToggleType.Release)
             };
-            unleash.FeatureToggles.Returns(featureToggles);
+            unleash.ListKnownToggles().Returns(featureToggles);
             var unleashFeatureDefinitionProvider = new UnleashFeatureDefinitionProvider(unleash);
             var featureDefinition = await unleashFeatureDefinitionProvider.GetFeatureDefinitionAsync("test");
 
@@ -45,43 +43,15 @@ namespace Dosaic.Plugins.Management.Unleash.Tests
         }
 
         [Test]
-        public async Task FeatureWithTwoStrategiesShouldHaveRequirementTypeAll()
-        {
-            var unleash = Substitute.For<IUnleash>();
-            var featureToggles = new List<FeatureToggle>()
-            {
-                new("test", "release", true, false,
-                    new List<ActivationStrategy>()
-                    {
-                        new("default", new Dictionary<string, string>()),
-                        new("userid", new Dictionary<string, string>())
-                    })
-            };
-            unleash.FeatureToggles.Returns(featureToggles);
-            var unleashFeatureDefinitionProvider = new UnleashFeatureDefinitionProvider(unleash);
-            var featureDefinition = await unleashFeatureDefinitionProvider.GetFeatureDefinitionAsync("test");
-
-            featureDefinition.Name.Should().Be(featureToggles[0].Name);
-            featureDefinition.EnabledFor.Should().Satisfy(x => x.Name == UnleashFilter.FilterAlias);
-            featureDefinition.RequirementType.Should().Be(RequirementType.Any);
-        }
-
-        [Test]
         public async Task GetAllFeatureDefinitionsAsyncShouldReturnCorrectFeatureDefinitons()
         {
             var unleash = Substitute.For<IUnleash>();
-            var featureToggles = new List<FeatureToggle>()
+            var featureToggles = new List<ToggleDefinition>()
             {
-                new("test", FeatureToggleType.Release, true, false,
-                    new List<ActivationStrategy>() { new("default", new Dictionary<string, string>()) }),
-                new("another-one", FeatureToggleType.Experiment, true, false,
-                    new List<ActivationStrategy>()
-                    {
-                        new("default", new Dictionary<string, string>()),
-                        new("userid", new Dictionary<string, string>())
-                    })
+                new("test","default", FeatureToggleType.Release ),
+                new("another-one","default", FeatureToggleType.Experiment ),
             };
-            unleash.FeatureToggles.Returns(featureToggles);
+            unleash.ListKnownToggles().Returns(featureToggles);
             var unleashFeatureDefinitionProvider = new UnleashFeatureDefinitionProvider(unleash);
             var featureDefinition = unleashFeatureDefinitionProvider.GetAllFeatureDefinitionsAsync();
 
@@ -94,7 +64,7 @@ namespace Dosaic.Plugins.Management.Unleash.Tests
             await enumerator.MoveNextAsync();
             enumerator.Current.Name.Should().Be(featureToggles[1].Name);
             enumerator.Current.EnabledFor.Should().Satisfy(x => x.Name == UnleashFilter.FilterAlias);
-            enumerator.Current.RequirementType.Should().Be(RequirementType.Any);
+            enumerator.Current.RequirementType.Should().Be(RequirementType.All);
         }
     }
 }

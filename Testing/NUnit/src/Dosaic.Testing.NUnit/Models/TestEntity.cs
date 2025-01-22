@@ -1,4 +1,4 @@
-namespace Dosaic.Testing.Models
+namespace Dosaic.Testing.NUnit.Models
 {
     public record BaseTestEntity(Guid Id, string Name, DateTime CreationDate, BaseSubTestEntity SubTestEntity = null)
     {

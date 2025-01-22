@@ -2,6 +2,7 @@ using System.Diagnostics;
 using Dosaic.Hosting.Abstractions.Extensions;
 using Dosaic.Hosting.Abstractions.Plugins;
 using Dosaic.Hosting.Abstractions.Services;
+using Dosaic.Plugins.Endpoints.RestResourceEntity.Extensions;
 
 namespace Dosaic.Example.Service
 {
@@ -20,6 +21,8 @@ namespace Dosaic.Example.Service
         {
             var myActivitySource = new ActivitySource("WebHostSamplePlugin");
 
+
+            endpointRouteBuilder.AddSimpleRestResource<Entry>(serviceProvider, "entry").ForAll();
             endpointRouteBuilder.MapGet("/hello", () =>
             {
                 using (var activity = myActivitySource.StartActivity("SayHello"))

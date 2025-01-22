@@ -1,6 +1,6 @@
 using System.Diagnostics;
 
-namespace Dosaic.Testing
+namespace Dosaic.Testing.NUnit
 {
     public static class ActivityTestBootstrapper
     {

@@ -1,5 +1,5 @@
 using Dosaic.Plugins.Persistence.Abstractions;
-using Dosaic.Testing.Models;
+using Dosaic.Testing.NUnit.Models;
 
 namespace Dosaic.Plugins.Persistence.MongoDb
 {

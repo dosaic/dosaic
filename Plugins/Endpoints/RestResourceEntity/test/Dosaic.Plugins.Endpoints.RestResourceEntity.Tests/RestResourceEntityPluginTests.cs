@@ -1,5 +1,5 @@
+using Dosaic.Testing.NUnit.Assertions;
 using NUnit.Framework;
-using Dosaic.Testing.Assertions;
 
 namespace Dosaic.Plugins.Endpoints.RestResourceEntity.Tests
 {

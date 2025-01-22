@@ -17,7 +17,7 @@ namespace Dosaic.Plugins.Management.Unleash
 
         public Task<FeatureDefinition> GetFeatureDefinitionAsync(string featureName)
         {
-            var feature = _unleash.FeatureToggles.FirstOrDefault(x => x.Name == featureName);
+            var feature = _unleash.ListKnownToggles().FirstOrDefault(x => x.Name == featureName);
             if (feature == null)
             {
                 return Task.FromResult<FeatureDefinition>(null);
@@ -42,7 +42,7 @@ namespace Dosaic.Plugins.Management.Unleash
         public async IAsyncEnumerable<FeatureDefinition> GetAllFeatureDefinitionsAsync()
 #pragma warning restore CS1998
         {
-            foreach (var toggle in _unleash.FeatureToggles)
+            foreach (var toggle in _unleash.ListKnownToggles())
             {
                 IConfigurationRoot parameters;
                 using (var stream = new MemoryStream())
@@ -58,13 +58,13 @@ namespace Dosaic.Plugins.Management.Unleash
             }
         }
 
-        internal static FeatureDefinition BuildFeatureDefinition(FeatureToggle feature, IConfigurationRoot parameters)
+        internal static FeatureDefinition BuildFeatureDefinition(ToggleDefinition feature, IConfigurationRoot parameters)
         {
             return new FeatureDefinition()
             {
                 Name = feature.Name,
                 EnabledFor = GetFilterConfigurationList(parameters),
-                RequirementType = feature.Strategies.Count > 1 ? RequirementType.Any : RequirementType.All
+                RequirementType = RequirementType.All
             };
         }
 

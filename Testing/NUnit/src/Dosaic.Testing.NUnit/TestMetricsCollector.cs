@@ -3,7 +3,7 @@ using FluentAssertions;
 using FluentAssertions.Collections;
 using FluentAssertions.Execution;
 
-namespace Dosaic.Testing
+namespace Dosaic.Testing.NUnit
 {
     public record MetricMeasurement(long Measurement, IEnumerable<KeyValuePair<string, string>> Tags);
 

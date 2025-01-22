@@ -43,7 +43,6 @@ namespace Dosaic.Plugins.Management.Unleash
                 UnleashApi = new Uri(_unleashConfiguration.ApiUri),
                 InstanceTag = _unleashConfiguration.InstanceTag,
                 Environment = _unleashConfiguration.Environment,
-                JsonSerializer = new SystemTextSerializer(),
                 ProjectId = _unleashConfiguration.ProjectId,
                 CustomHttpHeaders =
                     new Dictionary<string, string>() { { "Authorization", _unleashConfiguration.ApiToken } }

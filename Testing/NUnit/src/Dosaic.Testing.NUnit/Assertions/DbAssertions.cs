@@ -1,12 +1,12 @@
 using System.Globalization;
 using System.Linq.Expressions;
+using Dosaic.Plugins.Persistence.Abstractions;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
-using Dosaic.Plugins.Persistence.Abstractions;
 
-namespace Dosaic.Testing.Assertions
+namespace Dosaic.Testing.NUnit.Assertions
 {
     public record DbConfiguredModel(IModel Model)
     {

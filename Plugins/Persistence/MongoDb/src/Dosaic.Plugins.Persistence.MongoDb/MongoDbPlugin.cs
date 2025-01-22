@@ -33,9 +33,14 @@ namespace Dosaic.Plugins.Persistence.MongoDb
             };
             if (!string.IsNullOrEmpty(_configuration.User) && !string.IsNullOrEmpty(_configuration.Password))
             {
-                settings.Credential = MongoCredential.CreateCredential(_configuration.AuthDatabase ?? _configuration.Database, _configuration.User, _configuration.Password);
+                settings.Credential = MongoCredential.CreateCredential(
+                    _configuration.AuthDatabase ?? _configuration.Database, _configuration.User,
+                    _configuration.Password);
             }
-            healthChecksBuilder.AddMongoDb(settings, _configuration.Database, "mongo", tags: new[] { HealthCheckTag.Readiness.Value });
+
+            healthChecksBuilder.AddMongoDb(sp =>
+                    sp.GetRequiredService<IMongoDbInstance>().Client, _ => _configuration.Database, "mongo",
+                tags: [HealthCheckTag.Readiness.Value]);
         }
     }
 }

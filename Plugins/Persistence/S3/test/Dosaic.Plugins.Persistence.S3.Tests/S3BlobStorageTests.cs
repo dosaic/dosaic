@@ -1,4 +1,6 @@
 using System.Net;
+using Dosaic.Testing.NUnit.Assertions;
+using Dosaic.Testing.NUnit.Extensions;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Minio.ApiEndpoints;
@@ -8,8 +10,6 @@ using Minio.DataModel.Response;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
 using NUnit.Framework;
-using Dosaic.Testing.Assertions;
-using Dosaic.Testing.Extensions;
 
 namespace Dosaic.Plugins.Persistence.S3.Tests
 {

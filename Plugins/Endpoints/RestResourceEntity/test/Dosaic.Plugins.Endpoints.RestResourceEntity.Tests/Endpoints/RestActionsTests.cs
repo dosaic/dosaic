@@ -9,6 +9,7 @@ using Dosaic.Plugins.Endpoints.RestResourceEntity.Endpoints;
 using Dosaic.Plugins.Handlers.Abstractions.Cqrs.Handlers;
 using Dosaic.Plugins.Handlers.Abstractions.Cqrs.Models;
 using Dosaic.Testing;
+using Dosaic.Testing.NUnit;
 
 namespace Dosaic.Plugins.Endpoints.RestResourceEntity.Tests.Endpoints
 {

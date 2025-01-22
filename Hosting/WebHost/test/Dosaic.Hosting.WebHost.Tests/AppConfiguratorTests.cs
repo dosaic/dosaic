@@ -11,7 +11,7 @@ using Dosaic.Hosting.Abstractions;
 using Dosaic.Hosting.Abstractions.Plugins;
 using Dosaic.Hosting.Abstractions.Services;
 using Dosaic.Hosting.WebHost.Configurators;
-using Dosaic.Testing.Assertions;
+using Dosaic.Testing.NUnit.Assertions;
 
 namespace ExternalNamespace.Tests
 {

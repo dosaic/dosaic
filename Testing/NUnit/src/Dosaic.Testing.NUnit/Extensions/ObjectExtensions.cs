@@ -1,6 +1,6 @@
 using System.Reflection;
 
-namespace Dosaic.Testing.Extensions
+namespace Dosaic.Testing.NUnit.Extensions
 {
     public static class ObjectExtensions
     {

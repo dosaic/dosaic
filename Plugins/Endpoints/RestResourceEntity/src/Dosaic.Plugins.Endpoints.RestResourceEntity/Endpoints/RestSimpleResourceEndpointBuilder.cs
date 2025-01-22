@@ -50,7 +50,8 @@ namespace Dosaic.Plugins.Endpoints.RestResourceEntity.Endpoints
             return config;
         }
 
-        private void ConfigureRoute(HandlerAction action, RouteHandlerBuilder route,
+        private void
+            ConfigureRoute(HandlerAction action, RouteHandlerBuilder route,
             RestSimpleResourceEndpointConfiguration config)
         {
             var openApiTags = config.OpenApiTags.Any() ? config.OpenApiTags.ToArray() : new[] { _resource };
