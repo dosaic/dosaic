@@ -1,6 +1,6 @@
 using System.Diagnostics.Metrics;
-using Microsoft.EntityFrameworkCore.Diagnostics;
 using Dosaic.Hosting.Abstractions.Metrics;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 
 namespace Dosaic.Plugins.Persistence.EntityFramework
 {

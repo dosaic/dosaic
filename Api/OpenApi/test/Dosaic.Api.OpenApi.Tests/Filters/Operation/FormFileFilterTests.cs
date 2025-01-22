@@ -1,5 +1,6 @@
 using System.Reflection;
 using System.Text.Json;
+using Dosaic.Api.OpenApi.Filters.Operation;
 using FluentAssertions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -7,7 +8,6 @@ using Microsoft.AspNetCore.Mvc.Abstractions;
 using Microsoft.AspNetCore.Mvc.ApiExplorer;
 using Microsoft.OpenApi.Models;
 using NUnit.Framework;
-using Dosaic.Api.OpenApi.Filters.Operation;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
 // ReSharper disable UnusedMember.Local

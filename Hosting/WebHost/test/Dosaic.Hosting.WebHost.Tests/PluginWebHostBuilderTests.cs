@@ -1,6 +1,13 @@
 using System.Globalization;
 using AspNetCoreRateLimit;
 using Chronos.Abstractions;
+using Dosaic.Hosting.Abstractions.Configuration;
+using Dosaic.Hosting.Abstractions.DependencyInjection;
+using Dosaic.Hosting.Abstractions.Extensions;
+using Dosaic.Hosting.Abstractions.Middlewares.Models;
+using Dosaic.Hosting.WebHost.Configurators;
+using Dosaic.Hosting.WebHost.Logging;
+using Dosaic.Testing.NUnit;
 using FluentAssertions;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Cors.Infrastructure;
@@ -18,14 +25,6 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using NetEscapades.Configuration.Yaml;
 using NUnit.Framework;
-using Dosaic.Hosting.Abstractions.Configuration;
-using Dosaic.Hosting.Abstractions.DependencyInjection;
-using Dosaic.Hosting.Abstractions.Extensions;
-using Dosaic.Hosting.Abstractions.Middlewares.Models;
-using Dosaic.Hosting.WebHost.Configurators;
-using Dosaic.Hosting.WebHost.Logging;
-using Dosaic.Testing;
-using Dosaic.Testing.NUnit;
 using Serilog.Core;
 using ILogger = Microsoft.Extensions.Logging.ILogger;
 

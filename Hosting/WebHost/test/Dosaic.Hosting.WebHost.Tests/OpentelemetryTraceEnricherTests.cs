@@ -1,7 +1,7 @@
 using System.Diagnostics;
+using Dosaic.Hosting.WebHost.Logging;
 using FluentAssertions;
 using NUnit.Framework;
-using Dosaic.Hosting.WebHost.Logging;
 using Serilog.Core;
 using Serilog.Events;
 using Serilog.Parsing;

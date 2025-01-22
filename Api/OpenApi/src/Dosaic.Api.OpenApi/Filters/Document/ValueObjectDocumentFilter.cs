@@ -1,5 +1,5 @@
-using Microsoft.OpenApi.Models;
 using Dosaic.Api.OpenApi.Filters.Common;
+using Microsoft.OpenApi.Models;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
 namespace Dosaic.Api.OpenApi.Filters.Document

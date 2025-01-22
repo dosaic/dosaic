@@ -1,9 +1,9 @@
 using System.Collections;
 using System.Reflection;
 using System.Xml.XPath;
-using Microsoft.OpenApi.Models;
 using Dosaic.Api.OpenApi.Filters.Common;
 using Dosaic.Hosting.Abstractions.Extensions;
+using Microsoft.OpenApi.Models;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
 namespace Dosaic.Api.OpenApi.Filters.Schema

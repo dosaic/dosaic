@@ -1,7 +1,7 @@
+using Dosaic.Hosting.Abstractions.DependencyInjection;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using NUnit.Framework;
-using Dosaic.Hosting.Abstractions.DependencyInjection;
 
 namespace Dosaic.Hosting.WebHost.Tests.DependencyInjectionTests
 {

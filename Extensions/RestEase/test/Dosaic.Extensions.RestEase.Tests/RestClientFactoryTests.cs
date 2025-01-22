@@ -1,13 +1,9 @@
-using System;
-using System.Linq;
 using System.Net;
 using System.Net.Http;
-using System.Threading;
-using System.Threading.Tasks;
+using Dosaic.Extensions.RestEase.Authentication;
 using FluentAssertions;
 using Newtonsoft.Json;
 using NUnit.Framework;
-using Dosaic.Extensions.RestEase.Authentication;
 using Polly;
 using RestEase;
 using WireMock.RequestBuilders;
@@ -50,7 +46,9 @@ namespace Dosaic.Extensions.RestEase.Tests
             var result = await client.Create(new SomeResource { Name = name }, CancellationToken.None);
             result.Id.Should().Be(returnObj.Id);
             result.Name.Should().Be(returnObj.Name);
+#pragma warning disable CA1826
             var logEntry = _server.FindLogEntries(serverRequest).FirstOrDefault()!;
+#pragma warning restore CA1826
             logEntry.Should().NotBeNull();
             logEntry.RequestMessage.Headers.Should().NotContainKey(AuthorizationHeader);
         }
@@ -82,7 +80,9 @@ namespace Dosaic.Extensions.RestEase.Tests
             var result = await client.Create(new SomeResource { Name = name }, CancellationToken.None);
             result.Id.Should().Be(returnObj.Id);
             result.Name.Should().Be(returnObj.Name);
+#pragma warning disable CA1826
             var logEntry = _server.FindLogEntries(serverRequest).FirstOrDefault()!;
+#pragma warning restore CA1826
             logEntry.Should().NotBeNull();
             logEntry.RequestMessage.Headers.Should().ContainKey(AuthorizationHeader);
             var authHeader = logEntry.RequestMessage.Headers[AuthorizationHeader].Single();

@@ -1,4 +1,9 @@
 using Chronos.Abstractions;
+using Dosaic.Hosting.Abstractions;
+using Dosaic.Hosting.Abstractions.Plugins;
+using Dosaic.Hosting.Abstractions.Services;
+using Dosaic.Hosting.WebHost.Configurators;
+using Dosaic.Testing.NUnit.Assertions;
 using ExternalNamespace.Tests;
 using FluentAssertions;
 using Microsoft.AspNetCore.Builder;
@@ -7,11 +12,6 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using NUnit.Framework;
-using Dosaic.Hosting.Abstractions;
-using Dosaic.Hosting.Abstractions.Plugins;
-using Dosaic.Hosting.Abstractions.Services;
-using Dosaic.Hosting.WebHost.Configurators;
-using Dosaic.Testing.NUnit.Assertions;
 
 namespace ExternalNamespace.Tests
 {

@@ -1,7 +1,7 @@
+using Dosaic.Hosting.WebHost.Logging;
 using FluentAssertions;
 using Microsoft.AspNetCore.Http;
 using NUnit.Framework;
-using Dosaic.Hosting.WebHost.Logging;
 using Serilog.Events;
 
 namespace Dosaic.Hosting.WebHost.Tests.Logging

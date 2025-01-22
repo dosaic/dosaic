@@ -1,9 +1,9 @@
 using System.Linq.Expressions;
-using ODataQueryHelper.Core;
-using ODataQueryHelper.Core.Model;
 using Dosaic.Hosting.Abstractions.Exceptions;
 using Dosaic.Hosting.Abstractions.Middlewares.Models;
 using Dosaic.Plugins.Persistence.Abstractions.Exceptions;
+using ODataQueryHelper.Core;
+using ODataQueryHelper.Core.Model;
 
 namespace Dosaic.Plugins.Persistence.Abstractions
 {

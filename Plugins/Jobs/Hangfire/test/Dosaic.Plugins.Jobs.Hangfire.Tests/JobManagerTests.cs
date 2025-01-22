@@ -1,4 +1,6 @@
 using System.Collections.Immutable;
+using Dosaic.Hosting.Abstractions.Extensions;
+using Dosaic.Plugins.Jobs.Hangfire.Job;
 using FluentAssertions;
 using Hangfire;
 using Hangfire.Common;
@@ -8,8 +10,6 @@ using Hangfire.Storage.Monitoring;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using NUnit.Framework;
-using Dosaic.Hosting.Abstractions.Extensions;
-using Dosaic.Plugins.Jobs.Hangfire.Job;
 
 namespace Dosaic.Plugins.Jobs.Hangfire.Tests
 {

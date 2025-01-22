@@ -1,8 +1,8 @@
 using System.Collections.Concurrent;
+using Dosaic.Hosting.Abstractions.Metrics;
 using Hangfire;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Dosaic.Hosting.Abstractions.Metrics;
 
 namespace Dosaic.Plugins.Jobs.Hangfire
 {

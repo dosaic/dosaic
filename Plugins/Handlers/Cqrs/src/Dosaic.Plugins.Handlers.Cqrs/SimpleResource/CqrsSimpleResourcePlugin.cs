@@ -1,11 +1,11 @@
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using Dosaic.Hosting.Abstractions.Extensions;
 using Dosaic.Hosting.Abstractions.Plugins;
 using Dosaic.Hosting.Abstractions.Services;
 using Dosaic.Plugins.Handlers.Abstractions.Cqrs.Handlers;
 using Dosaic.Plugins.Handlers.Abstractions.Cqrs.Validators;
 using Dosaic.Plugins.Handlers.Cqrs.SimpleResource.Handlers;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace Dosaic.Plugins.Handlers.Cqrs.SimpleResource
 {

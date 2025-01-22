@@ -1,4 +1,5 @@
 using System.Text;
+using Dosaic.Hosting.WebHost.Formatters;
 using FluentAssertions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Formatters;
@@ -6,7 +7,6 @@ using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.ModelBinding.Metadata;
 using NSubstitute;
 using NUnit.Framework;
-using Dosaic.Hosting.WebHost.Formatters;
 
 namespace Dosaic.Hosting.WebHost.Tests.Formatters
 {

@@ -1,3 +1,4 @@
+using Dosaic.Plugins.Jobs.Hangfire.Attributes;
 using FluentAssertions;
 using Hangfire;
 using Hangfire.MemoryStorage;
@@ -5,7 +6,6 @@ using Hangfire.States;
 using Hangfire.Storage;
 using NSubstitute;
 using NUnit.Framework;
-using Dosaic.Plugins.Jobs.Hangfire.Attributes;
 
 namespace Dosaic.Plugins.Jobs.Hangfire.Tests.Attributes
 {

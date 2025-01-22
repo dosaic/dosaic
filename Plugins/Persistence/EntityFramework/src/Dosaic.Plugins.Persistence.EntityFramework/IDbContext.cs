@@ -1,5 +1,5 @@
-using Microsoft.EntityFrameworkCore;
 using Dosaic.Plugins.Persistence.Abstractions;
+using Microsoft.EntityFrameworkCore;
 
 namespace Dosaic.Plugins.Persistence.EntityFramework
 {

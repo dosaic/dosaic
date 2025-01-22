@@ -1,12 +1,11 @@
+using Dosaic.Testing.NUnit;
+using Dosaic.Testing.NUnit.Assertions;
 using FluentAssertions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.FeatureManagement;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
 using NUnit.Framework;
-using Dosaic.Testing;
-using Dosaic.Testing.NUnit;
-using Dosaic.Testing.NUnit.Assertions;
 using Unleash;
 
 namespace Dosaic.Plugins.Management.Unleash.Tests

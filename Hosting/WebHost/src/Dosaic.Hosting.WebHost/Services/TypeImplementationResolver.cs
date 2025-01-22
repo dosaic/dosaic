@@ -1,10 +1,10 @@
 using System.Collections;
 using System.Reflection;
-using Microsoft.Extensions.Configuration;
 using Dosaic.Hosting.Abstractions.Attributes;
 using Dosaic.Hosting.Abstractions.Extensions;
 using Dosaic.Hosting.Abstractions.Plugins;
 using Dosaic.Hosting.Abstractions.Services;
+using Microsoft.Extensions.Configuration;
 
 namespace Dosaic.Hosting.WebHost.Services
 {

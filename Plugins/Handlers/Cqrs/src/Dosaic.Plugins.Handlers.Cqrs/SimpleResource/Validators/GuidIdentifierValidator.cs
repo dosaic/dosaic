@@ -1,5 +1,5 @@
-using FluentValidation;
 using Dosaic.Plugins.Persistence.Abstractions;
+using FluentValidation;
 
 namespace Dosaic.Plugins.Handlers.Cqrs.SimpleResource.Validators
 {

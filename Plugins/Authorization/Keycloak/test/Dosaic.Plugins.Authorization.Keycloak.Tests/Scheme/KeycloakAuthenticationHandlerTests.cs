@@ -2,6 +2,8 @@ using System.Globalization;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text.Encodings.Web;
+using Dosaic.Plugins.Authorization.Keycloak.Scheme;
+using Dosaic.Testing.NUnit;
 using FluentAssertions;
 using Jose;
 using Microsoft.AspNetCore.Authentication;
@@ -13,9 +15,6 @@ using Microsoft.IdentityModel.Tokens;
 using Newtonsoft.Json;
 using NSubstitute;
 using NUnit.Framework;
-using Dosaic.Plugins.Authorization.Keycloak.Scheme;
-using Dosaic.Testing;
-using Dosaic.Testing.NUnit;
 
 namespace Dosaic.Plugins.Authorization.Keycloak.Tests.Scheme
 {

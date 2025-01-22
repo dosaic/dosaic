@@ -1,10 +1,10 @@
+using Dosaic.Hosting.Abstractions.Configuration;
+using Dosaic.Hosting.WebHost.Extensions;
+using Dosaic.Hosting.WebHost.Logging;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using Dosaic.Hosting.Abstractions.Configuration;
-using Dosaic.Hosting.WebHost.Extensions;
-using Dosaic.Hosting.WebHost.Logging;
 
 namespace Dosaic.Hosting.WebHost.Configurators
 {

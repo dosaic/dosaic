@@ -1,7 +1,7 @@
+using Dosaic.Hosting.WebHost.Logging;
 using FluentAssertions;
 using Newtonsoft.Json;
 using NUnit.Framework;
-using Dosaic.Hosting.WebHost.Logging;
 using Serilog;
 using Serilog.Events;
 

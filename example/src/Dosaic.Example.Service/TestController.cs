@@ -16,7 +16,6 @@ namespace Dosaic.Example.Service
             return new Entry() { Name = "test" };
         }
 
-
         [HttpDelete]
         public Entry Delete()
         {

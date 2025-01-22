@@ -2,7 +2,6 @@ using System.Text.Json;
 using Microsoft.Extensions.Configuration;
 using Microsoft.FeatureManagement;
 using Unleash;
-using Unleash.Internal;
 
 namespace Dosaic.Plugins.Management.Unleash
 {

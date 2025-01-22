@@ -1,11 +1,11 @@
 using System.Diagnostics.Metrics;
+using Dosaic.Hosting.Abstractions;
+using Dosaic.Hosting.Abstractions.Metrics;
+using Dosaic.Hosting.Abstractions.Plugins;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Logging;
 using Microsoft.FeatureManagement;
-using Dosaic.Hosting.Abstractions;
-using Dosaic.Hosting.Abstractions.Metrics;
-using Dosaic.Hosting.Abstractions.Plugins;
 using Unleash;
 using Unleash.Events;
 using Unleash.Internal;

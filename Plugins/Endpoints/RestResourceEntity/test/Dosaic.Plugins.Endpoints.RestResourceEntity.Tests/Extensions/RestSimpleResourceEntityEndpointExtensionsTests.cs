@@ -1,8 +1,8 @@
+using Dosaic.Plugins.Endpoints.RestResourceEntity.Extensions;
 using FluentAssertions;
 using Microsoft.AspNetCore.Routing;
 using NSubstitute;
 using NUnit.Framework;
-using Dosaic.Plugins.Endpoints.RestResourceEntity.Extensions;
 
 namespace Dosaic.Plugins.Endpoints.RestResourceEntity.Tests.Extensions
 {

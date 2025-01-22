@@ -1,10 +1,10 @@
+using Dosaic.Hosting.Abstractions;
+using Dosaic.Hosting.Abstractions.Plugins;
+using Dosaic.Plugins.Persistence.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Minio;
 using Minio.ApiEndpoints;
-using Dosaic.Hosting.Abstractions;
-using Dosaic.Hosting.Abstractions.Plugins;
-using Dosaic.Plugins.Persistence.Abstractions;
 
 namespace Dosaic.Plugins.Persistence.S3
 {

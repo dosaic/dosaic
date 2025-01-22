@@ -1,12 +1,12 @@
 using System.Diagnostics;
 using System.Reflection;
+using Dosaic.Hosting.Abstractions.Plugins;
+using Dosaic.Hosting.Abstractions.Services;
+using Dosaic.Plugins.Persistence.Abstractions;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using OpenTelemetry.Instrumentation.EntityFrameworkCore;
 using OpenTelemetry.Trace;
-using Dosaic.Hosting.Abstractions.Plugins;
-using Dosaic.Hosting.Abstractions.Services;
-using Dosaic.Plugins.Persistence.Abstractions;
 
 namespace Dosaic.Plugins.Persistence.EntityFramework
 {

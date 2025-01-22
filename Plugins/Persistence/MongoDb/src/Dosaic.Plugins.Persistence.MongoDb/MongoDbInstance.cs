@@ -1,10 +1,10 @@
 using System.Globalization;
 using System.Text.RegularExpressions;
+using Dosaic.Hosting.Abstractions.Attributes;
+using Dosaic.Hosting.Abstractions.Metrics;
 using MongoDB.Driver;
 using MongoDB.Driver.Core.Configuration;
 using MongoDB.Driver.Core.Events;
-using Dosaic.Hosting.Abstractions.Attributes;
-using Dosaic.Hosting.Abstractions.Metrics;
 
 namespace Dosaic.Plugins.Persistence.MongoDb
 {

@@ -1,6 +1,6 @@
+using Dosaic.Plugins.Handlers.Abstractions.Cqrs.Models;
 using FluentAssertions;
 using NUnit.Framework;
-using Dosaic.Plugins.Handlers.Abstractions.Cqrs.Models;
 
 namespace Dosaic.Plugins.Handlers.Cqrs.Tests
 {

@@ -1,12 +1,11 @@
 using Chronos.Abstractions;
+using Dosaic.Plugins.Persistence.Abstractions;
+using Dosaic.Testing.NUnit;
+using Dosaic.Testing.NUnit.Assertions;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using NUnit.Framework;
-using Dosaic.Plugins.Persistence.Abstractions;
-using Dosaic.Testing;
-using Dosaic.Testing.NUnit;
-using Dosaic.Testing.NUnit.Assertions;
 
 namespace Dosaic.Plugins.Persistence.InMemory.Tests
 {

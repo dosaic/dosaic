@@ -1,4 +1,7 @@
 using System.Reflection;
+using Dosaic.Hosting.Abstractions;
+using Dosaic.Hosting.Abstractions.Services;
+using Dosaic.Plugins.Jobs.Hangfire.Attributes;
 using FluentAssertions;
 using Hangfire;
 using Hangfire.MemoryStorage;
@@ -12,9 +15,6 @@ using Microsoft.FeatureManagement;
 using NSubstitute;
 using NSubstitute.ReceivedExtensions;
 using NUnit.Framework;
-using Dosaic.Hosting.Abstractions;
-using Dosaic.Hosting.Abstractions.Services;
-using Dosaic.Plugins.Jobs.Hangfire.Attributes;
 
 namespace Dosaic.Plugins.Jobs.Hangfire.Tests
 {

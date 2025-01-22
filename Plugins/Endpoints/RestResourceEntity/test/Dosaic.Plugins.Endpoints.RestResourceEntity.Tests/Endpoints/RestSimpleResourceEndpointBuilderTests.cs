@@ -1,5 +1,9 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Net;
+using Dosaic.Extensions.Abstractions;
+using Dosaic.Hosting.Abstractions.Middlewares.Models;
+using Dosaic.Plugins.Endpoints.RestResourceEntity.Endpoints;
+using Dosaic.Testing.NUnit;
 using FluentAssertions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -7,11 +11,6 @@ using Microsoft.AspNetCore.Http.Metadata;
 using Microsoft.AspNetCore.Routing;
 using NSubstitute;
 using NUnit.Framework;
-using Dosaic.Extensions.Abstractions;
-using Dosaic.Hosting.Abstractions.Middlewares.Models;
-using Dosaic.Plugins.Endpoints.RestResourceEntity.Endpoints;
-using Dosaic.Testing;
-using Dosaic.Testing.NUnit;
 using HttpMethod = Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http.HttpMethod;
 
 namespace Dosaic.Plugins.Endpoints.RestResourceEntity.Tests.Endpoints

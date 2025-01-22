@@ -1,6 +1,6 @@
-using FluentValidation;
 using Dosaic.Hosting.Abstractions.Exceptions;
 using Dosaic.Hosting.Abstractions.Middlewares.Models;
+using FluentValidation;
 
 namespace Dosaic.Plugins.Handlers.Cqrs.SimpleResource.Validators
 {

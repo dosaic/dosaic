@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http;
 using System.Security.Cryptography;
+using Dosaic.Plugins.Authorization.Keycloak.Scheme;
 using FluentAssertions;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -9,7 +10,6 @@ using Newtonsoft.Json;
 using NSubstitute;
 using NSubstitute.ReceivedExtensions;
 using NUnit.Framework;
-using Dosaic.Plugins.Authorization.Keycloak.Scheme;
 using RichardSzalay.MockHttp;
 
 namespace Dosaic.Plugins.Authorization.Keycloak.Tests.Scheme

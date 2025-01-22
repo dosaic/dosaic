@@ -1,8 +1,8 @@
 using System.Diagnostics;
 using Chronos.Abstractions;
-using Microsoft.EntityFrameworkCore;
 using Dosaic.Hosting.Abstractions.Exceptions;
 using Dosaic.Plugins.Persistence.Abstractions;
+using Microsoft.EntityFrameworkCore;
 
 namespace Dosaic.Plugins.Persistence.EntityFramework
 {

@@ -1,15 +1,14 @@
-using FluentAssertions;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using NSubstitute;
-using NUnit.Framework;
 using Dosaic.Hosting.Abstractions.Services;
 using Dosaic.Plugins.Handlers.Abstractions.Cqrs.Handlers;
 using Dosaic.Plugins.Handlers.Cqrs.SimpleResource;
 using Dosaic.Plugins.Handlers.Cqrs.SimpleResource.Handlers;
 using Dosaic.Plugins.Persistence.Abstractions;
-using Dosaic.Testing;
 using Dosaic.Testing.NUnit;
+using FluentAssertions;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using NSubstitute;
+using NUnit.Framework;
 
 namespace Dosaic.Plugins.Handlers.Cqrs.Tests.SimpleResource
 {

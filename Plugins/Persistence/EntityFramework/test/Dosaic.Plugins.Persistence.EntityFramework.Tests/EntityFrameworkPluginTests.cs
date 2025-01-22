@@ -2,6 +2,9 @@ using System.Data;
 using System.Diagnostics;
 using Chronos;
 using Chronos.Abstractions;
+using Dosaic.Hosting.Abstractions.Services;
+using Dosaic.Plugins.Persistence.Abstractions;
+using Dosaic.Testing.NUnit.Extensions;
 using FluentAssertions;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
@@ -10,9 +13,6 @@ using Microsoft.Extensions.Diagnostics.HealthChecks;
 using NSubstitute;
 using NUnit.Framework;
 using OpenTelemetry.Instrumentation.EntityFrameworkCore;
-using Dosaic.Hosting.Abstractions.Services;
-using Dosaic.Plugins.Persistence.Abstractions;
-using Dosaic.Testing.NUnit.Extensions;
 
 namespace Dosaic.Plugins.Persistence.EntityFramework.Tests
 {

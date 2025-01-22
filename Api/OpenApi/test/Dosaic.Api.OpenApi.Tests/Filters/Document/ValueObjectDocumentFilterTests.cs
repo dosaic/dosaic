@@ -1,10 +1,10 @@
+using Dosaic.Api.OpenApi.Filters.Common;
+using Dosaic.Api.OpenApi.Filters.Document;
 using FluentAssertions;
 using Microsoft.AspNetCore.Mvc.ApiExplorer;
 using Microsoft.OpenApi.Interfaces;
 using Microsoft.OpenApi.Models;
 using NUnit.Framework;
-using Dosaic.Api.OpenApi.Filters.Common;
-using Dosaic.Api.OpenApi.Filters.Document;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
 namespace Dosaic.Api.OpenApi.Tests.Filters.Document

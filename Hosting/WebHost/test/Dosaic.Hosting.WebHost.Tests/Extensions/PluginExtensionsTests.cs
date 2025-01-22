@@ -1,10 +1,10 @@
+using Dosaic.Hosting.Abstractions.Plugins;
+using Dosaic.Hosting.WebHost.Extensions;
 using FluentAssertions;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using NUnit.Framework;
-using Dosaic.Hosting.Abstractions.Plugins;
-using Dosaic.Hosting.WebHost.Extensions;
 
 namespace Dosaic.Hosting.WebHost.Tests.Extensions
 {

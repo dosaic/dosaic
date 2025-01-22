@@ -1,8 +1,8 @@
 using System.Diagnostics.Metrics;
+using Dosaic.Hosting.Abstractions.Metrics;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.FeatureManagement;
-using Dosaic.Hosting.Abstractions.Metrics;
 using Unleash;
 
 namespace Dosaic.Plugins.Management.Unleash

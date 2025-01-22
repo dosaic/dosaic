@@ -1,4 +1,7 @@
 using System.Net.Http;
+using Dosaic.Plugins.Persistence.Abstractions;
+using Dosaic.Testing.NUnit;
+using Dosaic.Testing.NUnit.Extensions;
 using FluentAssertions;
 using HealthChecks.Uris;
 using Microsoft.Extensions.DependencyInjection;
@@ -6,10 +9,6 @@ using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Minio;
 using NSubstitute;
 using NUnit.Framework;
-using Dosaic.Plugins.Persistence.Abstractions;
-using Dosaic.Testing;
-using Dosaic.Testing.NUnit;
-using Dosaic.Testing.NUnit.Extensions;
 
 namespace Dosaic.Plugins.Persistence.S3.Tests
 {

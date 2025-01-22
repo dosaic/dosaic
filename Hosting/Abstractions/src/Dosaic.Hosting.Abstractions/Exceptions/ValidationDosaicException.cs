@@ -1,5 +1,5 @@
-using Microsoft.AspNetCore.Http;
 using Dosaic.Hosting.Abstractions.Middlewares.Models;
+using Microsoft.AspNetCore.Http;
 
 namespace Dosaic.Hosting.Abstractions.Exceptions
 {

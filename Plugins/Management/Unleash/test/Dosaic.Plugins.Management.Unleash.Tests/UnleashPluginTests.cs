@@ -1,3 +1,6 @@
+using Dosaic.Testing.NUnit;
+using Dosaic.Testing.NUnit.Assertions;
+using Dosaic.Testing.NUnit.Extensions;
 using FluentAssertions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
@@ -6,10 +9,6 @@ using Microsoft.Extensions.Logging;
 using Microsoft.FeatureManagement;
 using NSubstitute;
 using NUnit.Framework;
-using Dosaic.Testing;
-using Dosaic.Testing.NUnit;
-using Dosaic.Testing.NUnit.Assertions;
-using Dosaic.Testing.NUnit.Extensions;
 using Unleash;
 using Unleash.Events;
 using Unleash.Internal;

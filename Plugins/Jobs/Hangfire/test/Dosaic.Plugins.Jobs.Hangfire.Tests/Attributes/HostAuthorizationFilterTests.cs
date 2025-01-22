@@ -1,11 +1,10 @@
+using Dosaic.Testing.NUnit;
 using FluentAssertions;
 using Hangfire;
 using Hangfire.Dashboard;
 using Hangfire.MemoryStorage;
 using Microsoft.AspNetCore.Http;
 using NUnit.Framework;
-using Dosaic.Testing;
-using Dosaic.Testing.NUnit;
 
 namespace Dosaic.Plugins.Jobs.Hangfire.Tests.Attributes
 {

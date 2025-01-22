@@ -1,7 +1,7 @@
 using System.Net;
+using Dosaic.Hosting.Abstractions.Middlewares.Models;
 using FluentAssertions;
 using NUnit.Framework;
-using Dosaic.Hosting.Abstractions.Middlewares.Models;
 
 namespace Dosaic.Plugins.Endpoints.RestResourceEntity.Tests
 {

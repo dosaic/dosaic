@@ -1,5 +1,3 @@
-using System;
-
 namespace Dosaic.Extensions.RestEase.Tests
 {
     public class SomeResource

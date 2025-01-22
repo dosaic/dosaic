@@ -3,13 +3,13 @@ using System.Diagnostics.Metrics;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text.Encodings.Web;
+using Dosaic.Hosting.Abstractions.Metrics;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.Net.Http.Headers;
-using Dosaic.Hosting.Abstractions.Metrics;
 
 namespace Dosaic.Plugins.Authorization.Keycloak.Scheme
 {

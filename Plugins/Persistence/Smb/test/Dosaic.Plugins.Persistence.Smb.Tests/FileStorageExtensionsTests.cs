@@ -1,8 +1,8 @@
 using System.Text;
+using Dosaic.Plugins.Persistence.Abstractions;
 using FluentAssertions;
 using NSubstitute;
 using NUnit.Framework;
-using Dosaic.Plugins.Persistence.Abstractions;
 
 namespace Dosaic.Plugins.Persistence.Smb.Tests
 {

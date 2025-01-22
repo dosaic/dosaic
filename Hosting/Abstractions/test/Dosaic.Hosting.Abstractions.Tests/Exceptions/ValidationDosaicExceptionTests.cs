@@ -1,7 +1,7 @@
-using FluentAssertions;
-using NUnit.Framework;
 using Dosaic.Hosting.Abstractions.Exceptions;
 using Dosaic.Hosting.Abstractions.Middlewares.Models;
+using FluentAssertions;
+using NUnit.Framework;
 #pragma warning disable SYSLIB0011
 
 namespace Dosaic.Hosting.Abstractions.Tests.Exceptions

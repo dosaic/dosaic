@@ -1,8 +1,8 @@
 using System.Security.Claims;
+using Dosaic.Plugins.Authorization.Keycloak.Scheme;
 using FluentAssertions;
 using Newtonsoft.Json;
 using NUnit.Framework;
-using Dosaic.Plugins.Authorization.Keycloak.Scheme;
 
 namespace Dosaic.Plugins.Authorization.Keycloak.Tests.Scheme
 {

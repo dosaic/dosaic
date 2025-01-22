@@ -1,6 +1,6 @@
-using Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http;
 using Dosaic.Hosting.Abstractions.Attributes;
 using Dosaic.Plugins.Authorization.Abstractions;
+using Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http;
 
 namespace Dosaic.Plugins.Authorization.Keycloak
 {

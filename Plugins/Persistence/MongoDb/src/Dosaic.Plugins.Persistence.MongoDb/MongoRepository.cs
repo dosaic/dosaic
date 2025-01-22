@@ -1,9 +1,9 @@
 using System.Diagnostics;
 using Chronos.Abstractions;
-using MongoDB.Driver;
-using ODataQueryHelper.Core.Model;
 using Dosaic.Hosting.Abstractions.Exceptions;
 using Dosaic.Plugins.Persistence.Abstractions;
+using MongoDB.Driver;
+using ODataQueryHelper.Core.Model;
 
 namespace Dosaic.Plugins.Persistence.MongoDb
 {

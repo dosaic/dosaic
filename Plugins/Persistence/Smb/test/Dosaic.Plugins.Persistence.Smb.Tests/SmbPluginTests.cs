@@ -1,9 +1,8 @@
-using Microsoft.Extensions.DependencyInjection;
-using NUnit.Framework;
 using Dosaic.Plugins.Persistence.Abstractions;
-using Dosaic.Testing;
 using Dosaic.Testing.NUnit;
 using Dosaic.Testing.NUnit.Assertions;
+using Microsoft.Extensions.DependencyInjection;
+using NUnit.Framework;
 
 namespace Dosaic.Plugins.Persistence.Smb.Tests
 {

@@ -1,8 +1,8 @@
+using Dosaic.Hosting.Abstractions;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Dosaic.Hosting.Abstractions;
 
 namespace Dosaic.Plugins.Persistence.EntityFramework
 {

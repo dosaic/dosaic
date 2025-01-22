@@ -1,7 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
+using Dosaic.Hosting.Abstractions.Exceptions;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.FeatureManagement.Mvc;
-using Dosaic.Hosting.Abstractions.Exceptions;
 
 namespace Dosaic.Plugins.Management.Unleash
 {

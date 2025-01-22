@@ -1,9 +1,8 @@
+using Dosaic.Testing.NUnit;
 using FluentAssertions;
 using MongoDB.Driver;
 using MongoDB.Driver.Core.Events;
 using NUnit.Framework;
-using Dosaic.Testing;
-using Dosaic.Testing.NUnit;
 
 namespace Dosaic.Plugins.Persistence.MongoDb
 {

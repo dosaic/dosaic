@@ -1,11 +1,11 @@
-using Hangfire;
-using Hangfire.States;
-using Hangfire.Storage;
-using Hangfire.Storage.Monitoring;
 using Dosaic.Hosting.Abstractions.Extensions;
 using Dosaic.Plugins.Jobs.Hangfire.Attributes;
 using Dosaic.Plugins.Jobs.Hangfire.Extensions;
 using Dosaic.Plugins.Jobs.Hangfire.Job;
+using Hangfire;
+using Hangfire.States;
+using Hangfire.Storage;
+using Hangfire.Storage.Monitoring;
 
 namespace Dosaic.Plugins.Jobs.Hangfire
 {

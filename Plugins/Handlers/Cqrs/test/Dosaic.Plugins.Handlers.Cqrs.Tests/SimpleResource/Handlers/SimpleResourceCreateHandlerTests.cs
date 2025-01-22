@@ -1,13 +1,12 @@
-using FluentAssertions;
-using FluentValidation;
-using NSubstitute;
-using NUnit.Framework;
 using Dosaic.Hosting.Abstractions.Exceptions;
 using Dosaic.Plugins.Handlers.Abstractions.Cqrs.Handlers;
 using Dosaic.Plugins.Handlers.Cqrs.SimpleResource.Handlers;
 using Dosaic.Plugins.Persistence.Abstractions;
-using Dosaic.Testing;
 using Dosaic.Testing.NUnit;
+using FluentAssertions;
+using FluentValidation;
+using NSubstitute;
+using NUnit.Framework;
 
 namespace Dosaic.Plugins.Handlers.Cqrs.Tests.SimpleResource.Handlers
 {

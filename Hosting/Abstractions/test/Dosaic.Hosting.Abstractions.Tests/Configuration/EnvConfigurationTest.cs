@@ -1,7 +1,7 @@
+using Dosaic.Hosting.Abstractions.Configuration;
 using FluentAssertions;
 using Microsoft.Extensions.Configuration;
 using NUnit.Framework;
-using Dosaic.Hosting.Abstractions.Configuration;
 
 namespace Dosaic.Hosting.Abstractions.Tests.Configuration
 {

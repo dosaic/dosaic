@@ -25,7 +25,6 @@ namespace Dosaic.Example.Service
         {
             var myActivitySource = new ActivitySource("WebHostSamplePlugin");
 
-
             endpointRouteBuilder.AddSimpleRestResource<Entry>(serviceProvider, "entry").ForAll();
             endpointRouteBuilder.MapGet("/hello", () =>
             {

@@ -1,16 +1,15 @@
 using System.Globalization;
 using System.Net.Http;
+using Dosaic.Extensions.Abstractions;
+using Dosaic.Plugins.Endpoints.RestResourceEntity.Endpoints;
+using Dosaic.Plugins.Handlers.Abstractions.Cqrs.Handlers;
+using Dosaic.Plugins.Handlers.Abstractions.Cqrs.Models;
+using Dosaic.Testing.NUnit;
 using FluentAssertions;
 using Microsoft.AspNetCore.Http;
 using Newtonsoft.Json;
 using NSubstitute;
 using NUnit.Framework;
-using Dosaic.Extensions.Abstractions;
-using Dosaic.Plugins.Endpoints.RestResourceEntity.Endpoints;
-using Dosaic.Plugins.Handlers.Abstractions.Cqrs.Handlers;
-using Dosaic.Plugins.Handlers.Abstractions.Cqrs.Models;
-using Dosaic.Testing;
-using Dosaic.Testing.NUnit;
 
 namespace Dosaic.Plugins.Endpoints.RestResourceEntity.Tests.Endpoints
 {

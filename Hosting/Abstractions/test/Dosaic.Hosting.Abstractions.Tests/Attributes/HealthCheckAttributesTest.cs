@@ -1,6 +1,6 @@
+using Dosaic.Hosting.Abstractions.Attributes;
 using FluentAssertions;
 using NUnit.Framework;
-using Dosaic.Hosting.Abstractions.Attributes;
 
 namespace Dosaic.Hosting.Abstractions.Tests.Attributes
 {

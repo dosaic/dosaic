@@ -1,7 +1,7 @@
+using Dosaic.Plugins.Persistence.Abstractions;
 using Microsoft.Extensions.Logging;
 using Minio.ApiEndpoints;
 using Minio.DataModel.Args;
-using Dosaic.Plugins.Persistence.Abstractions;
 
 namespace Dosaic.Plugins.Persistence.S3
 {

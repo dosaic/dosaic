@@ -1,9 +1,8 @@
+using Dosaic.Hosting.Abstractions.Metrics;
+using Dosaic.Testing.NUnit;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using NUnit.Framework;
-using Dosaic.Hosting.Abstractions.Metrics;
-using Dosaic.Testing;
-using Dosaic.Testing.NUnit;
 
 namespace Dosaic.Plugins.Persistence.EntityFramework.Tests
 {

@@ -1,6 +1,6 @@
-using Microsoft.Extensions.Logging;
 using Dosaic.Hosting.Abstractions.Extensions;
 using Dosaic.Plugins.Jobs.Hangfire.Attributes;
+using Microsoft.Extensions.Logging;
 
 namespace Dosaic.Plugins.Jobs.Hangfire.Job
 {

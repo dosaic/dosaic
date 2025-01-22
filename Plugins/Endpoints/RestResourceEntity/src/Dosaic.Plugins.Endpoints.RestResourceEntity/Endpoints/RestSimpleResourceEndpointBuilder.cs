@@ -1,10 +1,10 @@
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Routing;
 using Dosaic.Extensions.Abstractions;
 using Dosaic.Hosting.Abstractions.Middlewares.Models;
 using Dosaic.Plugins.Handlers.Abstractions.Cqrs;
 using Dosaic.Plugins.Persistence.Abstractions;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Routing;
 // ReSharper disable RedundantArgumentDefaultValue
 
 namespace Dosaic.Plugins.Endpoints.RestResourceEntity.Endpoints

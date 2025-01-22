@@ -1,3 +1,5 @@
+using Dosaic.Hosting.Abstractions;
+using Dosaic.Testing.NUnit.Assertions;
 using FluentAssertions;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
@@ -6,8 +8,6 @@ using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using NUnit.Framework;
-using Dosaic.Hosting.Abstractions;
-using Dosaic.Testing.NUnit.Assertions;
 
 namespace Dosaic.Plugins.Persistence.EntityFramework.Tests
 {

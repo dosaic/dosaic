@@ -3,7 +3,6 @@ using Microsoft.FeatureManagement;
 using NSubstitute;
 using NUnit.Framework;
 using Unleash;
-using Unleash.Internal;
 
 namespace Dosaic.Plugins.Management.Unleash.Tests
 {

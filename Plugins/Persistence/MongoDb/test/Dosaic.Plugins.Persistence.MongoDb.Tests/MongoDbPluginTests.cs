@@ -1,12 +1,12 @@
 using Chronos;
 using Chronos.Abstractions;
+using Dosaic.Hosting.Abstractions;
+using Dosaic.Plugins.Persistence.Abstractions;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using NSubstitute;
 using NUnit.Framework;
-using Dosaic.Hosting.Abstractions;
-using Dosaic.Plugins.Persistence.Abstractions;
 
 namespace Dosaic.Plugins.Persistence.MongoDb
 {

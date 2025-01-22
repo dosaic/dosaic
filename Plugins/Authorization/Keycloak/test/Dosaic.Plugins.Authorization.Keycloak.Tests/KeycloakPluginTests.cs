@@ -1,4 +1,7 @@
 using System.Net.Http;
+using Dosaic.Hosting.Abstractions;
+using Dosaic.Plugins.Authorization.Keycloak.Scheme;
+using Dosaic.Testing.NUnit.Extensions;
 using FluentAssertions;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
@@ -14,9 +17,6 @@ using Microsoft.Extensions.Options;
 using NSubstitute;
 using NSubstitute.Core;
 using NUnit.Framework;
-using Dosaic.Hosting.Abstractions;
-using Dosaic.Plugins.Authorization.Keycloak.Scheme;
-using Dosaic.Testing.NUnit.Extensions;
 
 namespace Dosaic.Plugins.Authorization.Keycloak.Tests
 {

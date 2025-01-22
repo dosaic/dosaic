@@ -1,6 +1,6 @@
 using System.Text;
-using Microsoft.AspNetCore.Mvc.Formatters;
 using Dosaic.Hosting.Abstractions.Extensions;
+using Microsoft.AspNetCore.Mvc.Formatters;
 
 namespace Dosaic.Hosting.WebHost.Formatters
 {

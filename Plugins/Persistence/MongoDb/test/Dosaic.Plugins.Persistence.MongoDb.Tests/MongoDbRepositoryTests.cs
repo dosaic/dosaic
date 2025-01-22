@@ -1,14 +1,13 @@
 using System.Globalization;
 using Chronos;
 using Chronos.Abstractions;
+using Dosaic.Hosting.Abstractions.Exceptions;
+using Dosaic.Plugins.Persistence.Abstractions;
+using Dosaic.Testing.NUnit;
 using FluentAssertions;
 using MongoDB.Driver;
 using NSubstitute;
 using NUnit.Framework;
-using Dosaic.Hosting.Abstractions.Exceptions;
-using Dosaic.Plugins.Persistence.Abstractions;
-using Dosaic.Testing;
-using Dosaic.Testing.NUnit;
 
 namespace Dosaic.Plugins.Persistence.MongoDb
 {

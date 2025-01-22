@@ -1,15 +1,15 @@
 using System.Linq.Expressions;
-using FluentAssertions;
-using NSubstitute;
-using NSubstitute.ExceptionExtensions;
-using NUnit.Framework;
-using ODataQueryHelper.Core.Model;
 using Dosaic.Extensions.Abstractions;
 using Dosaic.Hosting.Abstractions.DependencyInjection;
 using Dosaic.Hosting.Abstractions.Exceptions;
 using Dosaic.Plugins.Handlers.Abstractions.Cqrs.Handlers;
 using Dosaic.Plugins.Handlers.Cqrs.SimpleResource.Handlers;
 using Dosaic.Plugins.Persistence.Abstractions;
+using FluentAssertions;
+using NSubstitute;
+using NSubstitute.ExceptionExtensions;
+using NUnit.Framework;
+using ODataQueryHelper.Core.Model;
 
 namespace Dosaic.Plugins.Handlers.Cqrs.Tests.SimpleResource.Handlers
 {

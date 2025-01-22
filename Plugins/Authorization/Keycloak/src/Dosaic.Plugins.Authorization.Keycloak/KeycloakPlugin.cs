@@ -1,3 +1,7 @@
+using Dosaic.Hosting.Abstractions;
+using Dosaic.Hosting.Abstractions.Plugins;
+using Dosaic.Plugins.Authorization.Abstractions;
+using Dosaic.Plugins.Authorization.Keycloak.Scheme;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
@@ -5,10 +9,6 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Logging;
-using Dosaic.Hosting.Abstractions;
-using Dosaic.Hosting.Abstractions.Plugins;
-using Dosaic.Plugins.Authorization.Abstractions;
-using Dosaic.Plugins.Authorization.Keycloak.Scheme;
 
 namespace Dosaic.Plugins.Authorization.Keycloak
 {

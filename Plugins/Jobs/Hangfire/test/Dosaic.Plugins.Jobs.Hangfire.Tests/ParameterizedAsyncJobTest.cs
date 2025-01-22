@@ -1,5 +1,5 @@
-using Microsoft.Extensions.Logging;
 using Dosaic.Plugins.Jobs.Hangfire.Job;
+using Microsoft.Extensions.Logging;
 
 namespace Dosaic.Plugins.Jobs.Hangfire.Tests
 {

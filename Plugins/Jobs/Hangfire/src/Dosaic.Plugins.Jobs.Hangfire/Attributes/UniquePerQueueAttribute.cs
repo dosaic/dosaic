@@ -1,7 +1,7 @@
 using System.Text.Json;
+using Dosaic.Plugins.Jobs.Hangfire.Extensions;
 using Hangfire.Common;
 using Hangfire.States;
-using Dosaic.Plugins.Jobs.Hangfire.Extensions;
 
 namespace Dosaic.Plugins.Jobs.Hangfire.Attributes
 {

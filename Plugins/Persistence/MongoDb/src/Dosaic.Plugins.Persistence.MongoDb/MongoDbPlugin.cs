@@ -1,8 +1,8 @@
-using Microsoft.Extensions.DependencyInjection;
-using MongoDB.Driver;
 using Dosaic.Hosting.Abstractions;
 using Dosaic.Hosting.Abstractions.Plugins;
 using Dosaic.Plugins.Persistence.Abstractions;
+using Microsoft.Extensions.DependencyInjection;
+using MongoDB.Driver;
 
 namespace Dosaic.Plugins.Persistence.MongoDb
 {

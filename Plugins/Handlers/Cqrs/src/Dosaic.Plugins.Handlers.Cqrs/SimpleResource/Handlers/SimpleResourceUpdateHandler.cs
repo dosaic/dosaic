@@ -1,10 +1,10 @@
 using System.Diagnostics;
-using FluentValidation;
 using Dosaic.Hosting.Abstractions.Exceptions;
 using Dosaic.Plugins.Handlers.Abstractions.Cqrs.Handlers;
 using Dosaic.Plugins.Handlers.Abstractions.Cqrs.Validators;
 using Dosaic.Plugins.Handlers.Cqrs.SimpleResource.Validators;
 using Dosaic.Plugins.Persistence.Abstractions;
+using FluentValidation;
 
 namespace Dosaic.Plugins.Handlers.Cqrs.SimpleResource.Handlers
 {

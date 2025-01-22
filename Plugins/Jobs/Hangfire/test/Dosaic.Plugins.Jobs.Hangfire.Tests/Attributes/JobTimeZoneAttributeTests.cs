@@ -1,6 +1,6 @@
+using Dosaic.Plugins.Jobs.Hangfire.Attributes;
 using FluentAssertions;
 using NUnit.Framework;
-using Dosaic.Plugins.Jobs.Hangfire.Attributes;
 
 namespace Dosaic.Plugins.Jobs.Hangfire.Tests.Attributes
 {

@@ -1,10 +1,10 @@
-using FluentAssertions;
-using FluentValidation;
-using NUnit.Framework;
 using Dosaic.Extensions.Abstractions;
 using Dosaic.Hosting.Abstractions.Exceptions;
 using Dosaic.Plugins.Handlers.Abstractions.Cqrs.Validators;
 using Dosaic.Plugins.Handlers.Cqrs.SimpleResource.Validators;
+using FluentAssertions;
+using FluentValidation;
+using NUnit.Framework;
 
 namespace Dosaic.Plugins.Handlers.Cqrs.Tests.SimpleResource.Validators
 {

@@ -1,7 +1,7 @@
-using Microsoft.AspNetCore.Routing;
-using Microsoft.Extensions.DependencyInjection;
 using Dosaic.Plugins.Endpoints.RestResourceEntity.Endpoints;
 using Dosaic.Plugins.Persistence.Abstractions;
+using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Dosaic.Plugins.Endpoints.RestResourceEntity.Extensions
 {

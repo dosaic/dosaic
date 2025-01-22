@@ -1,10 +1,10 @@
 using System.Diagnostics;
 using Chronos.Abstractions;
-using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Logging;
 using Dosaic.Hosting.Abstractions.Attributes;
 using Dosaic.Hosting.Abstractions.Exceptions;
 using Dosaic.Hosting.Abstractions.Middlewares.Models;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
 
 namespace Dosaic.Hosting.Abstractions.Middlewares
 {

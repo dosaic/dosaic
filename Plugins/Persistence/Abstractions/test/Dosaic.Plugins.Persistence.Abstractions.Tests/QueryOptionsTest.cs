@@ -1,10 +1,10 @@
 using System.Linq.Expressions;
-using FluentAssertions;
-using NUnit.Framework;
-using ODataQueryHelper.Core.Model;
 using Dosaic.Hosting.Abstractions.Exceptions;
 using Dosaic.Plugins.Persistence.Abstractions.Exceptions;
 using Dosaic.Testing.NUnit.Models;
+using FluentAssertions;
+using NUnit.Framework;
+using ODataQueryHelper.Core.Model;
 
 namespace Dosaic.Plugins.Persistence.Abstractions.Tests
 {

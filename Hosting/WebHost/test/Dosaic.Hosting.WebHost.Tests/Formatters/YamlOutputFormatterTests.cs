@@ -1,9 +1,9 @@
 using System.Text;
+using Dosaic.Hosting.WebHost.Formatters;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Formatters;
 using NSubstitute;
 using NUnit.Framework;
-using Dosaic.Hosting.WebHost.Formatters;
 
 namespace Dosaic.Hosting.WebHost.Tests.Formatters
 {

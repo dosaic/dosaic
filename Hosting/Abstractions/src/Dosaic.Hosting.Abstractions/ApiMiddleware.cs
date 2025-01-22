@@ -1,8 +1,8 @@
 using System.Diagnostics.CodeAnalysis;
 using Chronos.Abstractions;
+using Dosaic.Hosting.Abstractions.Middlewares.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.WebUtilities;
-using Dosaic.Hosting.Abstractions.Middlewares.Models;
 
 namespace Dosaic.Hosting.Abstractions
 {

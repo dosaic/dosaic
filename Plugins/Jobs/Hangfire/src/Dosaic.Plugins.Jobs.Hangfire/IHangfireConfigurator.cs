@@ -1,5 +1,5 @@
-using Hangfire;
 using Dosaic.Hosting.Abstractions.Plugins;
+using Hangfire;
 
 namespace Dosaic.Plugins.Jobs.Hangfire
 {

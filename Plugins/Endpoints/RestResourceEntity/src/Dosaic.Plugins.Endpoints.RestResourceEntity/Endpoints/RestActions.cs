@@ -1,9 +1,9 @@
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
 using Dosaic.Extensions.Abstractions;
 using Dosaic.Plugins.Handlers.Abstractions.Cqrs.Handlers;
 using Dosaic.Plugins.Handlers.Abstractions.Cqrs.Models;
 using Dosaic.Plugins.Persistence.Abstractions;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 
 namespace Dosaic.Plugins.Endpoints.RestResourceEntity.Endpoints
 {

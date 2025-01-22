@@ -1,8 +1,7 @@
-using System.Collections.Generic;
 using System.Net.Http;
+using Dosaic.Extensions.RestEase.Authentication;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
-using Dosaic.Extensions.RestEase.Authentication;
 using Polly;
 using RestEase;
 

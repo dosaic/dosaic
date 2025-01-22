@@ -1,8 +1,8 @@
 using System.ComponentModel;
+using Dosaic.Api.OpenApi.Filters.Schema;
 using FluentAssertions;
 using Microsoft.OpenApi.Models;
 using NUnit.Framework;
-using Dosaic.Api.OpenApi.Filters.Schema;
 using Swashbuckle.AspNetCore.SwaggerGen;
 // ReSharper disable UnusedMember.Local
 

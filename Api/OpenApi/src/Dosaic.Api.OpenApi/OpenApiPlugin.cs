@@ -1,13 +1,13 @@
-using Microsoft.AspNetCore.Builder;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Microsoft.OpenApi.Models;
 using Dosaic.Api.OpenApi.Filters.Document;
 using Dosaic.Api.OpenApi.Filters.Operation;
 using Dosaic.Api.OpenApi.Filters.Schema;
 using Dosaic.Hosting.Abstractions.Attributes;
 using Dosaic.Hosting.Abstractions.Plugins;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.OpenApi.Models;
 
 // ReSharper disable UnusedAutoPropertyAccessor.Global
 

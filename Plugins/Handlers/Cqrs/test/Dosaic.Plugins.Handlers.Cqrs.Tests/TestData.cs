@@ -1,7 +1,7 @@
-using FluentValidation;
 using Dosaic.Plugins.Handlers.Abstractions.Cqrs.Handlers;
 using Dosaic.Plugins.Handlers.Abstractions.Cqrs.Validators;
 using Dosaic.Plugins.Persistence.Abstractions;
+using FluentValidation;
 
 namespace Dosaic.Plugins.Handlers.Cqrs.Tests
 {

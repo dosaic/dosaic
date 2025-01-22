@@ -1,6 +1,6 @@
-using Microsoft.Extensions.DependencyInjection;
 using Dosaic.Hosting.Abstractions.Plugins;
 using Dosaic.Plugins.Persistence.Abstractions;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Dosaic.Plugins.Persistence.Smb
 {

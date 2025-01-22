@@ -1,7 +1,7 @@
+using Dosaic.Plugins.Jobs.Hangfire.Job;
 using Hangfire.States;
 using Hangfire.Storage;
 using Hangfire.Storage.Monitoring;
-using Dosaic.Plugins.Jobs.Hangfire.Job;
 
 namespace Dosaic.Plugins.Jobs.Hangfire
 {

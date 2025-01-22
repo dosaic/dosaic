@@ -1,5 +1,5 @@
-using NUnit.Framework;
 using Dosaic.Hosting.WebHost.Logging;
+using NUnit.Framework;
 using Serilog.Events;
 using Serilog.Parsing;
 
