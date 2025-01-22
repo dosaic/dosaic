@@ -9,6 +9,7 @@
     <PackageVersion Version="8.0.0" Include="AspNetCore.HealthChecks.Uris" />
     <PackageVersion Version="8.0.0" Include="AspNetCore.HealthChecks.Hangfire" />
     <PackageVersion Version="8.0.0" Include="AspNetCore.HealthChecks.MongoDb" />
+    <PackageVersion Version="8.0.0" Include="AspNetCore.HealthChecks.System" />
     <PackageVersion Version="5.0.0" Include="AspNetCoreRateLimit" />
     <PackageVersion Version="2.2.1" Include="BouncyCastle.NetCore" />
     <PackageVersion Version="2.0.24" Include="Chronos.Abstractions" />

@@ -134,11 +134,16 @@ To contribute code along your issue please follow the these steps:
 ### Where did the name come from?
 
 D - Dotnet
+
 O - Orchestration
+
 S - Services
+
 A - Abstraction
+
 I - Integration
+
 C - Configuration
 
-Just kidding, we were looking around and found **mosaic**, which is already kind of taken. 
+Just kidding, we were looking around and found **mosaic**, which is already kind of taken.
 Then we just switched the first letter and everything made sense :D
