@@ -84,6 +84,9 @@
     <PackageVersion Version="1.0.17" Include="NSubstitute.Analyzers.CSharp" />
     <PackageVersion Version="4.3.2" Include="NUnit" />
     <PackageVersion Version="1.2.1.1" Include="NUnit.Allure" />
+    <PackageVersion Version="2024.2.0" Include="SSH.NET" />
+    <PackageVersion Version="4.3.4" Include="System.Net.Http" />
+    <PackageVersion Version="4.3.1" Include="System.Text.RegularExpressions" />
     <PackageVersion Version="5.0.4" Include="Unleash.Client" />
     <PackageVersion Version="6.0.0" Include="Vogen" />
     <PackageVersion Version="1.7.0" Include="WireMock.Net" />

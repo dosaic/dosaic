@@ -128,6 +128,64 @@ To contribute code along your issue please follow the these steps:
 | 1702 | Assembly Referencing                        | [1702](https://docs.microsoft.com/en-us/dotnet/csharp/misc/cs1702)                                 |
 | 1591 | Disable XML Comments                        | [1591](https://docs.microsoft.com/en-us/dotnet/csharp/language-reference/compiler-messages/cs1591) |
 
+### Implicit package overrides
+
+#### System.Net.Http 4.3.0 -> 4.3.4
+
+4.3.0 has some major security issues
+
+* [Advisory: github.com (Severity: High)](https://github.com/advisories/GHSA-7jgj-8wvc-jh57)
+* [Advisory by Mend.io: GHSA-7jgj-8wvc-jh57 (Severity: High)](https://osv.dev/vulnerability/GHSA-7jgj-8wvc-jh57)
+
+Because of this, we decided to explicitly install a newer version,
+which does not have the security issues.
+
+Affected projects:
+* Plugins.Persistence.Abstractions (through QDataQueryHelper.Core)
+* Plugins.Persistence.MongoDb (through MongoDbMigrations)
+* Extensions.RestEase.Tests (through WireMock.Net)
+
+#### System.Text.RegularExpressions 4.3.0 -> 4.3.1
+
+4.3.0 has some major security issues
+
+* [Advisory: github.com (Severity: High)](https://github.com/advisories/GHSA-cmhx-cq75-c4mj)
+* [Advisory by Mend.io: GHSA-cmhx-cq75-c4mj (Severity: High)](https://osv.dev/vulnerability/GHSA-cmhx-cq75-c4mj)
+
+Because of this, we decided to explicitly install a newer version,
+which does not have the security issues.
+
+Affected projects:
+* Plugins.Persistence.Abstractions (through QDataQueryHelper.Core)
+* Plugins.Persistence.MongoDb (through MongoDbMigrations)
+* Extensions.RestEase.Tests (through WireMock.Net)
+
+#### Newtonsoft.Json 9.0.1 -> 13.0.3
+
+9.0.1 has some major security issues
+
+* [Advisory: github.com (Severity: High)](https://github.com/advisories/GHSA-5crp-9r3c-p9vr)
+* [Advisory by Mend.io: GHSA-5crp-9r3c-p9vr (Severity: High)](https://osv.dev/vulnerability/GHSA-5crp-9r3c-p9vr)
+
+Because of this, we decided to explicitly install a newer version,
+which does not have the security issues.
+
+Affected projects:
+* Plugins.Persistence.MongoDb (through MongoDbMigrations)
+
+#### SSH.NET 2020.0.1 -> 2024.2.0
+
+2020.0.1 has some major security issues
+
+* [Advisory: github.com (Severity: Moderate)](https://github.com/advisories/GHSA-72p8-v4hg-v45p)
+* [Advisory by Mend.io: GHSA-72p8-v4hg-v45p (Severity: Moderate)](https://osv.dev/vulnerability/GHSA-72p8-v4hg-v45p)
+
+Because of this, we decided to explicitly install a newer version,
+which does not have the security issues.
+
+Affected projects:
+* Plugins.Persistence.MongoDb (through MongoDbMigrations)
+
 
 ## About us
 

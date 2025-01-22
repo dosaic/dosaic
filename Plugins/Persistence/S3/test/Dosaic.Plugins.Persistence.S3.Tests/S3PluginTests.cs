@@ -1,3 +1,4 @@
+using System.Net.Http;
 using FluentAssertions;
 using HealthChecks.Uris;
 using Microsoft.Extensions.DependencyInjection;

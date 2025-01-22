@@ -3,6 +3,7 @@ using Hangfire.MemoryStorage;
 using Dosaic.Plugins.Jobs.Hangfire;
 using Dosaic.Plugins.Jobs.Hangfire.Attributes;
 using Dosaic.Plugins.Jobs.Hangfire.Job;
+using Microsoft.Extensions.Logging;
 
 namespace Dosaic.Example.Service
 {

@@ -3,7 +3,7 @@
   <PropertyGroup>
     <TargetFramework>net9.0</TargetFramework>
     <Nullable>disable</Nullable>
-    <ImplicitUsings>enable</ImplicitUsings>
+    <ImplicitUsings>disable</ImplicitUsings>
     <IsPackable>false</IsPackable>
     <EmitCompilerGeneratedFiles>false</EmitCompilerGeneratedFiles>
     <NoDefaultLaunchSettingsFile>true</NoDefaultLaunchSettingsFile>

@@ -1,3 +1,4 @@
+using System.Net.Http;
 using FluentAssertions;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;

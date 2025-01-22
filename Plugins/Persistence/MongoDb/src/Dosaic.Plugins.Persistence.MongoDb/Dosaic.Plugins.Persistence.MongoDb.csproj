@@ -1,8 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <Nullable>disable</Nullable>
-        <ImplicitUsings>enable</ImplicitUsings>
+
+
         <IsPackable>true</IsPackable>
     </PropertyGroup>
 
@@ -10,6 +10,10 @@
     <PackageReference Include="AspNetCore.HealthChecks.MongoDb" />
     <PackageReference Include="MongoDB.Driver" />
     <PackageReference Include="MongoDBMigrations" />
+    <PackageReference Include="Newtonsoft.Json" />
+    <PackageReference Include="SSH.NET" />
+    <PackageReference Include="System.Net.Http" />
+    <PackageReference Include="System.Text.RegularExpressions" />
   </ItemGroup>
 
   <ItemGroup>

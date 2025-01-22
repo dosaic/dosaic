@@ -1,7 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <Nullable>disable</Nullable><ImplicitUsings>enable</ImplicitUsings>
+
+    <ImplicitUsings>enable</ImplicitUsings>
     <AssemblyName>Dosaic.Hosting.WebHost.Tests</AssemblyName>
     <RootNamespace>Dosaic.Hosting.WebHost.Tests</RootNamespace>
   </PropertyGroup>
