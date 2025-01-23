@@ -4,32 +4,32 @@
 
 ## Hosting
 
-* [WebHost](Dosaic.Hosting/WebHost/README.md)
-* [Generator](Dosaic.Hosting/Generator/README.md)
-* [Abstractions](Dosaic.Hosting/Abstractions/README.md)
+* [WebHost](Hosting/WebHost/README.md)
+* [Generator](Hosting/Generator/README.md)
+* [Abstractions](Hosting/Abstractions/README.md)
 
 ## Plugins
 
 * Authorization
-    * [Abstractions](Dosaic.Plugins/Authorization/Abstractions/README.md)
-    * [Keycloak](Dosaic.Plugins/Authorization/Keycloak/README.md)
+    * [Abstractions](Plugins/Authorization/Abstractions/README.md)
+    * [Keycloak](Plugins/Authorization/Keycloak/README.md)
 * Endpoints
-    * [Abstractions](Dosaic.Plugins/Endpoints/Abstractions/README.md)
-    * [RestResourceEntity](Dosaic.Plugins/Endpoints/RestResourceEntity/README.md)
+    * [Abstractions](Plugins/Endpoints/Abstractions/README.md)
+    * [RestResourceEntity](Plugins/Endpoints/RestResourceEntity/README.md)
 * Handlers
-    * [Abstractions](Dosaic.Plugins/Handlers/Abstractions/Cqrs/README.md)
-    * [CQRS](Dosaic.Plugins/Handlers/Cqrs/README.md)
+    * [Abstractions](Plugins/Handlers/Abstractions/Cqrs/README.md)
+    * [CQRS](Plugins/Handlers/Cqrs/README.md)
 * Jobs
-    * [Hangfire](Dosaic.Plugins/Jobs/Hangfire/README.md)
+    * [Hangfire](Plugins/Jobs/Hangfire/README.md)
 * Management
-    * [Unleash](Dosaic.Plugins/Management/Unleash/README.md)
+    * [Unleash](Plugins/Management/Unleash/README.md)
 * Persistence
-    * [Abstractions](Dosaic.Plugins/Persistence/Abstractions/README.md)
-    * [EntityFramework](Dosaic.Plugins/Persistence/EntityFramework/README.md)
-    * [InMemory](Dosaic.Plugins/Persistence/InMemory/README.md)
-    * [MongoDb](Dosaic.Plugins/Persistence/MongoDb/README.md)
-    * [S3](Dosaic.Plugins/Persistence/S3/README.md)
+    * [Abstractions](Plugins/Persistence/Abstractions/README.md)
+    * [EntityFramework](Plugins/Persistence/EntityFramework/README.md)
+    * [InMemory](Plugins/Persistence/InMemory/README.md)
+    * [MongoDb](Plugins/Persistence/MongoDb/README.md)
+    * [S3](Plugins/Persistence/S3/README.md)
 
 ## Testing
 
-* [NUnit](Dosaic.Testing/NUnit/README.md)
+* [NUnit](Testing/NUnit/README.md)
