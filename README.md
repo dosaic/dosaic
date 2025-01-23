@@ -15,7 +15,7 @@
 
 <div style="display: flex; justify-content: center; align-items: center;margin-top:10px">
 
-![Framework](https://img.shields.io/badge/framework-net8.0-blueviolet?style=flat-square)
+![Framework](https://img.shields.io/badge/framework-net9.0-blueviolet?style=flat-square)
 [![MIT License](https://img.shields.io/badge/license-MIT-%230b0?style=flat-square)](https://github.com/dosaic/dosaic/blob/main/LICENSE.txt)
 ![Nuget](https://img.shields.io/nuget/v/Dosaic.Hosting.Webhost?style=flat-square)
 ![Nuget](https://img.shields.io/nuget/dt/Dosaic.Hosting.Webhost?style=flat-square)
@@ -31,22 +31,21 @@ Check the individual README files in each plugins directory.
 
 ## Features
 
-* logs
-* metrics
-* traces
-* minimal api ready
-* auto discovered plugins
-* with performance in mind
-* less memory allocations
-* industry best practices applied security
-* standard dotnet core patterns & APIs
+* Supports structured logging with Serilog
+* Exposes Prometheus compatible metrics endpoint
+* Configurable trace sampling rates with OpenTelemetry
+* Compatible with ASP.NET Core Minimal APIs & ASP.NET Core Mvc
+* Uses source-generators to load plugins at runtime
+* Optimized for high performance
+* Utilizes Span<T> and Memory<T> for reduced allocations
+* Implements OWASP security guidelines
+* Follows .NET Core dependency injection and middleware patterns
 
 ## Prerequisites
 
 Before you begin, ensure you have met the following requirements:
 
-* You have installed the latest version of `.net8 sdk`
-
+* You have installed the latest version of `.net9 sdk`
 
 ## Get started
 
@@ -54,7 +53,7 @@ To start using Dosaic components/plugins, you have to:
 
 1. Install/add the PluginWebHost via nuget package `Dosaic.Hosting.WebHost`
 2. Install/add the source generator plugin via nuget package `Dosaic.Hosting.Generator`
-3. Rewrite the Entrypoint `Program.cs` to have following code:
+3. Rewrite the Entrypoint `Program.cs` to have the following code:
 
 ```c#
 using Dosaic.Hosting.WebHost;
@@ -84,7 +83,7 @@ We are using these frameworks for unit testing
 
 * AutoBogus
 * Bogus
-* FluentAssertions
+* AwesomeAssertions
 * Microsoft.NET.Test.Sdk
 * NaughtyStrings.Bogus
 * NSubstitute
