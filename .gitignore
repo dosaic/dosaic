@@ -708,3 +708,5 @@ FodyWeavers.xsd
 # dotnet pack
 nbgv
 .store
+
+.qodo
