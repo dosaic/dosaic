@@ -23,7 +23,7 @@
 
   <ItemGroup Condition="!Exists('packages.config') AND $(MSBuildProjectName.EndsWith('Tests')) == false">
     <None Include="..\..\README.md" Pack="true" PackagePath="\"/>
-    <None Include="$(SolutionDir)\.gitbook\assets\logo.png" Pack="true" PackagePath="\"/>
+    <None Include="$(SolutionDir)\.gitbook\assets\dosaic.png" Pack="true" PackagePath="\"/>
   </ItemGroup>
   <PropertyGroup Condition="!Exists('packages.config')">
     <Title>Dosaic</Title>
