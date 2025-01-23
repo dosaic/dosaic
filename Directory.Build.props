@@ -28,17 +28,17 @@
   <PropertyGroup Condition="!Exists('packages.config')">
     <Title>Dosaic</Title>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <PackageIcon>logo.png</PackageIcon>
+    <PackageIcon>dosaic.png</PackageIcon>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <Authors>Dosaic</Authors>
     <Copyright>Copyright (c) Dosaic 2025</Copyright>
     <PackageProjectUrl>https://github.com/dosaic/dosaic</PackageProjectUrl>
-    <Description>Dosaic is a `service hosting framework` that allows `.net devs` to `decorate their services with behaviours or functionality (think of plugins) while only using minimal configuration`.</Description>
+    <Description>A plugin-first dotnet framework for rapidly building anything hosted in the web.</Description>
     <PackageTags>Dosaic plugins framework library logging metrics tracing performance security</PackageTags>
     <RepositoryUrl>https://github.com/dosaic/dosaic</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <language>en-US</language>
-    <summary>Dosaic is a `service hosting framework` that allows `.net devs` to `decorate their services with behaviours or functionality (think of plugins) while only using minimal configuration`.</summary>
+    <summary>  A plugin-first dotnet framework for rapidly building anything hosted in the web.</summary>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
   </PropertyGroup>
 
