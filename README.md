@@ -1,28 +1,26 @@
-<!-- # Dosaic -->
-
 <div style="display: flex; justify-content: center; align-items: center;margin-top:10px">
   <a href="https://dosaic.gitbook.io/dosaic/" target="_blank" style="display: flex; align-items: center;">
     <picture>
       <source srcset="https://raw.githubusercontent.com/dosaic/dosaic/HEAD/.gitbook/assets/logo.svg .gitbook/assets/logo.svg, ">
       <!-- <source srcset=".gitbook/assets/logo.svg"> -->
-      <img alt="Dosaic" src=".gitbook/assets/logo.svg" height="64">
+      <img alt="Dosaic" src=".gitbook/assets/logo.svg" height="64" width="64">
     </picture>
     <span style="margin-left: 10px; font-size: 2em; color: white;">Dosaic</span>
   </a>
 </div>
 
-<p align="center">
+<div style="display: flex; justify-content: center; align-items: center;margin-top:10px">
   A plugin-first dotnet framework for rapidly building anything hosted in the web.
-</p>
+</div>
 
-<p align="center">
+<div style="display: flex; justify-content: center; align-items: center;margin-top:10px">
 
 ![Framework](https://img.shields.io/badge/framework-net8.0-blueviolet?style=flat-square)
 [![MIT License](https://img.shields.io/badge/license-MIT-%230b0?style=flat-square)](https://github.com/dosaic/dosaic/blob/main/LICENSE.txt)
 ![Nuget](https://img.shields.io/nuget/v/Dosaic.Hosting.Webhost?style=flat-square)
 ![Nuget](https://img.shields.io/nuget/dt/Dosaic.Hosting.Webhost?style=flat-square)
 
-</p>
+</div>
 
 ## Documentation
 
@@ -188,6 +186,8 @@ Affected projects:
 
 
 ## About us
+
+This framework was based on https://github.com/sia-digital/pibox.
 
 ### Where did the name come from?
 
