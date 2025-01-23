@@ -77,7 +77,6 @@
     <PackageVersion Version="2.13.1" Include="AutoBogus" />
     <PackageVersion Version="2.4.1" Include="NaughtyStrings.Bogus" />
     <PackageVersion Version="35.6.1" Include="Bogus" />
-    <PackageVersion Version="8.0.1" Include="FluentAssertions" />
     <PackageVersion Version="17.12.0" Include="Microsoft.NET.Test.Sdk" />
     <PackageVersion Version="4.6.0" Include="NUnit3TestAdapter" />
     <PackageVersion Version="5.3.0" Include="NSubstitute" />

@@ -1,6 +1,6 @@
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
+FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS runtime
 
-COPY /src/Dosaic.Example.Service/bin/Release/net8.0/publish/ /app
+COPY /src/Dosaic.Example.Service/bin/Release/net9.0/publish/ /app
 WORKDIR /app
 
 EXPOSE 8080
