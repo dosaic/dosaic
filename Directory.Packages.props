@@ -70,7 +70,7 @@
     <PackageVersion Version="8.3.1" Include="System.IdentityModel.Tokens.Jwt" />
     <PackageVersion Version="7.2.0" Include="Swashbuckle.AspNetCore.Annotations" />
     <PackageVersion Version="7.2.0" Include="Swashbuckle.AspNetCore.SwaggerUI" />
-    <PackageVersion Version="5.1.0" Include="jose-jwt" />
+    <PackageVersion Version="5.1.1" Include="jose-jwt" />
     <PackageVersion Version="7.0.0" Include="RichardSzalay.MockHttp" />
     <PackageVersion Version="7.0.4" Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
     <PackageVersion Version="1.6.4" Include="Restease" />
