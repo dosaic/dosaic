@@ -1,0 +1,14 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+      <IsPackable>true</IsPackable>
+    </PropertyGroup>
+  
+    <ItemGroup>
+      <PackageReference Include="Mapster" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\..\..\..\..\Hosting\Abstractions\src\Dosaic.Hosting.Abstractions\Dosaic.Hosting.Abstractions.csproj" />
+    </ItemGroup>
+
+</Project>

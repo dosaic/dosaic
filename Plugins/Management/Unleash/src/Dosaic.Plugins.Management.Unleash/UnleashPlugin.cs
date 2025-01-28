@@ -12,13 +12,12 @@ using Unleash.Internal;
 
 namespace Dosaic.Plugins.Management.Unleash
 {
-    public class UnleashPlugin : IPluginServiceConfiguration, IPluginHealthChecksConfiguration
+    public class UnleashPlugin(UnleashConfiguration unleashConfiguration, ILogger<UnleashPlugin> logger)
+        : IPluginServiceConfiguration, IPluginHealthChecksConfiguration
     {
         internal const string UnleashPluginImpressionsTotal = "dosaic_unleash_plugin_impressions_total";
         internal const string UnleashPluginErrorsTotal = "dosaic_unleash_plugin_errors_total";
-        internal const string UnleashPluginToggleupdatesTotal = "dosaic_unleash_plugin_toggleUpdates_total";
-        private readonly UnleashConfiguration _unleashConfiguration;
-        private readonly ILogger<UnleashPlugin> _logger;
+        internal const string UnleashPluginToggleUpdatesTotal = "dosaic_unleash_plugin_toggleUpdates_total";
 
         private readonly Counter<long> _impressionCounter =
             Metrics.CreateCounter<long>(UnleashPluginImpressionsTotal, "calls", "Total number of impression events");
@@ -27,25 +26,17 @@ namespace Dosaic.Plugins.Management.Unleash
             Metrics.CreateCounter<long>(UnleashPluginErrorsTotal, "calls", "Total number of error events");
 
         private readonly Counter<long> _toggleUpdateCounter =
-            Metrics.CreateCounter<long>(UnleashPluginToggleupdatesTotal, "calls", "Total number of toggle update events");
-
-        public UnleashPlugin(UnleashConfiguration unleashConfiguration, ILogger<UnleashPlugin> logger)
-        {
-            _unleashConfiguration = unleashConfiguration;
-            _logger = logger;
-        }
+            Metrics.CreateCounter<long>(UnleashPluginToggleUpdatesTotal, "calls", "Total number of toggle update events");
 
         public void ConfigureServices(IServiceCollection serviceCollection)
         {
-            var settings = new UnleashSettings()
+            var settings = new UnleashSettings
             {
-                AppName = _unleashConfiguration.AppName,
-                UnleashApi = new Uri(_unleashConfiguration.ApiUri),
-                InstanceTag = _unleashConfiguration.InstanceTag,
-                Environment = _unleashConfiguration.Environment,
-                ProjectId = _unleashConfiguration.ProjectId,
+                AppName = unleashConfiguration.AppName,
+                UnleashApi = new Uri(unleashConfiguration.ApiUri),
+                InstanceTag = unleashConfiguration.InstanceTag,
                 CustomHttpHeaders =
-                    new Dictionary<string, string>() { { "Authorization", _unleashConfiguration.ApiToken } }
+                    new Dictionary<string, string>() { { "Authorization", unleashConfiguration.ApiToken } }
             };
 
             var unleash = new DefaultUnleash(settings);
@@ -53,24 +44,23 @@ namespace Dosaic.Plugins.Management.Unleash
             // Set up handling of impression and error events
             unleash.ConfigureEvents(cfg =>
             {
-                cfg.ImpressionEvent = evt => { HandleImpressionEvent(evt); };
-                cfg.ErrorEvent = evt => { HandleErrorEvent(evt); };
-                cfg.TogglesUpdatedEvent = evt => { HandleTogglesUpdatedEvent(evt); };
+                cfg.ImpressionEvent = HandleImpressionEvent;
+                cfg.ErrorEvent = HandleErrorEvent;
+                cfg.TogglesUpdatedEvent = HandleTogglesUpdatedEvent;
             });
 
-            serviceCollection.AddSingleton<IUnleash>(c => unleash);
+            serviceCollection.AddSingleton<IUnleash>(unleash);
 
             serviceCollection.AddSingleton<IFeatureDefinitionProvider, UnleashFeatureDefinitionProvider>()
                 .AddFeatureManagement()
                 .AddFeatureFilter<UnleashFilter>()
                 .UseDisabledFeaturesHandler(new FeatureNotEnabledDisabledHandler());
-            ;
         }
 
         internal void HandleTogglesUpdatedEvent(TogglesUpdatedEvent evt)
         {
             _toggleUpdateCounter.Add(1);
-            _logger.LogInformation("Feature toggles updated on: {evt.UpdatedOn}", evt.UpdatedOn);
+            logger.LogInformation("Feature toggles updated on: {evt.UpdatedOn}", evt.UpdatedOn);
         }
 
         internal void HandleErrorEvent(ErrorEvent evt)
@@ -78,13 +68,13 @@ namespace Dosaic.Plugins.Management.Unleash
             if (evt.Error != null)
             {
                 _errorCounter.Add(1);
-                _logger.LogError("Unleash {UnleashError}  of type {UnleashErrorType} occured.", evt.Error, evt.ErrorType);
+                logger.LogError("Unleash {UnleashError}  of type {UnleashErrorType} occured.", evt.Error, evt.ErrorType);
             }
             else
             {
                 // cant find reason why this is happening and no proper error is returned
                 // also seems not to degrade or interrupt the service in any kind of way
-                _logger.LogDebug("ignore or find out why this is null: {UnleashErrorType} {UnleashError}.",
+                logger.LogDebug("ignore or find out why this is null: {UnleashErrorType} {UnleashError}.",
                     evt.ErrorType, evt.Error);
             }
         }
@@ -93,15 +83,15 @@ namespace Dosaic.Plugins.Management.Unleash
         {
             _impressionCounter.Add(1, new KeyValuePair<string, object>("featureName", evt.FeatureName),
                 new KeyValuePair<string, object>("enabled", evt.Enabled));
-            _logger.LogDebug("ImpressionEvent: {UnleashFeatureName}: {UnleashEnabled}", evt.FeatureName,
+            logger.LogDebug("ImpressionEvent: {UnleashFeatureName}: {UnleashEnabled}", evt.FeatureName,
                 evt.Enabled);
         }
 
         public void ConfigureHealthChecks(IHealthChecksBuilder healthChecksBuilder)
         {
-            var url = $"https://{_unleashConfiguration.ApiUri}/health";
+            var url = $"https://{unleashConfiguration.ApiUri}/health";
             healthChecksBuilder.AddUrlGroup(new Uri(url), "unleash", HealthStatus.Degraded,
-                tags: new[] { HealthCheckTag.Readiness.Value });
+                tags: [HealthCheckTag.Readiness.Value]);
         }
     }
 }

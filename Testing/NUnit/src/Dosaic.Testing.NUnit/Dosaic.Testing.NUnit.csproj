@@ -21,6 +21,7 @@
     <PackageReference Include="NUnit" />
     <PackageReference Include="NUnit.Allure" />
     <PackageReference Include="Chronos.Net" />
+    <PackageReference Include="TngTech.ArchUnitNET.NUnit" />
   </ItemGroup>
 
   <ItemGroup>

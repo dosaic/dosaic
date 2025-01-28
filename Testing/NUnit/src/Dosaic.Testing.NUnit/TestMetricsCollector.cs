@@ -69,7 +69,7 @@ namespace Dosaic.Testing.NUnit
 
     {
         public TestMetricsCollectorAssertions(List<MetricMeasurement> instance)
-            : base(instance)
+            : base(instance, AssertionChain.GetOrCreate())
         {
         }
 
@@ -78,8 +78,7 @@ namespace Dosaic.Testing.NUnit
         public AndConstraint<TestMetricsCollectorAssertions> ContainsMetric(
             long value, string expectedTagKey, string expectedTagValue, string because = "", params object[] becauseArgs)
         {
-            Execute.Assertion
-                .BecauseOf(because, becauseArgs)
+            CurrentAssertionChain.BecauseOf(because, becauseArgs)
                 .Given(() => Subject)
                 .ForCondition(c => c.Any(tuple => tuple.Measurement == value && tuple.Tags
                     .Any(x => x.Key == expectedTagKey && x.Value == expectedTagValue)))
@@ -92,7 +91,7 @@ namespace Dosaic.Testing.NUnit
         public AndConstraint<TestMetricsCollectorAssertions> ContainsMetric(
             long value, KeyValuePair<string, string>[] tags, string because = "", params object[] becauseArgs)
         {
-            Execute.Assertion
+            CurrentAssertionChain
                 .BecauseOf(because, becauseArgs)
                 .Given(() => Subject)
                 .ForCondition(c => c.Any(tuple => tuple.Measurement == value && tuple.Tags
@@ -106,7 +105,7 @@ namespace Dosaic.Testing.NUnit
         public AndConstraint<TestMetricsCollectorAssertions> ContainsMetric(
             long value, string because = "", params object[] becauseArgs)
         {
-            Execute.Assertion
+            CurrentAssertionChain
                 .BecauseOf(because, becauseArgs)
                 .Given(() => Subject)
                 .ForCondition(c => c.Any(tuple => tuple.Measurement == value))

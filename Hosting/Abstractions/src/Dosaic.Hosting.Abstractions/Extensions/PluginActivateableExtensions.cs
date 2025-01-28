@@ -8,7 +8,9 @@ namespace Dosaic.Hosting.Abstractions.Extensions
     {
         public static List<KeyValuePair<int, T>> FindPlugins<T>(this IImplementationResolver implementationResolver) where T : IPluginActivateable
         {
-            return implementationResolver.FindAndResolve<T>().OrderBy(GetSortOrderForPlugin).Select((x, i) => new KeyValuePair<int, T>(i, x)).ToList();
+            return implementationResolver.FindAndResolve<T>()
+                .OrderBy(GetSortOrderForPlugin)
+                .Select((x, i) => new KeyValuePair<int, T>(i, x)).ToList();
         }
 
         public static string GetPluginName(this IPluginActivateable pluginActivateable) => pluginActivateable.GetType().Name;

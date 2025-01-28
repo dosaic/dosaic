@@ -27,6 +27,7 @@ using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Logging;
 using OpenTelemetry;
 using OpenTelemetry.Exporter;
+using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
@@ -56,8 +57,7 @@ namespace Dosaic.Hosting.WebHost.Configurators
             ConfigureDefaultServices();
             ConfigureWebServices();
             ConfigureHealthChecks();
-            ConfigureMetrics();
-            ConfigureTracing();
+            ConfigureTelemetry();
             ConfigurePlugins();
         }
 
@@ -106,68 +106,66 @@ namespace Dosaic.Hosting.WebHost.Configurators
                 });
         }
 
-        private void ConfigureMetrics()
+        internal void ConfigureTelemetry()
         {
-            // add metrics
-            _serviceCollection.AddOpenTelemetry().WithMetrics(
-                builder =>
-                {
-                    var entryAssembly = Assembly.GetEntryAssembly();
-                    var serviceName = entryAssembly!.GetName().Name ?? "unknown-service";
-                    Baggage.SetBaggage("AppName", serviceName);
-
-                    builder
-                        // default labels/attributes -> this currently does not work because the spec is not approved yet https://github.com/open-telemetry/opentelemetry-dotnet/discussions/3333#discussioncomment-2907442
-                        // .SetResourceBuilder(ResourceBuilder.CreateDefault().AddService(entryAssembly.GetName().Name,
-                        //     serviceVersion: entryAssembly.GetName().Version?.ToString() ?? "unknown", serviceInstanceId: Environment.MachineName))
-                        .ConfigureResource(resource =>
-                        {
-                            resource.AddService(serviceName,
-                                serviceVersion: entryAssembly.GetName().Version?.ToString() ?? "unknown", serviceInstanceId: Environment.MachineName);
-                        })
-                        .AddAspNetCoreInstrumentation()
-                        .AddHttpClientInstrumentation()
-                        .AddRuntimeInstrumentation()
-                        .AddProcessInstrumentation()
-                        .AddMeter("*")
-                        .AddOtlpExporter()
-                        .AddPrometheusExporter();
-                });
-            _serviceCollection.AddSingleton<ILogEventSink, LoggingMetricSink>();
-        }
-
-        internal void ConfigureTracing()
-        {
-            var tracingHost = _configuration["tracing:host"];
-            if (!string.IsNullOrEmpty(tracingHost))
-            {
-                _serviceCollection.AddSingleton<ILogEventEnricher, OpentelemetryTraceEnricher>();
-                var entryAssembly = Assembly.GetEntryAssembly();
-                _serviceCollection.AddOpenTelemetry().WithTracing(
-                    (builder) => builder
-                        .SetResourceBuilder(ResourceBuilder.CreateDefault().AddService(entryAssembly!.GetName().Name!))
-                        .AddSource("*")
-                        .AddHttpClientInstrumentation()
-                        .AddAspNetCoreInstrumentation(instrumentationOptions => instrumentationOptions.Filter = (context) => !context.Request.Path.StartsWithSegments("/swagger"))
-                        .AddOtlpExporter(o =>
-                        {
-                            _logger.LogInformation("Sending traces to {TracingHost}", tracingHost);
-                            o.Endpoint = new Uri(tracingHost);
-                            o.Protocol = OtlpExportProtocol.Grpc;
-                        })
-                );
-            }
-
             // Add ActivityListener to ActivitySource to enforce activitySource.StartActivity return non-null activities
             // see https://github.com/dotnet/runtime/issues/45070
             // must be done regardless if tracing is used or not otherwise there will be NREs
             var activityListener = new ActivityListener
             {
-                ShouldListenTo = s => true,
+                ShouldListenTo = _ => true,
                 SampleUsingParentId = (ref ActivityCreationOptions<string> _) => ActivitySamplingResult.AllData,
                 Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllData
             };
             ActivitySource.AddActivityListener(activityListener);
+            var otelConfig = _configuration.BindToSection<OtelConfiguration>("telemetry");
+            var entryAssembly = Assembly.GetEntryAssembly();
+            var serviceName = entryAssembly!.GetName().Name ?? "unknown-service";
+            var serviceVersion = entryAssembly.GetName().Version?.ToString() ?? "unknown";
+            var serviceInstanceId = Environment.MachineName;
+            Action<OtlpExporterOptions> setExporterOptions = opts =>
+            {
+                if (otelConfig?.Endpoint is null) return;
+                opts.Endpoint = otelConfig.Endpoint;
+                opts.Headers = string.Join(",", otelConfig.Headers.Select(x => $"{x.Name}={x.Value}"));
+                opts.Protocol = otelConfig.Protocol;
+            };
+            Action<ResourceBuilder> setResource = resource =>
+            {
+                resource.AddService(serviceName,
+                    serviceVersion: serviceVersion, serviceInstanceId: serviceInstanceId);
+            };
+            _serviceCollection.AddSingleton<ILogEventSink, LoggingMetricSink>();
+            Baggage.SetBaggage("AppName", serviceName);
+            var otel = _serviceCollection.AddOpenTelemetry();
+            otel.WithMetrics(
+                builder =>
+                {
+                    builder
+                        .ConfigureResource(setResource)
+                        .AddAspNetCoreInstrumentation()
+                        .AddHttpClientInstrumentation()
+                        .AddRuntimeInstrumentation()
+                        .AddProcessInstrumentation()
+                        .AddMeter("*")
+                        .AddOtlpExporter(setExporterOptions)
+                        .AddPrometheusExporter();
+                });
+            if (otelConfig?.Endpoint is null) return;
+            _serviceCollection.AddSingleton<ILogEventEnricher, OpentelemetryTraceEnricher>();
+            otel.WithTracing(
+                builder => builder
+                    .ConfigureResource(setResource)
+                    .AddSource("*")
+                    .AddHttpClientInstrumentation()
+                    .AddAspNetCoreInstrumentation(instrumentationOptions => instrumentationOptions.Filter = (context) => !context.Request.Path.StartsWithSegments("/swagger"))
+                    .AddOtlpExporter(setExporterOptions)
+            );
+            otel.WithLogging(builder =>
+            {
+                builder.ConfigureResource(setResource)
+                    .AddOtlpExporter(setExporterOptions);
+            });
         }
 
         private void ConfigureWebServices()
@@ -272,6 +270,8 @@ namespace Dosaic.Hosting.WebHost.Configurators
             options.UnknownTypeHandling = defaultOpts.UnknownTypeHandling;
             options.UnmappedMemberHandling = defaultOpts.UnmappedMemberHandling;
             options.WriteIndented = defaultOpts.WriteIndented;
+            options.RespectRequiredConstructorParameters = defaultOpts.RespectRequiredConstructorParameters;
+            options.RespectNullableAnnotations = defaultOpts.RespectNullableAnnotations;
             options.TypeInfoResolverChain.Clear();
             options.Converters.Clear();
             foreach (var converter in defaultOpts.Converters)
@@ -303,6 +303,15 @@ namespace Dosaic.Hosting.WebHost.Configurators
                 "One or more validations have failed.", actionContext.HttpContext.TraceIdentifier,
                 fieldValidationErrors);
             return new BadRequestObjectResult(validationErrorResponse);
+        }
+
+        internal class OtelConfiguration
+        {
+            public OtlpExportProtocol Protocol { get; set; } = OtlpExportProtocol.Grpc;
+            public Uri Endpoint { get; set; }
+            public IList<NameValuePair> Headers { get; set; } = [];
+
+            public record NameValuePair(string Name, string Value);
         }
     }
 }

@@ -6,7 +6,7 @@ namespace Dosaic.Testing.NUnit.Extensions
     {
         public static T GetInaccessibleValue<T>(this object obj, string name)
         {
-            var type = obj.GetType();
+            var type = obj?.GetType() ?? throw new ArgumentNullException(nameof(obj));
             while (type is not null)
             {
                 var field = type.GetField(name, BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Static);
@@ -19,5 +19,8 @@ namespace Dosaic.Testing.NUnit.Extensions
             }
             throw new ArgumentException($"Could not find field or property '{name}'");
         }
+
+        public static object GetInaccessibleValue(this object obj, string name) =>
+            obj.GetInaccessibleValue<object>(name);
     }
 }

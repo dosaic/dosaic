@@ -30,7 +30,6 @@ namespace Dosaic.Plugins.Management.Unleash
             {
                 UserId = context.User?.Identity?.Name,
                 AppName = _unleashConfiguration.AppName,
-                Environment = _unleashConfiguration.Environment,
                 CurrentTime = _dateTimeProvider.UtcNow,
                 RemoteAddress = context.Request?.Host.Host,
                 Properties = new Dictionary<string, string>()

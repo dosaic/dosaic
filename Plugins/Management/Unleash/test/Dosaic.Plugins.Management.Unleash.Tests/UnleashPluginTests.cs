@@ -23,9 +23,7 @@ namespace Dosaic.Plugins.Management.Unleash.Tests
             AppName = "unittest",
             ApiUri = "http://localhost:4242",
             ApiToken = "my-token",
-            ProjectId = "1",
             InstanceTag = "backup-instance",
-            Environment = "unittest",
         };
 
         private UnleashPlugin _plugin = null!;
@@ -54,9 +52,7 @@ namespace Dosaic.Plugins.Management.Unleash.Tests
             settings.AppName.Should().Be(GetUnleashConfiguration.AppName);
             settings.UnleashApi.Should().Be(GetUnleashConfiguration.ApiUri);
             settings.CustomHttpHeaders.Should().ContainValue(GetUnleashConfiguration.ApiToken);
-            settings.ProjectId.Should().Be(GetUnleashConfiguration.ProjectId);
             settings.InstanceTag.Should().Be(GetUnleashConfiguration.InstanceTag);
-            settings.Environment.Should().Be(GetUnleashConfiguration.Environment);
 
             var blobStorage = sp.GetRequiredService<IFeatureDefinitionProvider>();
             blobStorage.Should().NotBeNull();
@@ -105,13 +101,13 @@ namespace Dosaic.Plugins.Management.Unleash.Tests
         [Test]
         public void HandleToggleUpdatedEventShouldLogDebugAndIncrementMetric()
         {
-            using var metricsCollector = new TestMetricsCollector(UnleashPlugin.UnleashPluginToggleupdatesTotal);
+            using var metricsCollector = new TestMetricsCollector(UnleashPlugin.UnleashPluginToggleUpdatesTotal);
             metricsCollector.CollectedMetrics.Should().BeEmpty();
 
             _plugin.HandleTogglesUpdatedEvent(new TogglesUpdatedEvent() { UpdatedOn = new DateTime(2023, 11, 16, 1, 1, 1, DateTimeKind.Utc) });
             _fakeLogger.Entries.Should().Satisfy(x => x.Message == "Feature toggles updated on: 11/16/2023 01:01:01" && x.Level == LogLevel.Information);
 
-            metricsCollector.Instruments.Should().Contain(UnleashPlugin.UnleashPluginToggleupdatesTotal);
+            metricsCollector.Instruments.Should().Contain(UnleashPlugin.UnleashPluginToggleUpdatesTotal);
             metricsCollector.CollectedMetrics.Should().ContainsMetric(1);
         }
     }
