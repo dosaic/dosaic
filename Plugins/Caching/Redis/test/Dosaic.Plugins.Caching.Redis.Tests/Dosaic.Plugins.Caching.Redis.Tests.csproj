@@ -1,0 +1,6 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\..\..\Testing\NUnit\src\Dosaic.Testing.NUnit\Dosaic.Testing.NUnit.csproj" />
+    <ProjectReference Include="..\..\src\Dosaic.Plugins.Caching.Redis\Dosaic.Plugins.Caching.Redis.csproj" />
+  </ItemGroup>
+</Project>

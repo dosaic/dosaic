@@ -3,8 +3,10 @@
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
   </PropertyGroup>
   <ItemGroup>
+    <PackageVersion Include="AspNetCore.HealthChecks.Redis" Version="9.0.0" />
     <PackageVersion Version="8.0.0" Include="AwesomeAssertions" />
     <PackageVersion Version="9.0.1" Include="Microsoft.EntityFrameworkCore.Sqlite" />
+    <PackageVersion Include="Microsoft.Extensions.Caching.StackExchangeRedis" Version="9.0.1" />
     <PackageVersion Version="4.0.0" Include="Microsoft.FeatureManagement" />
     <PackageVersion Version="3.7.115" Include="Nerdbank.GitVersioning" />
     <PackageVersion Version="9.0.0" Include="AspNetCore.HealthChecks.Uris" />
