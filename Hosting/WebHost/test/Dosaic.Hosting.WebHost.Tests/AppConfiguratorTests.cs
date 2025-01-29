@@ -4,7 +4,7 @@ using Dosaic.Hosting.Abstractions.Plugins;
 using Dosaic.Hosting.Abstractions.Services;
 using Dosaic.Hosting.WebHost.Configurators;
 using Dosaic.Testing.NUnit.Assertions;
-using ExternalNamespace.Tests;
+using ExternalNamespace;
 using FluentAssertions;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -13,7 +13,7 @@ using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using NUnit.Framework;
 
-namespace ExternalNamespace.Tests
+namespace ExternalNamespace
 {
     internal class ExternalNamespaceTestPlugin : IPluginApplicationConfiguration, IPluginEndpointsConfiguration, IPluginServiceConfiguration
     {
@@ -56,6 +56,7 @@ namespace ExternalNamespace.Tests
 
 namespace Dosaic.Hosting.WebHost.Tests
 {
+
     public class AppConfiguratorTests
     {
 
@@ -69,7 +70,9 @@ namespace Dosaic.Hosting.WebHost.Tests
             webApplication.Services.AddControllers();
             var appConfigurator = new AppConfigurator(fakeLogger, webApplication.Build(), implementationResolver);
             implementationResolver.FindTypes().Returns(
-                new List<Type>() { typeof(ExternalNamespaceTestPlugin), typeof(DosaicNamespaceTestPlugin), typeof(XLastNamespaceTestPlugin) });
+            [
+                typeof(ExternalNamespaceTestPlugin), typeof(DosaicNamespaceTestPlugin), typeof(XLastNamespaceTestPlugin)
+            ]);
             implementationResolver.ResolveInstance(Arg.Is<Type>(t => t == typeof(ExternalNamespaceTestPlugin))).Returns(new ExternalNamespaceTestPlugin());
             implementationResolver.ResolveInstance(Arg.Is<Type>(t => t == typeof(DosaicNamespaceTestPlugin))).Returns(new DosaicNamespaceTestPlugin());
             implementationResolver.ResolveInstance(Arg.Is<Type>(t => t == typeof(XLastNamespaceTestPlugin))).Returns(new XLastNamespaceTestPlugin());

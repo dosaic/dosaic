@@ -1,4 +1,3 @@
-using System.Collections.Immutable;
 using Dosaic.Hosting.Abstractions.Extensions;
 using Dosaic.Plugins.Jobs.Hangfire.Job;
 using FluentAssertions;

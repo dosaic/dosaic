@@ -1,0 +1,12 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+    <ItemGroup>
+      <PackageReference Include="MassTransit" />
+      <PackageReference Include="MassTransit.RabbitMQ" />
+      <PackageReference Include="Polly" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\..\..\..\..\Hosting\Abstractions\src\Dosaic.Hosting.Abstractions\Dosaic.Hosting.Abstractions.csproj" />
+      <ProjectReference Include="..\..\..\Abstractions\src\Dosaic.Plugins.Messaging.Abstractions\Dosaic.Plugins.Messaging.Abstractions.csproj" />
+    </ItemGroup>
+</Project>

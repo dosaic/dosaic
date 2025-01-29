@@ -1,0 +1,10 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <PackageReference Include="DynamicExpresso.Core" />
+    <ProjectReference Include="..\..\..\..\..\Hosting\Abstractions\src\Dosaic.Hosting.Abstractions\Dosaic.Hosting.Abstractions.csproj" />
+    <ProjectReference Include="..\..\..\Abstractions\src\Dosaic.Plugins.Validations.Abstractions\Dosaic.Plugins.Validations.Abstractions.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Validators\" />
+  </ItemGroup>
+</Project>

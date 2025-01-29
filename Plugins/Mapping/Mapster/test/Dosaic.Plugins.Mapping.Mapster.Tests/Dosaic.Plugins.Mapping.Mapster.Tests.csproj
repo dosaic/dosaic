@@ -1,0 +1,12 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\..\..\..\..\Testing\NUnit\src\Dosaic.Testing.NUnit\Dosaic.Testing.NUnit.csproj" />
+      <ProjectReference Include="..\..\src\Dosaic.Plugins.Mapping.Mapster\Dosaic.Plugins.Mapping.Mapster.csproj" />
+    </ItemGroup>
+
+</Project>

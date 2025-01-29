@@ -126,21 +126,25 @@ Dosaic.Hosting.WebHostPluginWebHostBuilder.RunDefault(Dosaic.Generated.DosaicPlu
 
 Now you can add additional plugins as nuget packages to your project and configure them via config files/settings and/or in your web host plugin
 
-## Metrics
+## OpenTelemetry settings
+
+Dosaic uses open telemetry for it's tracing capabilities. Further info can be found here&#x20;
+
+https://opentelemetry.io/docs/instrumentation/net/getting-started/
+
+If there is a tracing host configured, the service will try to send any traces, metrics or logs to this host. it will also enrich the log messages with SpanIds and TraceIds.
+
+```yaml
+telemetry:
+  host: http://localhost:3333
+  protocol: grpc
+  headers:
+    - name: Authorization
+      value: Bearer
+```
+
+### Metrics
 
 Dosaic uses open telemetry for it's metrics capabilities. Further info can be found here&#x20;
 
 [#metrics](../Abstractions/#metrics "mention")
-
-## Tracing settings
-
-o uses open telemetry for it's tracing capabilities. Further info can be found here&#x20;
-
-https://opentelemetry.io/docs/instrumentation/net/getting-started/
-
-If there is a tracing host configured, the service will try to send any traces to this host. it will also enrich the log messages with SpanIds and TraceIds.
-
-```yaml
-tracing:
-  host: http://localhost:3333
-```

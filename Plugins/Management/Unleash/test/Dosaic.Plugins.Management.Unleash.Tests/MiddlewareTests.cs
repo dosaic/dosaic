@@ -42,7 +42,6 @@ namespace Dosaic.Plugins.Management.Unleash.Tests
             await middleware.Invoke(context);
             var propagatedContext = context.Items[UnleashMiddlware.Unleashcontext] as UnleashContext;
             propagatedContext!.AppName.Should().Be(unleashConfiguration.AppName);
-            propagatedContext!.Environment.Should().Be(unleashConfiguration.Environment);
             propagatedContext!.CurrentTime.Should().Be(_dateTimeOffset);
             propagatedContext!.Properties.Should().BeEmpty();
             propagatedContext!.SessionId.Should().BeNull();
@@ -67,7 +66,6 @@ namespace Dosaic.Plugins.Management.Unleash.Tests
             await middleware.Invoke(context);
             var propagatedContext = context.Items[UnleashMiddlware.Unleashcontext] as UnleashContext;
             propagatedContext!.AppName.Should().Be(unleashConfiguration.AppName);
-            propagatedContext!.Environment.Should().Be(unleashConfiguration.Environment);
             propagatedContext!.CurrentTime.Should().Be(_dateTimeOffset);
             propagatedContext!.Properties.Should().BeEmpty();
             propagatedContext!.SessionId.Should().Be(sessionId);

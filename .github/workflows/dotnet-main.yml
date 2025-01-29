@@ -76,6 +76,7 @@ jobs:
       with:
         name: Coverage Report-${{ matrix.runs-on }}
         path: coverage-results/**
+        overwrite: true
 
     - name: Write to Job Summary
       run: cat ./coverage-results/Summary.md >> $GITHUB_STEP_SUMMARY

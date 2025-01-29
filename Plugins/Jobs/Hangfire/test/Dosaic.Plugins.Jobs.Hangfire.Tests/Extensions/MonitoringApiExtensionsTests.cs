@@ -5,7 +5,7 @@ using Hangfire.Storage.Monitoring;
 using NSubstitute;
 using NUnit.Framework;
 
-namespace Dosaic.Plugins.Jobs.Hangfire.Tests.Extensionms
+namespace Dosaic.Plugins.Jobs.Hangfire.Tests.Extensions
 {
     public class MonitoringApiExtensionsTests
     {
