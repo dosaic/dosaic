@@ -222,7 +222,7 @@ namespace Dosaic.Hosting.WebHost.Logging
                 {
                     conf.WriteTo.Console(outputTemplate: NonContainerTemplate, formatProvider: CultureInfo.InvariantCulture);
                 }
-            }).ConfigureServices((context, services) => { services.AddSingleton<ILogger>(sp => sp.GetService<ILoggerFactory>().CreateLogger<ILogger>()); });
+            }, writeToProviders: true).ConfigureServices((context, services) => { services.AddSingleton<ILogger>(sp => sp.GetService<ILoggerFactory>().CreateLogger<ILogger>()); });
         }
     }
 }

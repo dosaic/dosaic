@@ -24,7 +24,8 @@ Configure your appsettings.yml with these properties
 Postgres for example
 ```yaml
 redisCache:
-  connectionString: "localhost:6379"
+  useInMemory: false # local testing
+  connectionString: "localhost:6379" # If using in memory, you dont need this
 ```
 
 ## Usage

@@ -27,6 +27,7 @@ using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Logging;
 using OpenTelemetry;
 using OpenTelemetry.Exporter;
+using OpenTelemetry.Extensions.Propagators;
 using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
@@ -152,6 +153,7 @@ namespace Dosaic.Hosting.WebHost.Configurators
                         .AddPrometheusExporter();
                 });
             if (otelConfig?.Endpoint is null) return;
+            Sdk.SetDefaultTextMapPropagator(new B3Propagator(true));
             _serviceCollection.AddSingleton<ILogEventEnricher, OpentelemetryTraceEnricher>();
             otel.WithTracing(
                 builder => builder
@@ -165,6 +167,10 @@ namespace Dosaic.Hosting.WebHost.Configurators
             {
                 builder.ConfigureResource(setResource)
                     .AddOtlpExporter(setExporterOptions);
+            }, opts =>
+            {
+                opts.IncludeFormattedMessage = true;
+                opts.IncludeScopes = true;
             });
         }
 

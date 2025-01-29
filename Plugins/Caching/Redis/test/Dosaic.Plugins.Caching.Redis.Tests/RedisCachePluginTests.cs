@@ -27,6 +27,17 @@ public class RedisCachePluginTests
     }
 
     [Test]
+    public void RegistersServicesInMemory()
+    {
+        var sc = TestingDefaults.ServiceCollection();
+        var plugin = new RedisCachePlugin(new RedisCacheConfiguration { UseInMemory = true });
+        plugin.ConfigureServices(sc);
+        var sp = sc.BuildServiceProvider();
+        sp.GetRequiredService<RedisCacheConfiguration>().Should().NotBeNull().And.BeEquivalentTo(new RedisCacheConfiguration { UseInMemory = true });
+        sp.GetRequiredService<IDistributedCache>().Should().BeAssignableTo<MemoryDistributedCache>();
+    }
+
+    [Test]
     public void RegistersServicesThrowsOnInvalidConfiguration()
     {
         var sc = TestingDefaults.ServiceCollection();

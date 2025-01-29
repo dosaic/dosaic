@@ -9,17 +9,23 @@ public class RedisCachePlugin(RedisCacheConfiguration configuration) : IPluginSe
 {
     public void ConfigureServices(IServiceCollection serviceCollection)
     {
+        serviceCollection.AddSingleton(configuration);
+        if (configuration.UseInMemory)
+        {
+            serviceCollection.AddDistributedMemoryCache();
+            return;
+        }
         if (string.IsNullOrWhiteSpace(configuration?.ConnectionString))
             throw new ArgumentException("Configuration: redisCache.ConnectionString is required but empty");
         serviceCollection.AddStackExchangeRedisCache(opts =>
         {
             opts.Configuration = configuration.ConnectionString;
         });
-        serviceCollection.AddSingleton(configuration);
     }
 
     public void ConfigureHealthChecks(IHealthChecksBuilder healthChecksBuilder)
     {
+        if (configuration.UseInMemory) return;
         healthChecksBuilder.AddRedis(configuration.ConnectionString, "redis", HealthStatus.Unhealthy, tags: [HealthCheckTag.Readiness.Value]);
     }
 }

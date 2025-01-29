@@ -60,6 +60,7 @@ namespace Dosaic.Hosting.WebHost.Configurators
 
         private void ConfigureLogging()
         {
+            _builder.Logging.ClearProviders();
             _builder.Host.UseStructuredLogging();
         }
 
