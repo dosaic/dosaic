@@ -10,6 +10,8 @@ public partial class Validations
         public override string Code => ValidationCodes.Required;
         public override object Arguments => new { };
         public override string ErrorMessage => "Field is required";
+        public override bool TreatNullAsValid => false;
+
         protected override bool IsValid(ValidationContext context)
         {
             return context.Value is not null

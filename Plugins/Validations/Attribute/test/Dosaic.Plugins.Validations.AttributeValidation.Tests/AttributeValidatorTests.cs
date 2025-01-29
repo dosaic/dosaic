@@ -172,6 +172,28 @@ public class ValidationsTests
         result.Errors[0].Code.Should().Be(ValidationCodes.GenericError);
         result.Errors[0].Path.Should().Be("Field");
     }
+
+    [Test]
+    public async Task NullablesWillBeNotAssertedWhenNull()
+    {
+        var dto = new RequiredDto();
+        var result = await _validator.ValidateAsync(dto);
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().HaveCount(1);
+        result.Errors[0].Code.Should().Be(ValidationCodes.Required);
+        result.Errors[0].Path.Should().Be(nameof(RequiredDto.Required));
+
+        var dto2 = new RequiredDto { Required = "123" };
+        result = await _validator.ValidateAsync(dto2);
+        result.IsValid.Should().BeTrue();
+
+        var dto3 = new RequiredDto { Required = "123", Nullable = "1" };
+        result = await _validator.ValidateAsync(dto3);
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().HaveCount(1);
+        result.Errors[0].Code.Should().Be(ValidationCodes.String.MinLength);
+        result.Errors[0].Path.Should().Be(nameof(RequiredDto.Nullable));
+    }
 }
 
 public class SomeDto
@@ -220,4 +242,13 @@ public class ThrowAttribute : SyncValidationAttribute
     public override string Code => "Throw";
     public override object Arguments => new { };
     protected override bool IsValid(ValidationContext context) => throw new Exception();
+}
+
+public class RequiredDto
+{
+    [AttributeValidation.Validators.Validations.Required]
+    public string Required { get; set; }
+
+    [AttributeValidation.Validators.Validations.String.MinLength(2)]
+    public string Nullable { get; set; }
 }

@@ -8,8 +8,6 @@ namespace Dosaic.Plugins.Validations.AttributeValidation;
 
 internal class AttributeValidator(IServiceProvider serviceProvider) : IValidator
 {
-    private static readonly IValueValidator _requiredValidator = new Validators.Validations.RequiredAttribute();
-
     private static readonly IDictionary<MemberInfo, IValueValidator[]>
         _validationCache = new ConcurrentDictionary<MemberInfo, IValueValidator[]>();
 
@@ -30,16 +28,11 @@ internal class AttributeValidator(IServiceProvider serviceProvider) : IValidator
     private static async Task<List<ValidationError>> RunValidationsAsync(ValidationContext context,
         IList<IValueValidator> validators, CancellationToken cancellationToken)
     {
-        if (ContainsValidator<Validators.Validations.RequiredAttribute>(validators))
-        {
-            if (!await _requiredValidator.IsValidAsync(context, cancellationToken))
-            {
-                return [CreateRequiredError(context.Path)];
-            }
-        }
         var errors = new List<ValidationError>();
         foreach (var validator in validators)
         {
+            if (validator.TreatNullAsValid && context.IsNullValue)
+                continue;
             try
             {
                 var result = await validator.IsValidAsync(context, cancellationToken);
@@ -125,17 +118,6 @@ internal class AttributeValidator(IServiceProvider serviceProvider) : IValidator
             return validators;
         return _validationCache[property] = property.GetCustomAttributes(typeof(IValueValidator), true).OfType<IValueValidator>().ToArray();
     }
-    private static bool ContainsValidator<T>(IEnumerable<IValueValidator> validators) where T : IValueValidator =>
-        validators.Any(i => i.GetType() == typeof(T));
-
-    private static ValidationError CreateRequiredError(string path) => new()
-    {
-        Path = path,
-        Arguments = new Dictionary<string, object>(),
-        Code = _requiredValidator.Code,
-        Validator = _requiredValidator.GetName(),
-        Message = _requiredValidator.ErrorMessage
-    };
 
     private static string NextPath(string basePath, string name) => string.IsNullOrEmpty(basePath) ? name : $"{basePath}/{name}";
 }
