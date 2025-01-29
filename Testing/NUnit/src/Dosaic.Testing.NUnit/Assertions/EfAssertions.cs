@@ -178,7 +178,7 @@ namespace Dosaic.Testing.NUnit.Assertions
             params object[] becauseArgs)
         {
             CurrentAssertionChain.BecauseOf(because, becauseArgs)
-                .ForCondition(!string.IsNullOrEmpty(property) && target.GetInterfaces().Any(i => i == typeof(IModel)))
+                .ForCondition(!string.IsNullOrEmpty(property))
                 .FailWith("You need to specify a property name and a target type which implements IEntity")
                 .Then
                 .Given(() => Subject.GetForeignKeys().FirstOrDefault(p =>
