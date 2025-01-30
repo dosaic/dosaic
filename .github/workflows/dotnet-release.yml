@@ -24,7 +24,7 @@ jobs:
 
       - name: retrieve version
         id: version
-        run: echo "NUGET_PKG_VERSION=${{ github.event.release.tag_name | remove('v') }}" >> $GITHUB_ENV
+        run: echo "NUGET_PKG_VERSION=${{ github.event.release.tag_name }}" >> $GITHUB_ENV
 
       - name: install
         run: dotnet restore

@@ -41,6 +41,7 @@ jobs:
       with:
         files: |
           test-results/**/*.trx
+        comment_mode: 'off'
 
     - name: publish coverage results
       uses: im-open/code-coverage-report-generator@4
