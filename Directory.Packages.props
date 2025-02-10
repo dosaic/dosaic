@@ -69,8 +69,8 @@
     <PackageVersion Version="2.2.0" Include="MongoDBMigrations" />
     <PackageVersion Version="6.0.4" Include="Minio" />
     <PackageVersion Version="13.0.3" Include="Newtonsoft.Json" />
-    <PackageVersion Version="8.3.1" Include="Microsoft.IdentityModel.Tokens" />
-    <PackageVersion Version="8.3.1" Include="System.IdentityModel.Tokens.Jwt" />
+    <PackageVersion Version="8.4.0" Include="Microsoft.IdentityModel.Tokens" />
+    <PackageVersion Version="8.4.0" Include="System.IdentityModel.Tokens.Jwt" />
     <PackageVersion Version="7.2.0" Include="Swashbuckle.AspNetCore.Annotations" />
     <PackageVersion Version="7.2.0" Include="Swashbuckle.AspNetCore.SwaggerUI" />
     <PackageVersion Version="5.1.1" Include="jose-jwt" />
