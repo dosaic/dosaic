@@ -44,10 +44,10 @@
     <PackageVersion Version="4.12.0" Include="Microsoft.CodeAnalysis.CSharp" />
     <PackageVersion Version="3.11.0" Include="Microsoft.CodeAnalysis.Analyzers" />
     <PackageVersion Version="9.0.1" Include="Microsoft.Extensions.Hosting.Abstractions" />
-    <PackageVersion Version="9.0.1" Include="Microsoft.Extensions.Logging.Abstractions" />
+    <PackageVersion Version="9.0.2" Include="Microsoft.Extensions.Logging.Abstractions" />
     <PackageVersion Version="9.0.1" Include="Microsoft.Extensions.Configuration" />
     <PackageVersion Version="9.0.1" Include="Microsoft.Extensions.DependencyInjection" />
-    <PackageVersion Version="9.0.1" Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+    <PackageVersion Version="9.0.2" Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
     <PackageVersion Version="9.0.1" Include="Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore" />
     <PackageVersion Version="9.0.1" Include="Microsoft.Extensions.Http.Polly" />
     <PackageVersion Version="9.0.1" Include="Microsoft.Extensions.Caching.Abstractions" />
@@ -64,7 +64,7 @@
     <PackageVersion Version="2.3.0" Include="Microsoft.AspNetCore.Hosting.Abstractions" />
     <PackageVersion Version="7.0.10" Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
     <PackageVersion Version="9.0.1" Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" />
-    <PackageVersion Version="9.0.1" Include="Microsoft.AspNetCore.Authorization" />
+    <PackageVersion Version="9.0.2" Include="Microsoft.AspNetCore.Authorization" />
     <PackageVersion Version="3.1.0" Include="MongoDB.Driver" />
     <PackageVersion Version="2.2.0" Include="MongoDBMigrations" />
     <PackageVersion Version="6.0.4" Include="Minio" />
