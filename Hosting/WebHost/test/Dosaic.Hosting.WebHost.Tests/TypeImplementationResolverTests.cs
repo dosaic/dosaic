@@ -22,7 +22,7 @@ namespace Dosaic.Hosting.WebHost.Tests
             var typeService = new TypeImplementationResolver(_configuration, _resolvedTypes, new Dictionary<Type, object>());
             var types = typeService.FindTypes(f => f.Implements<BaseClass>());
             types.Should().Contain(typeof(SampleType));
-            types.Should().NotContain(typeof(BaseClass));
+            types.Should().Contain(typeof(BaseClass));
         }
 
         [Test]

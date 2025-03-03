@@ -28,6 +28,7 @@ namespace Dosaic.Hosting.Abstractions.Extensions
         public static bool HasAttribute<T>(this Type type) where T : Attribute => type.GetCustomAttribute<T>() is not null;
         public static T GetAttribute<T>(this Type type) where T : Attribute => type.GetCustomAttribute<T>();
         public static IList<T> GetAttributes<T>(this Type type) where T : Attribute => type.GetCustomAttributes<T>().ToList();
+        public static bool CanBeInstantiated(this Type type) => !type.IsAbstract && !type.IsInterface;
         private static bool HasAnyInterfaces(Type type, Type implementationType)
         {
             return type.GetInterfaces()
@@ -42,5 +43,6 @@ namespace Dosaic.Hosting.Abstractions.Extensions
                     return currentInterface == implementationType;
                 });
         }
+        public static IList<Type> GetAssemblyTypes(this Type t, Predicate<Type> typePredicate = null) => t.Assembly.GetTypes(typePredicate);
     }
 }
