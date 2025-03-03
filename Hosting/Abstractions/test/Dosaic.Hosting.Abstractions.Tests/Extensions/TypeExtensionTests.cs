@@ -11,6 +11,7 @@ namespace Dosaic.Hosting.Abstractions.Tests.Extensions
         {
             var type = typeof(TestClass);
             type.HasAttribute<CustomAttribute>().Should().BeTrue();
+            type.CanBeInstantiated().Should().BeTrue();
             var attribute = type.GetAttribute<CustomAttribute>();
             attribute.Should().NotBeNull();
             attribute!.Name.Should().Be("TEST");

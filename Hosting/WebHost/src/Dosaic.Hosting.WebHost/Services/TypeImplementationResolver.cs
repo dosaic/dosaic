@@ -106,7 +106,7 @@ namespace Dosaic.Hosting.WebHost.Services
 
         public List<Type> FindTypes()
         {
-            return _resolvedTypes.ToList();
+            return _resolvedTypes.Select(x => x.Assembly).Distinct().SelectMany(x => x.GetTypes()).ToList();
         }
 
         public List<Assembly> FindAssemblies()
