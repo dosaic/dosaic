@@ -10,6 +10,7 @@ namespace Dosaic.Hosting.Abstractions.Extensions
 
             while (currentChild != typeof(object))
             {
+                if (type == implementationType) return false;
                 if (implementationType == currentChild
                     || HasAnyInterfaces(currentChild, implementationType)
                     || implementationType == currentChild.BaseType)
