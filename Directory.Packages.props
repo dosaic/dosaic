@@ -6,106 +6,108 @@
     <PackageVersion Include="AspNetCore.HealthChecks.Redis" Version="9.0.0" />
     <PackageVersion Version="8.0.1" Include="AwesomeAssertions" />
     <PackageVersion Include="Buildalyzer.Workspaces" Version="7.1.0" />
-    <PackageVersion Include="Microsoft.CodeAnalysis" Version="4.13.0" />
-    <PackageVersion Include="Microsoft.CodeAnalysis.Common" Version="4.13.0" />
-    <PackageVersion Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="4.13.0" />
-    <PackageVersion Include="Microsoft.CodeAnalysis.VisualBasic.Workspaces" Version="4.13.0" />
-    <PackageVersion Include="Microsoft.CodeAnalysis.Workspaces.Common" Version="4.13.0" />
-    <PackageVersion Include="Microsoft.CodeAnalysis.Workspaces.MSBuild" Version="4.13.0" />
-    <PackageVersion Version="9.0.2" Include="Microsoft.EntityFrameworkCore.Sqlite" />
+    <PackageVersion Include="Microsoft.CodeAnalysis" Version="4.12.0" />
+
+    <!-- We need to stay on 4.12.0 because of the compiler warning: Referenced Version '4.13.0' is newer than the currently installed '4.12.0' -->
+    <PackageVersion Include="Microsoft.CodeAnalysis.Common" Version="4.12.0" />
+    <PackageVersion Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="4.12.0" />
+    <PackageVersion Include="Microsoft.CodeAnalysis.VisualBasic.Workspaces" Version="4.12.0" />
+    <PackageVersion Include="Microsoft.CodeAnalysis.Workspaces.Common" Version="4.12.0" />
+    <PackageVersion Include="Microsoft.CodeAnalysis.Workspaces.MSBuild" Version="4.12.0" />
+    <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="4.12.0" />
+
+    <PackageVersion Include="Microsoft.CodeAnalysis.Analyzers" Version="3.11.0" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="9.0.2" />
     <PackageVersion Include="Microsoft.Extensions.Caching.StackExchangeRedis" Version="9.0.2" />
-    <PackageVersion Version="4.0.0" Include="Microsoft.FeatureManagement" />
-    <PackageVersion Version="3.7.115" Include="Nerdbank.GitVersioning" />
-    <PackageVersion Version="9.0.0" Include="AspNetCore.HealthChecks.Uris" />
-    <PackageVersion Version="9.0.0" Include="AspNetCore.HealthChecks.Hangfire" />
-    <PackageVersion Version="9.0.0" Include="AspNetCore.HealthChecks.MongoDb" />
-    <PackageVersion Version="9.0.0" Include="AspNetCore.HealthChecks.System" />
-    <PackageVersion Version="5.0.0" Include="AspNetCoreRateLimit" />
-    <PackageVersion Version="2.2.1" Include="BouncyCastle.NetCore" />
-    <PackageVersion Version="2.0.24" Include="Chronos.Abstractions" />
-    <PackageVersion Version="2.0.24" Include="Chronos.Net" />
-    <PackageVersion Version="11.11.0" Include="FluentValidation" />
-    <PackageVersion Version="3.25.2" Include="Google.Protobuf" />
-    <PackageVersion Version="2.46.6" Include="Grpc" />
-    <PackageVersion Version="2.60.0" Include="Grpc.Tools">
+    <PackageVersion Include="Microsoft.FeatureManagement" Version="4.0.0" />
+    <PackageVersion Include="AspNetCore.HealthChecks.Uris" Version="9.0.0" />
+    <PackageVersion Include="AspNetCore.HealthChecks.Hangfire" Version="9.0.0" />
+    <PackageVersion Include="AspNetCore.HealthChecks.MongoDb" Version="9.0.0" />
+    <PackageVersion Include="AspNetCore.HealthChecks.System" Version="9.0.0" />
+    <PackageVersion Include="AspNetCoreRateLimit" Version="5.0.0" />
+    <PackageVersion Include="BouncyCastle.NetCore" Version="2.2.1" />
+    <PackageVersion Include="Chronos.Abstractions" Version="2.0.24" />
+    <PackageVersion Include="Chronos.Net" Version="2.0.24" />
+    <PackageVersion Include="FluentValidation" Version="11.11.0" />
+    <PackageVersion Include="Google.Protobuf" Version="3.25.2" />
+    <PackageVersion Include="Grpc" Version="2.46.6" />
+    <PackageVersion Include="Grpc.Tools" Version="2.60.0">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageVersion>
-    <PackageVersion Version="1.8.18" Include="HangFire" />
-    <PackageVersion Version="1.8.1.1" Include="Hangfire.MemoryStorage" />
-    <PackageVersion Version="1.20.10" Include="Hangfire.PostgreSql" />
-    <PackageVersion Version="3.1.0" Include="NetEscapades.Configuration.Yaml" />
-    <PackageVersion Version="1.7.0-rc.1" Include="OpenTelemetry.Exporter.Prometheus.AspNetCore" />
-    <PackageVersion Version="1.11.1" Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" />
-    <PackageVersion Version="1.0.0-beta.10" Include="OpenTelemetry.Instrumentation.EntityFrameworkCore" />
-    <PackageVersion Version="1.11.1" Include="OpenTelemetry.Extensions.Hosting" />
-    <PackageVersion Version="1.11.0" Include="OpenTelemetry.Instrumentation.AspNetCore" />
-    <PackageVersion Version="1.11.0" Include="OpenTelemetry.Instrumentation.Http" />
-    <PackageVersion Version="1.11.0" Include="OpenTelemetry.Instrumentation.Runtime" />
-    <PackageVersion Version="1.11.1" Include="OpenTelemetry.Extensions.Propagators" />
-    <PackageVersion Version="0.5.0-beta.4" Include="OpenTelemetry.Instrumentation.Process" />
-    <PackageVersion Version="9.0.0" Include="Serilog.AspNetCore" />
-    <PackageVersion Version="3.1.0" Include="Serilog.Enrichers.Span" />
-    <PackageVersion Version="4.0.0" Include="Serilog.Enrichers.Thread" />
-    <PackageVersion Version="1.51.91" Include="ODataQueryHelper.Core" />
-    <PackageVersion Version="4.13.0" Include="Microsoft.CodeAnalysis.CSharp" />
-    <PackageVersion Version="3.11.0" Include="Microsoft.CodeAnalysis.Analyzers" />
-    <PackageVersion Version="9.0.2" Include="Microsoft.Extensions.Hosting.Abstractions" />
-    <PackageVersion Version="9.0.2" Include="Microsoft.Extensions.Logging.Abstractions" />
-    <PackageVersion Version="9.0.2" Include="Microsoft.Extensions.Configuration" />
-    <PackageVersion Version="9.0.2" Include="Microsoft.Extensions.DependencyInjection" />
-    <PackageVersion Version="9.0.2" Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
-    <PackageVersion Version="9.0.2" Include="Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore" />
-    <PackageVersion Version="9.0.2" Include="Microsoft.Extensions.Http.Polly" />
-    <PackageVersion Version="9.0.2" Include="Microsoft.Extensions.Caching.Abstractions" />
-    <PackageVersion Version="9.0.2" Include="Microsoft.Extensions.Http" />
-    <PackageVersion Version="4.0.0" Include="Microsoft.FeatureManagement.AspNetCore" />
-    <PackageVersion Version="9.0.2" Include="Microsoft.EntityFrameworkCore" />
-    <PackageVersion Version="9.0.2" Include="Microsoft.EntityFrameworkCore.Relational" />
-    <PackageVersion Version="9.0.2" Include="Microsoft.EntityFrameworkCore.Tools">
+    <PackageVersion Include="HangFire" Version="1.8.18" />
+    <PackageVersion Include="Hangfire.MemoryStorage" Version="1.8.1.1" />
+    <PackageVersion Include="Hangfire.PostgreSql" Version="1.20.10" />
+    <PackageVersion Include="NetEscapades.Configuration.Yaml" Version="3.1.0" />
+    <PackageVersion Include="OpenTelemetry.Exporter.Prometheus.AspNetCore" Version="1.7.0-rc.1" />
+    <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.11.1" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.EntityFrameworkCore" Version="1.0.0-beta.10" />
+    <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.11.1" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.11.0" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.11.0" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.11.0" />
+    <PackageVersion Include="OpenTelemetry.Extensions.Propagators" Version="1.11.1" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.Process" Version="0.5.0-beta.4" />
+    <PackageVersion Include="Serilog.AspNetCore" Version="9.0.0" />
+    <PackageVersion Include="Serilog.Enrichers.Span" Version="3.1.0" />
+    <PackageVersion Include="Serilog.Enrichers.Thread" Version="4.0.0" />
+    <PackageVersion Include="ODataQueryHelper.Core" Version="1.51.91" />
+    <PackageVersion Include="Microsoft.Extensions.Hosting.Abstractions" Version="9.0.2" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.2" />
+    <PackageVersion Include="Microsoft.Extensions.Configuration" Version="9.0.2" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="9.0.2" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.2" />
+    <PackageVersion Include="Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore" Version="9.0.2" />
+    <PackageVersion Include="Microsoft.Extensions.Http.Polly" Version="9.0.2" />
+    <PackageVersion Include="Microsoft.Extensions.Caching.Abstractions" Version="9.0.2" />
+    <PackageVersion Include="Microsoft.Extensions.Http" Version="9.0.2" />
+    <PackageVersion Include="Microsoft.FeatureManagement.AspNetCore" Version="4.0.0" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="9.0.2" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Relational" Version="9.0.2" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Tools" Version="9.0.2">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageVersion>
-    <PackageVersion Version="9.0.2" Include="Microsoft.EntityFrameworkCore.InMemory" />
-    <PackageVersion Version="9.0.2" Include="Microsoft.AspNetCore.Diagnostics.EntityFrameworkCore" />
-    <PackageVersion Version="2.3.0" Include="Microsoft.AspNetCore.Hosting.Abstractions" />
-    <PackageVersion Version="7.0.10" Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
-    <PackageVersion Version="9.0.2" Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" />
-    <PackageVersion Version="9.0.2" Include="Microsoft.AspNetCore.Authorization" />
-    <PackageVersion Version="3.2.1" Include="MongoDB.Driver" />
-    <PackageVersion Version="2.2.0" Include="MongoDBMigrations" />
-    <PackageVersion Version="6.0.4" Include="Minio" />
-    <PackageVersion Version="13.0.3" Include="Newtonsoft.Json" />
-    <PackageVersion Version="8.6.0" Include="Microsoft.IdentityModel.Tokens" />
-    <PackageVersion Version="8.6.0" Include="System.IdentityModel.Tokens.Jwt" />
-    <PackageVersion Version="7.3.1" Include="Swashbuckle.AspNetCore.Annotations" />
-    <PackageVersion Version="7.3.1" Include="Swashbuckle.AspNetCore.SwaggerUI" />
-    <PackageVersion Version="5.1.1" Include="jose-jwt" />
-    <PackageVersion Version="7.0.0" Include="RichardSzalay.MockHttp" />
-    <PackageVersion Version="7.0.4" Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
-    <PackageVersion Version="1.6.4" Include="Restease" />
-    <PackageVersion Version="2.13.1" Include="AutoBogus" />
-    <PackageVersion Version="3.0.0" Include="NaughtyStrings.Bogus" />
-    <PackageVersion Version="35.6.2" Include="Bogus" />
-    <PackageVersion Version="17.12.0" Include="Microsoft.NET.Test.Sdk" />
-    <PackageVersion Version="4.6.0" Include="NUnit3TestAdapter" />
-    <PackageVersion Version="5.3.0" Include="NSubstitute" />
-    <PackageVersion Version="1.0.17" Include="NSubstitute.Analyzers.CSharp" />
-    <PackageVersion Version="4.3.2" Include="NUnit" />
-    <PackageVersion Version="1.2.1.1" Include="NUnit.Allure" />
-    <PackageVersion Version="0.11.3" Include="TngTech.ArchUnitNET.NUnit" />
-    <PackageVersion Version="2024.2.0" Include="SSH.NET" />
-    <PackageVersion Version="4.3.4" Include="System.Net.Http" />
-    <PackageVersion Version="4.3.1" Include="System.Text.RegularExpressions" />
-    <PackageVersion Version="5.1.1" Include="Unleash.Client" />
-    <PackageVersion Version="7.0.1" Include="Vogen" />
-    <PackageVersion Version="1.7.4" Include="WireMock.Net" />
-    <PackageVersion Version="16.3.0" Include="YamlDotNet" />
-    <PackageVersion Version="1.3.10" Include="EzSmb" />
-    <PackageVersion Version="8.5.2" Include="Polly" />
-    <PackageVersion Version="8.3.6" Include="MassTransit" />
-    <PackageVersion Version="8.3.6" Include="MassTransit.RabbitMQ" />
-    <PackageVersion Version="2.17.2" Include="DynamicExpresso.Core" />
-    <PackageVersion Version="7.4.0" Include="Mapster" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.InMemory" Version="9.0.2" />
+    <PackageVersion Include="Microsoft.AspNetCore.Diagnostics.EntityFrameworkCore" Version="9.0.2" />
+    <PackageVersion Include="Microsoft.AspNetCore.Hosting.Abstractions" Version="2.3.0" />
+    <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="7.0.10" />
+    <PackageVersion Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="9.0.2" />
+    <PackageVersion Include="Microsoft.AspNetCore.Authorization" Version="9.0.2" />
+    <PackageVersion Include="MongoDB.Driver" Version="3.2.1" />
+    <PackageVersion Include="MongoDBMigrations" Version="2.2.0" />
+    <PackageVersion Include="Minio" Version="6.0.4" />
+    <PackageVersion Include="Newtonsoft.Json" Version="13.0.3" />
+    <PackageVersion Include="Microsoft.IdentityModel.Tokens" Version="8.6.0" />
+    <PackageVersion Include="System.IdentityModel.Tokens.Jwt" Version="8.6.0" />
+    <PackageVersion Include="Swashbuckle.AspNetCore.Annotations" Version="7.3.1" />
+    <PackageVersion Include="Swashbuckle.AspNetCore.SwaggerUI" Version="7.3.1" />
+    <PackageVersion Include="jose-jwt" Version="5.1.1" />
+    <PackageVersion Include="RichardSzalay.MockHttp" Version="7.0.0" />
+    <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="7.0.4" />
+    <PackageVersion Include="Restease" Version="1.6.4" />
+    <PackageVersion Include="AutoBogus" Version="2.13.1" />
+    <PackageVersion Include="NaughtyStrings.Bogus" Version="3.0.0" />
+    <PackageVersion Include="Bogus" Version="35.6.2" />
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.13.0" />
+    <PackageVersion Include="NUnit3TestAdapter" Version="5.0.0" />
+    <PackageVersion Include="NSubstitute" Version="5.3.0" />
+    <PackageVersion Include="NSubstitute.Analyzers.CSharp" Version="1.0.17" />
+    <PackageVersion Include="NUnit" Version="4.3.2" />
+    <PackageVersion Include="NUnit.Allure" Version="1.2.1.1" />
+    <PackageVersion Include="TngTech.ArchUnitNET.NUnit" Version="0.11.3" />
+    <PackageVersion Include="SSH.NET" Version="2024.2.0" />
+    <PackageVersion Include="System.Net.Http" Version="4.3.4" />
+    <PackageVersion Include="System.Text.RegularExpressions" Version="4.3.1" />
+    <PackageVersion Include="Unleash.Client" Version="5.1.1" />
+    <PackageVersion Include="Vogen" Version="7.0.1" />
+    <PackageVersion Include="WireMock.Net" Version="1.7.4" />
+    <PackageVersion Include="YamlDotNet" Version="16.3.0" />
+    <PackageVersion Include="EzSmb" Version="1.3.10" />
+    <PackageVersion Include="Polly" Version="8.5.2" />
+    <PackageVersion Include="MassTransit" Version="8.3.6" />
+    <PackageVersion Include="MassTransit.RabbitMQ" Version="8.3.6" />
+    <PackageVersion Include="DynamicExpresso.Core" Version="2.17.2" />
+    <PackageVersion Include="Mapster" Version="7.4.0" />
   </ItemGroup>
 </Project>
