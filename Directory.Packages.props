@@ -5,6 +5,13 @@
   <ItemGroup>
     <PackageVersion Include="AspNetCore.HealthChecks.Redis" Version="9.0.0" />
     <PackageVersion Version="8.0.1" Include="AwesomeAssertions" />
+    <PackageVersion Include="Buildalyzer.Workspaces" Version="7.1.0" />
+    <PackageVersion Include="Microsoft.CodeAnalysis" Version="4.13.0" />
+    <PackageVersion Include="Microsoft.CodeAnalysis.Common" Version="4.13.0" />
+    <PackageVersion Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="4.13.0" />
+    <PackageVersion Include="Microsoft.CodeAnalysis.VisualBasic.Workspaces" Version="4.13.0" />
+    <PackageVersion Include="Microsoft.CodeAnalysis.Workspaces.Common" Version="4.13.0" />
+    <PackageVersion Include="Microsoft.CodeAnalysis.Workspaces.MSBuild" Version="4.13.0" />
     <PackageVersion Version="9.0.2" Include="Microsoft.EntityFrameworkCore.Sqlite" />
     <PackageVersion Include="Microsoft.Extensions.Caching.StackExchangeRedis" Version="9.0.2" />
     <PackageVersion Version="4.0.0" Include="Microsoft.FeatureManagement" />
