@@ -15,12 +15,6 @@
     <Using Include="System.Threading.Tasks"/>
   </ItemGroup>
 
-  <ItemGroup>
-    <PackageReference Include="Nerdbank.GitVersioning" Condition="!Exists('packages.config')">
-      <PrivateAssets>all</PrivateAssets>
-    </PackageReference>
-  </ItemGroup>
-
   <ItemGroup Condition="!Exists('packages.config') AND $(MSBuildProjectName.EndsWith('Tests')) == false">
     <None Include="..\..\README.md" Pack="true" PackagePath="\"/>
     <None Include="$(SolutionDir)\.gitbook\assets\dosaic.png" Pack="true" PackagePath="\"/>

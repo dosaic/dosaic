@@ -22,7 +22,7 @@ namespace Dosaic.Hosting.WebHost.Tests
             var typeService = new TypeImplementationResolver(_configuration, _resolvedTypes, new Dictionary<Type, object>());
             var types = typeService.FindTypes(f => f.Implements<BaseClass>());
             types.Should().Contain(typeof(SampleType));
-            types.Should().Contain(typeof(BaseClass));
+            types.Should().NotContain(typeof(BaseClass));
         }
 
         [Test]
@@ -67,9 +67,11 @@ namespace Dosaic.Hosting.WebHost.Tests
         public void CanActivateWithEmptyCtor()
         {
             IImplementationResolver implementationResolver = new TypeImplementationResolver(_configuration, _resolvedTypes, new Dictionary<Type, object>());
-            var instances = implementationResolver.FindAndResolve<WithoutCtor>();
+            var instances = implementationResolver.FindAndResolve<BaseCtor>();
             instances.Should().HaveCount(1);
-            instances.Single().GetTest().Should().Be("TEST");
+            var instance = instances.Single();
+            var withoutCtor = instance.Should().BeOfType<WithoutCtor>().Subject;
+            withoutCtor.GetTest().Should().Be("TEST");
         }
 
         [Test]
@@ -151,7 +153,9 @@ namespace Dosaic.Hosting.WebHost.Tests
         }
 #pragma warning restore S3881
 
-        private class WithoutCtor
+        private abstract class BaseCtor;
+
+        private class WithoutCtor : BaseCtor
         {
             private readonly string Test = "TEST";
             public string GetTest() => Test;

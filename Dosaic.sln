@@ -194,7 +194,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dosaic.Hosting.Generator", 
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "repository", "repository", "{3F883F3B-A2EA-4957-B1E7-0A86A575A346}"
 	ProjectSection(SolutionItems) = preProject
-		version.json = version.json
 		README.md = README.md
 		NuGet.Config = NuGet.Config
 		global.json = global.json
@@ -206,7 +205,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "repository", "repository", 
 		packages.sh = packages.sh
 		CODE_OF_CONDUCT.md = CODE_OF_CONDUCT.md
 		SUMMARY.md = SUMMARY.md
-		LICENSE.txt = LICENSE.txt
+		LICENSE = LICENSE
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "example", "example", "{87571A7A-0B36-4D9E-AA5C-D91A470BBD06}"

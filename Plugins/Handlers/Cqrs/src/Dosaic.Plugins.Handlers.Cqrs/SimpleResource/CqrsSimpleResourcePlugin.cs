@@ -42,7 +42,7 @@ namespace Dosaic.Plugins.Handlers.Cqrs.SimpleResource
 
         private IEnumerable<(Type interfaceType, Type implementationType)> FindTypesAndInterfaces<T>()
         {
-            const string assemblyName = ThisAssembly.AssemblyName;
+            var assemblyName = typeof(CqrsSimpleResourcePlugin).Assembly.GetName().Name;
             var types = _implementationResolver.FindTypes(t => t.Implements<T>() && t.Assembly.GetName().Name != assemblyName);
             foreach (var type in types)
             {
