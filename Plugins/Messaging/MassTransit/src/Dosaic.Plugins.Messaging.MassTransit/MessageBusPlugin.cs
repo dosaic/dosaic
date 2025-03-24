@@ -10,7 +10,7 @@ namespace Dosaic.Plugins.Messaging.MassTransit;
 
 public class MessageBusPlugin(IImplementationResolver implementationResolver, MessageBusConfiguration configuration) : IPluginServiceConfiguration
 {
-    private record QueueMessageTypes(string Queue, Type[] MessageTypes);
+    private record QueueMessageTypes(Uri Queue, Type[] MessageTypes);
     private IList<Type> GetMessageConsumers()
     {
         var messageConsumers = implementationResolver.FindAssemblies().SelectMany(x => x.GetTypes())
@@ -70,7 +70,7 @@ public class MessageBusPlugin(IImplementationResolver implementationResolver, Me
                 });
                 foreach (var queueGroup in queueGroups)
                 {
-                    config.ReceiveEndpoint(queueGroup.Queue, configurator =>
+                    config.ReceiveEndpoint(queueGroup.Queue.PathAndQuery, configurator =>
                     {
                         foreach (var messageType in queueGroup.MessageTypes)
                             configurator.ConfigureConsumer(context, consumerType.MakeGenericType(messageType));
