@@ -4,6 +4,5 @@ namespace Dosaic.Plugins.Messaging.MassTransit;
 
 internal class MessageValidator(Type[] consumedMessageTypes) : IMessageValidator
 {
-    public bool HasConsumers<TMessage>() where TMessage : IMessage =>
-        consumedMessageTypes.Contains(typeof(TMessage));
+    public bool HasConsumers(Type t) => consumedMessageTypes.Contains(t);
 }
