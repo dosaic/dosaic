@@ -34,4 +34,17 @@ namespace Dosaic.Example.Service
             return Task.FromResult<object>(new { Hello = "World" });
         }
     }
+
+    [RecurringJob("*/1 * * * *")]
+    public class TestJob2<T> : AsyncJob
+    {
+        public TestJob2(ILogger logger) : base(logger)
+        {
+        }
+
+        protected override Task<object> ExecuteJobAsync(CancellationToken cancellationToken)
+        {
+            throw new NotImplementedException();
+        }
+    }
 }

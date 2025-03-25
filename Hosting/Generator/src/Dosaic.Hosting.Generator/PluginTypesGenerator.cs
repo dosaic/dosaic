@@ -44,7 +44,7 @@ namespace Dosaic.Hosting.Generator
                 sourceBuilder.AppendLine(" public static Type[] All = new Type[] {");
                 foreach (var pluginClass in classes)
                 {
-                    sourceBuilder.AppendLine("  typeof(" + pluginClass.FullName + "),");
+                    sourceBuilder.AppendLine($"  {pluginClass.TypeOfName},");
                 }
 
                 sourceBuilder.AppendLine(" };");
