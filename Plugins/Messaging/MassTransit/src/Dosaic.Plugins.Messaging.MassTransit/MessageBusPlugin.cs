@@ -1,4 +1,6 @@
+using Chronos.Abstractions;
 using Dosaic.Hosting.Abstractions;
+using Dosaic.Hosting.Abstractions.Extensions;
 using Dosaic.Hosting.Abstractions.Plugins;
 using Dosaic.Hosting.Abstractions.Services;
 using Dosaic.Plugins.Messaging.Abstractions;
@@ -8,7 +10,7 @@ using Microsoft.Extensions.Diagnostics.HealthChecks;
 
 namespace Dosaic.Plugins.Messaging.MassTransit;
 
-public class MessageBusPlugin(IImplementationResolver implementationResolver, MessageBusConfiguration configuration) : IPluginServiceConfiguration
+public class MessageBusPlugin(IImplementationResolver implementationResolver, MessageBusConfiguration configuration, IMessageBusConfigurator[] configurators) : IPluginServiceConfiguration
 {
     private record QueueMessageTypes(Uri Queue, Type[] MessageTypes);
     private IList<Type> GetMessageConsumers()
@@ -47,7 +49,10 @@ public class MessageBusPlugin(IImplementationResolver implementationResolver, Me
         var queueGroups = GetQueueGroups();
         var messageTypes = queueGroups.SelectMany(x => x.MessageTypes).Distinct().ToArray();
         serviceCollection.AddSingleton<IMessageValidator>(new MessageValidator(messageTypes));
-        serviceCollection.AddSingleton<IMessageBus, MessageSender>();
+        serviceCollection.AddSingleton<IMessageBus>(sp => new MessageSender(sp.GetRequiredService<IDateTimeProvider>(),
+            sp.GetRequiredService<ISendEndpointProvider>(),
+            sp.GetRequiredService<IMessageValidator>(),
+            sp.GetService<IMessageScheduler>()));
         ConfigureMassTransit(serviceCollection, messageTypes, queueGroups);
     }
 
@@ -62,6 +67,8 @@ public class MessageBusPlugin(IImplementationResolver implementationResolver, Me
             {
                 config.Host(configuration.Host, configuration.Port, configuration.VHost, h =>
                 {
+                    h.Heartbeat(TimeSpan.FromSeconds(30));
+                    h.PublisherConfirmation = true;
                     if (configuration.Username is not null && configuration.Password is not null)
                     {
                         h.Username(configuration.Username);
@@ -72,10 +79,17 @@ public class MessageBusPlugin(IImplementationResolver implementationResolver, Me
                 {
                     config.ReceiveEndpoint(queueGroup.Queue.PathAndQuery, configurator =>
                     {
+                        configurators.ForEach(x => x.ConfigureReceiveEndpoint(context, queueGroup.Queue, configurator));
+                        if (configuration.UseRetry)
+                        {
+                            configurator.UseMessageRetry(r => r.Interval(configuration.MaxRetryCount, TimeSpan.FromSeconds(configuration.RetryDelaySeconds)));
+                        }
+                        configurator.UseDelayedRedelivery(r => r.Interval(configuration.MaxRedeliveryCount, TimeSpan.FromSeconds(configuration.RedeliveryDelaySeconds)));
                         foreach (var messageType in queueGroup.MessageTypes)
                             configurator.ConfigureConsumer(context, consumerType.MakeGenericType(messageType));
                     });
                 }
+                configurators.ForEach(x => x.ConfigureRabbitMq(context, config));
                 config.ConfigureEndpoints(context);
             });
             opts.AddHealthChecks();
@@ -85,6 +99,7 @@ public class MessageBusPlugin(IImplementationResolver implementationResolver, Me
                 o.Tags.Add(HealthCheckTag.Readiness.Value);
                 o.MinimalFailureStatus = HealthStatus.Unhealthy;
             });
+            configurators.ForEach(x => x.ConfigureMassTransit(opts));
         });
     }
 }

@@ -19,7 +19,6 @@ or add as package reference to your .csproj
 
 Configure your appsettings.yml with these properties
 
-Postgres for example
 ```yaml
 messageBus:
   host: localhost
@@ -27,6 +26,11 @@ messageBus:
   vhost: /
   username: rabbitmq
   password: rabbitmq
+  useRetry: false
+  maxRetryCount: 3
+  retryDelaySeconds: 30
+  maxRedeliveryCount: 3
+  redeliveryDelaySeconds: 30
 ```
 
 ## Usage

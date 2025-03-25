@@ -26,16 +26,23 @@ public class MessageBusPluginTests
         Password = "password",
         Port = 5500,
         Username = "username",
-        VHost = "/"
+        VHost = "/",
+        UseRetry = true,
+        MaxRedeliveryCount = 3,
+        MaxRetryCount = 3,
+        RetryDelaySeconds = 30,
+        RedeliveryDelaySeconds = 30
     };
     private IImplementationResolver _implementationResolver;
     private MessageBusPlugin _plugin;
+    private IMessageBusConfigurator _configurator;
 
     [SetUp]
     public void Setup()
     {
+        _configurator = Substitute.For<IMessageBusConfigurator>();
         _implementationResolver = Substitute.For<IImplementationResolver>();
-        _plugin = new MessageBusPlugin(_implementationResolver, _configuration);
+        _plugin = new MessageBusPlugin(_implementationResolver, _configuration, [_configurator]);
         _implementationResolver.FindAssemblies().Returns([typeof(TestConsumer).Assembly]);
     }
 
@@ -56,6 +63,8 @@ public class MessageBusPluginTests
         hostConfig.Settings.VirtualHost.Should().Be(_configuration.VHost);
         hostConfig.Settings.Username.Should().Be(_configuration.Username);
         hostConfig.Settings.Password.Should().Be(_configuration.Password);
+        hostConfig.Settings.Heartbeat.Should().Be(TimeSpan.FromSeconds(30));
+        hostConfig.Settings.PublisherConfirmation.Should().Be(true);
         var ep = host.GetInaccessibleValue<ReceiveEndpointCollection>("ReceiveEndpoints")
             .GetInaccessibleValue<SingleThreadedDictionary<string, ReceiveEndpoint>>("_endpoints");
         ep.Should().ContainKey(nameof(TestMessage));
@@ -66,6 +75,10 @@ public class MessageBusPluginTests
         healthOptions!.Tags.Should().Contain(HealthCheckTag.Readiness.Value);
         healthOptions.Name.Should().Be("message-bus");
         healthOptions.MinimalFailureStatus.Should().Be(HealthStatus.Unhealthy);
+
+        _configurator.Received().ConfigureMassTransit(Arg.Any<IBusRegistrationConfigurator>());
+        _configurator.Received().ConfigureReceiveEndpoint(Arg.Any<IBusRegistrationContext>(), Arg.Any<Uri>(), Arg.Any<IRabbitMqReceiveEndpointConfigurator>());
+        _configurator.Received().ConfigureRabbitMq(Arg.Any<IBusRegistrationContext>(), Arg.Any<IRabbitMqBusFactoryConfigurator>());
     }
 
     internal record TestMessage : IMessage;
