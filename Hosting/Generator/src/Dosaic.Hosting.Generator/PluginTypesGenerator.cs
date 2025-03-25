@@ -69,15 +69,26 @@ namespace Dosaic.Hosting.Generator
                 && ImplementsDosaicClasses(t)
             ).ToList();
 
-            return typeSymbols.Select(typeSymbol => new PluginClass
+            return typeSymbols.Select(GetPluginClass).OrderBy(x => x.FullName).ToList();
+        }
+
+        private static PluginClass GetPluginClass(ITypeSymbol typeSymbol)
+        {
+            var ns = typeSymbol.ContainingNamespace.ToDisplayString();
+            var interfaces = typeSymbol.AllInterfaces
+                .Where(x => x.AllInterfaces.Any(t => t.Name == "IPluginActivateable"))
+                .Select(s => s.Name)
+                .ToList();
+            var typeOfName = $"typeof({ns}.{typeSymbol.Name})";
+            if (typeSymbol is INamedTypeSymbol namedTypeSymbol && namedTypeSymbol.IsGenericType && namedTypeSymbol.TypeArguments.Length > 0)
+                typeOfName = $"typeof({ns}.{namedTypeSymbol.Name}<{new string(',', namedTypeSymbol.TypeArguments.Length - 1)}>)";
+            return new PluginClass
             {
                 Name = typeSymbol.Name,
-                Namespace = typeSymbol.ContainingNamespace.ToDisplayString(),
-                Interfaces = typeSymbol.AllInterfaces.Where(x => x.AllInterfaces.Any(t => t.Name == "IPluginActivateable"))
-                        .Select(s => s.Name)
-                        .ToList()
-            })
-                .ToList();
+                Namespace = ns,
+                Interfaces = interfaces,
+                TypeOfName = typeOfName
+            };
         }
 
         private static bool ImplementsDosaicClasses(ITypeSymbol t)
@@ -144,6 +155,7 @@ namespace Dosaic.Hosting.Generator
     {
         public string FullName => $"{Namespace}.{Name}";
         public string Name { get; set; }
+        public string TypeOfName { get; set; }
         public string Namespace { get; set; }
         public IList<string> Interfaces { get; set; }
     }
