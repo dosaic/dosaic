@@ -61,6 +61,7 @@ public class MessageBusPlugin(IImplementationResolver implementationResolver, Me
         var consumerType = typeof(MessageConsumer<>);
         serviceCollection.AddMassTransit(opts =>
         {
+            opts.DisableUsageTelemetry();
             foreach (var mt in messageTypes)
                 opts.AddConsumer(consumerType.MakeGenericType(mt));
             opts.UsingRabbitMq((context, config) =>
