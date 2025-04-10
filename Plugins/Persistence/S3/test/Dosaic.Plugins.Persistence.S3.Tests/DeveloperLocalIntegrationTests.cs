@@ -1,4 +1,5 @@
 using Dosaic.Plugins.Persistence.Abstractions;
+using Dosaic.Plugins.Persistence.S3.Blob;
 using Dosaic.Testing.NUnit;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
@@ -21,12 +22,12 @@ namespace Dosaic.Plugins.Persistence.S3.Tests
             UseSsl = true
         };
 #pragma warning restore S6290
-        private S3Plugin _plugin = null!;
+        private S3FileStoragePlugin _plugin = null!;
 
         [SetUp]
         public void Init()
         {
-            _plugin = new S3Plugin(_configuration);
+            _plugin = new S3FileStoragePlugin(_configuration);
         }
 
         [Test]
@@ -41,7 +42,7 @@ namespace Dosaic.Plugins.Persistence.S3.Tests
             {
                 Bucket = BucketName,
                 Key = Key,
-                MetaData = new Dictionary<string, string> { { BlobMetaData.ContentType, ContentType } },
+                MetaData = new Dictionary<string, string> { { BlobFileMetaData.ContentType, ContentType } },
                 Data = SampleDataBlobObject.GenerateStreamFromString("my-fancy-file-content")
             };
 
@@ -60,7 +61,7 @@ namespace Dosaic.Plugins.Persistence.S3.Tests
 
             var blobContent = await blobStorage.GetObjectAsync(BucketName, Key, CancellationToken.None);
             (await new StreamReader(blobContent.Data).ReadToEndAsync()).Should().Be("my-fancy-file-content");
-            blobContent.MetaData[BlobMetaData.ContentType].Should().Be(ContentType);
+            blobContent.MetaData[BlobFileMetaData.ContentType].Should().Be(ContentType);
         }
 
         [Test]
@@ -75,6 +76,5 @@ namespace Dosaic.Plugins.Persistence.S3.Tests
             await blobStorage.Invoking(async x => await x.DeleteObjectAsync(BucketName, Key, CancellationToken.None))
                 .Should().NotThrowAsync();
         }
-
     }
 }
