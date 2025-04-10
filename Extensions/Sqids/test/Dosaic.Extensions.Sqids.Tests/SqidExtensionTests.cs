@@ -10,7 +10,6 @@ namespace Dosaic.Extensions.Sqids.Tests
         private SqidsEncoder<char> _customEncoder;
         private SqidsOptions _options;
 
-
         [SetUp]
         public void Setup()
         {

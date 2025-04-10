@@ -2,7 +2,6 @@ using System.Globalization;
 using System.Security.Cryptography;
 using Dosaic.Hosting.Abstractions.Exceptions;
 using Dosaic.Plugins.Persistence.S3.Blob;
-using Microsoft.Build.Framework;
 using Microsoft.Extensions.Logging;
 using MimeDetective;
 using Minio;
@@ -84,7 +83,6 @@ public class FileStorage<BucketEnum>(
         logger.LogError(errorMessage);
         throw new DosaicException(errorMessage);
     }
-
 
     private string GetMimeType(FileId<BucketEnum> fileId, Stream stream)
     {

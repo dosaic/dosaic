@@ -6,7 +6,8 @@ public static class SqidExtensions
 {
     public static SqidsEncoder<char> Encoder { get; set; } = new(new SqidsOptions
     {
-        Alphabet = "kKsW7PVdXUYnHgQ6rujl0GepfNzB2qZ9bC83IyDmOAtJ4hcSvM1Roaw5LxEiTF", MinLength = 10
+        Alphabet = "kKsW7PVdXUYnHgQ6rujl0GepfNzB2qZ9bC83IyDmOAtJ4hcSvM1Roaw5LxEiTF",
+        MinLength = 10
     });
 
     public static string ToSqid(this string str)

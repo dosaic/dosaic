@@ -6,7 +6,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using MimeDetective;
 using Minio;
-using NSubstitute;
 using NUnit.Framework;
 
 namespace Dosaic.Plugins.Persistence.S3.Tests;
@@ -44,8 +43,6 @@ public class ServiceCollectionExtensionsTests
     public void AddFileStorageRegistersFileStorage()
     {
         _serviceCollection.AddFileStorage<SampleBucket>();
-
-
 
         _serviceCollection.Should().Contain(x =>
             x.ServiceType == typeof(IFileStorage<SampleBucket>) &&

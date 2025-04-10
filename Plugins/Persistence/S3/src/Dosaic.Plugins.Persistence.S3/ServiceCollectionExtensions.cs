@@ -19,7 +19,6 @@ public static class ServiceCollectionExtensions
         return serviceCollection.AddSingleton<IFileStorage<T>, FileStorage<T>>();
     }
 
-
     public static IServiceCollection AddBlobStorageBucketMigrationService<T>(this IServiceCollection serviceCollection,
         T type) where T : struct, Enum
     {

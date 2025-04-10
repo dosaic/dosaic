@@ -1,4 +1,3 @@
-using System.Reflection;
 using Dosaic.Plugins.Persistence.S3.File;
 using FluentAssertions;
 using MimeDetective.Definitions;

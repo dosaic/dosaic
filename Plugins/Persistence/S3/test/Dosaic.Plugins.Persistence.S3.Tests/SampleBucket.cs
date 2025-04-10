@@ -1,4 +1,3 @@
-using Dosaic.Hosting.Abstractions.Middlewares.Models;
 using Dosaic.Plugins.Persistence.S3.File;
 
 namespace Dosaic.Plugins.Persistence.S3.Tests;

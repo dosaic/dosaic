@@ -1,8 +1,8 @@
+using Dosaic.Plugins.Persistence.S3.File;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Minio;
 using Minio.DataModel.Args;
-using Dosaic.Plugins.Persistence.S3.File;
 
 namespace Dosaic.Plugins.Persistence.S3.Blob;
 
