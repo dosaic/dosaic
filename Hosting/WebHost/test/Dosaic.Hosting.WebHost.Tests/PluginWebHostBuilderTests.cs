@@ -1,8 +1,6 @@
 using System.Globalization;
 using AspNetCoreRateLimit;
-using Chronos.Abstractions;
 using Dosaic.Hosting.Abstractions.Configuration;
-using Dosaic.Hosting.Abstractions.DependencyInjection;
 using Dosaic.Hosting.Abstractions.Extensions;
 using Dosaic.Hosting.Abstractions.Middlewares.Models;
 using Dosaic.Hosting.WebHost.Configurators;

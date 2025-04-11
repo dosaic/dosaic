@@ -25,5 +25,4 @@ namespace Dosaic.Hosting.Abstractions.DependencyInjection
         TService Create();
     }
 
-
 }

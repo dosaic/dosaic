@@ -13,7 +13,6 @@ namespace Dosaic.Hosting.Abstractions.Extensions
                 sp => new Factory<TService>(sp),
                 lifetime));
 
-
             return serviceCollection;
         }
 
@@ -24,7 +23,6 @@ namespace Dosaic.Hosting.Abstractions.Extensions
             serviceCollection.Add(ServiceDescriptor.Describe(typeof(IFactory<>).MakeGenericType(type),
                 sp => Activator.CreateInstance(typeof(Factory<>).MakeGenericType(type), sp),
                 lifetime));
-
 
             return serviceCollection;
         }

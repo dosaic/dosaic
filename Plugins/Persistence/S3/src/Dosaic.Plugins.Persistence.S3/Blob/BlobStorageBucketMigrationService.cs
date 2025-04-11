@@ -25,7 +25,7 @@ internal class BlobStorageBucketMigrationService<T>(IMinioClient minioClient, IL
                     (await minioClient.ListBucketsAsync(stoppingToken)).Buckets.Select(x => x.Name).ToList();
 
                 var missingBuckets = requiredBuckets.Except(existingBuckets).ToList();
-                logger.LogInformation("S3 buckets<{bucketType} {@Buckets}",bucketTypeName,
+                logger.LogInformation("S3 buckets<{bucketType} {@Buckets}", bucketTypeName,
                     new
                     {
                         MissingBuckets = missingBuckets,
