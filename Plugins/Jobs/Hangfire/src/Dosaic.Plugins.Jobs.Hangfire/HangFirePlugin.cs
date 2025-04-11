@@ -26,7 +26,8 @@ namespace Dosaic.Plugins.Jobs.Hangfire
         private readonly IHangfireConfigurator[] _configurators;
         private readonly HangfireConfiguration _hangfireConfig;
 
-        public HangFirePlugin(HangfireConfiguration configuration, IImplementationResolver implementationResolver, IHangfireConfigurator[] configurators)
+        public HangFirePlugin(HangfireConfiguration configuration, IImplementationResolver implementationResolver,
+            IHangfireConfigurator[] configurators)
         {
             _implementationResolver = implementationResolver;
             _configurators = configurators;
@@ -42,10 +43,12 @@ namespace Dosaic.Plugins.Jobs.Hangfire
                     if (_hangfireConfig.InMemory)
                         conf.UseMemoryStorage();
                     else
-                        conf.UsePostgreSqlStorage(opts => opts.UseNpgsqlConnection(_hangfireConfig.ConnectionString), new PostgreSqlStorageOptions
-                        {
-                            InvisibilityTimeout = TimeSpan.FromMinutes(_hangfireConfig.InvisibilityTimeoutInMinutes)
-                        });
+                        conf.UsePostgreSqlStorage(opts => opts.UseNpgsqlConnection(_hangfireConfig.ConnectionString),
+                            new PostgreSqlStorageOptions
+                            {
+                                InvisibilityTimeout =
+                                    TimeSpan.FromMinutes(_hangfireConfig.InvisibilityTimeoutInMinutes)
+                            });
                     conf.UseSimpleAssemblyNameTypeSerializer();
                     _configurators.ForEach(x => x.Configure(conf));
                 }
@@ -97,6 +100,7 @@ namespace Dosaic.Plugins.Jobs.Hangfire
             foreach (var job in _implementationResolver.FindTypes(f =>
                          f.HasAttribute<RecurringJobAttribute>() && f.Implements<IAsyncJob>()))
             {
+                if (job.IsGenericType) continue;
                 var recurringJobDetails = job.GetAttribute<RecurringJobAttribute>()!;
                 var genericMethod = registerJobMethod.MakeGenericMethod(job);
                 genericMethod.Invoke(jobRegister, [recurringJobDetails.CronPattern, recurringJobDetails.Queue, ""]);
