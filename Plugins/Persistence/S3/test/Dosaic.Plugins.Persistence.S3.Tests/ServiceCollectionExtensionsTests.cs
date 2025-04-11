@@ -52,7 +52,7 @@ public class ServiceCollectionExtensionsTests
     [Test]
     public void AddBlobStorageBucketMigrationServiceRegistersMigrationService()
     {
-        _serviceCollection.AddBlobStorageBucketMigrationService(SampleBucket.Logos);
+        _serviceCollection.AddBlobStorageBucketMigrationService<SampleBucket>();
 
         _serviceCollection.Should().Contain(x =>
             x.ServiceType == typeof(IHostedService) &&
