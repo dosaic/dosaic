@@ -4,6 +4,7 @@ using Dosaic.Hosting.Abstractions.Services;
 using Dosaic.Plugins.Handlers.Abstractions.Cqrs.Handlers;
 using Dosaic.Plugins.Handlers.Abstractions.Cqrs.Validators;
 using Dosaic.Plugins.Handlers.Cqrs.SimpleResource.Handlers;
+using Dosaic.Plugins.Persistence.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -22,6 +23,9 @@ namespace Dosaic.Plugins.Handlers.Cqrs.SimpleResource
 
         public void ConfigureServices(IServiceCollection serviceCollection)
         {
+
+
+
             serviceCollection.AddTransient(typeof(ICreateHandler<>), typeof(SimpleResourceCreateHandler<>));
             serviceCollection.AddTransient(typeof(IUpdateHandler<>), typeof(SimpleResourceUpdateHandler<>));
             serviceCollection.AddTransient(typeof(IDeleteHandler<>), typeof(SimpleResourceDeleteHandler<>));

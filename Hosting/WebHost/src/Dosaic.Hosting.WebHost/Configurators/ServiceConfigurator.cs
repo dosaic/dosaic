@@ -231,8 +231,6 @@ namespace Dosaic.Hosting.WebHost.Configurators
             var logLevel = _configuration.GetValue<LogEventLevel?>("serilog:minimumLevel") ?? LogEventLevel.Information;
             _serviceCollection.WithLogLevelSwitch(logLevel);
 
-            _serviceCollection.AddTransient(typeof(IFactory<>), typeof(Factory<>));
-
             _serviceCollection.AddDateTimeProvider();
             _serviceCollection.AddDateTimeOffsetProvider();
 

@@ -1,3 +1,4 @@
+using Dosaic.Hosting.Abstractions.Extensions;
 using Dosaic.Hosting.Abstractions.Services;
 using Dosaic.Plugins.Handlers.Abstractions.Cqrs.Handlers;
 using Dosaic.Plugins.Handlers.Cqrs.SimpleResource;
@@ -35,6 +36,8 @@ namespace Dosaic.Plugins.Handlers.Cqrs.Tests.SimpleResource
         {
             _implementationResolver.FindTypes().Returns(new List<Type> { typeof(CustomValidator) });
             _plugin.ConfigureServices(_serviceCollection);
+
+            _serviceCollection.AddFactory(typeof(IReadRepository<TestEntity>));
             var sp = _serviceCollection.BuildServiceProvider();
 
             var createHandler = sp.GetRequiredService<ICreateHandler<TestEntity>>();
