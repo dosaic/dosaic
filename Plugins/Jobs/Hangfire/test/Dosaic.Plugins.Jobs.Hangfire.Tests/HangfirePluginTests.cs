@@ -5,6 +5,7 @@ using Dosaic.Plugins.Jobs.Hangfire.Attributes;
 using FluentAssertions;
 using Hangfire;
 using Hangfire.MemoryStorage;
+using Hangfire.Storage;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
@@ -73,7 +74,7 @@ namespace Dosaic.Plugins.Jobs.Hangfire.Tests
         public void ConfigureApplicationTest()
         {
             _implementationResolver.FindTypes()
-                .Returns([typeof(TestJobTimeoutAsync)]);
+                .Returns([typeof(TestJobTimeoutAsync), typeof(GenericTestJobAsync<>)]);
             JobStorage.Current = new MemoryStorage();
             var sc = new ServiceCollection();
             sc.AddSingleton<ILoggerFactory>(NullLoggerFactory.Instance);
@@ -89,6 +90,10 @@ namespace Dosaic.Plugins.Jobs.Hangfire.Tests
 
             GlobalJobFilters.Filters.Should().Contain(x => x.Instance.GetType() == typeof(EnabledByFeatureFilter));
             GlobalJobFilters.Filters.Should().Contain(x => x.Instance.GetType() == typeof(LogJobExecutionFilter));
+
+            var recurringJobs = JobStorage.Current.GetConnection().GetRecurringJobs();
+            recurringJobs.Should().HaveCount(1);
+            recurringJobs[0].Job.Type.Should().Be(typeof(TestJobTimeoutAsync));
         }
 
         [Test]

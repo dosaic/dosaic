@@ -106,5 +106,7 @@
     <PackageVersion Include="MassTransit.RabbitMQ" Version="8.4.0" />
     <PackageVersion Include="DynamicExpresso.Core" Version="2.18.0" />
     <PackageVersion Include="Mapster" Version="7.4.0" />
+    <PackageVersion Include="Mime-Detective" Version="24.12.2" />
+    <PackageVersion Include="Sqids" Version="3.1.0" />
   </ItemGroup>
 </Project>

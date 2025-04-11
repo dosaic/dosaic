@@ -1,8 +1,6 @@
 using System.Globalization;
 using AspNetCoreRateLimit;
-using Chronos.Abstractions;
 using Dosaic.Hosting.Abstractions.Configuration;
-using Dosaic.Hosting.Abstractions.DependencyInjection;
 using Dosaic.Hosting.Abstractions.Extensions;
 using Dosaic.Hosting.Abstractions.Middlewares.Models;
 using Dosaic.Hosting.WebHost.Configurators;
@@ -100,11 +98,6 @@ namespace Dosaic.Hosting.WebHost.Tests
             endpointDataSources[0].Endpoints[0].As<RouteEndpoint>().RoutePattern.RawText.Should().Be("/health/liveness");
             endpointDataSources[0].Endpoints[1].As<RouteEndpoint>().RoutePattern.RawText.Should().Be("/health/readiness");
             endpointDataSources[1].GetType().Name.Should().Be("ControllerActionEndpointDataSource");
-
-            var dateTimeProviderFactory = host.Services.GetRequiredService<IFactory<IDateTimeProvider>>();
-            dateTimeProviderFactory.Should().NotBeNull();
-            var dateTimeProvider = dateTimeProviderFactory.Create();
-            dateTimeProvider.Should().NotBeNull();
 
             var logger = host.Services.GetRequiredService<ILogger>();
             logger.Should().BeOfType<Logger<ILogger>>();

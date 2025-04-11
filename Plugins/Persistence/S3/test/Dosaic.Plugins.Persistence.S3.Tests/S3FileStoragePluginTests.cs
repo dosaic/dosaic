@@ -1,5 +1,5 @@
 using System.Net.Http;
-using Dosaic.Plugins.Persistence.Abstractions;
+using Dosaic.Plugins.Persistence.S3.File;
 using Dosaic.Testing.NUnit;
 using Dosaic.Testing.NUnit.Extensions;
 using FluentAssertions;
@@ -13,7 +13,7 @@ using NUnit.Framework;
 namespace Dosaic.Plugins.Persistence.S3.Tests
 {
     [TestFixture]
-    public class S3PluginTests
+    public class S3FileStoragePluginTests
     {
         private readonly S3Configuration _configuration = new()
         {
@@ -23,12 +23,12 @@ namespace Dosaic.Plugins.Persistence.S3.Tests
             Region = "region",
             UseSsl = true
         };
-        private S3Plugin _plugin = null!;
+        private S3FileStoragePlugin _plugin = null!;
 
         [SetUp]
         public void Init()
         {
-            _plugin = new S3Plugin(_configuration);
+            _plugin = new S3FileStoragePlugin(_configuration);
         }
 
         [Test]
@@ -36,6 +36,7 @@ namespace Dosaic.Plugins.Persistence.S3.Tests
         {
             var sc = TestingDefaults.ServiceCollection();
             _plugin.ConfigureServices(sc);
+            sc.AddFileStorage<SampleBucket>();
             var sp = sc.BuildServiceProvider();
 
             var client = sp.GetRequiredService<IMinioClient>();
@@ -55,9 +56,9 @@ namespace Dosaic.Plugins.Persistence.S3.Tests
             var secure = client.Config.Secure;
             secure.Should().Be(_configuration.UseSsl);
 
-            var blobStorage = sp.GetRequiredService<IBlobStorage>();
-            blobStorage.Should().NotBeNull();
-            blobStorage.Should().BeOfType<S3BlobStorage>();
+            var fileStorage = sp.GetRequiredService<IFileStorage<SampleBucket>>();
+            fileStorage.Should().NotBeNull();
+            fileStorage.Should().BeOfType<FileStorage<SampleBucket>>();
         }
 
         [Test]

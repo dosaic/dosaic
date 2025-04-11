@@ -22,6 +22,7 @@ namespace Dosaic.Plugins.Handlers.Cqrs.SimpleResource
 
         public void ConfigureServices(IServiceCollection serviceCollection)
         {
+
             serviceCollection.AddTransient(typeof(ICreateHandler<>), typeof(SimpleResourceCreateHandler<>));
             serviceCollection.AddTransient(typeof(IUpdateHandler<>), typeof(SimpleResourceUpdateHandler<>));
             serviceCollection.AddTransient(typeof(IDeleteHandler<>), typeof(SimpleResourceDeleteHandler<>));
