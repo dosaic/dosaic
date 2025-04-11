@@ -59,6 +59,12 @@ namespace Dosaic.Extensions.Sqids.Tests
             var result = sqid.FromSqid();
 
             result.Should().Be(original);
+
+            SqidExtensions.Encoder =  new(new SqidsOptions
+            {
+                Alphabet = "kKsW7PVdXUYnHgQ6rujl0GepfNzB2qZ9bC83IyDmOAtJ4hcSvM1Roaw5LxEiTF",
+                MinLength = 10
+            });
         }
 
         [Test]
