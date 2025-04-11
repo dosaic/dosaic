@@ -1,7 +1,3 @@
-I'll update the README.md for the S3 plugin to include documentation on the ServiceCollectionExtension methods,
-following a similar style to the Sqids/README.md:
-
-```markdown
 # Dosaic.Plugins.Persistence.S3
 
 Dosaic.Plugins.Persistence.S3 is a plugin that allows other Dosaic components to interact with S3-compatible storage.

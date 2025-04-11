@@ -13,6 +13,7 @@ internal class BlobStorageBucketMigrationService<T>(IMinioClient minioClient, IL
     {
         while (!stoppingToken.IsCancellationRequested)
         {
+            var bucketTypeName = typeof(T).Name;
             try
             {
                 var requiredBuckets = Enum.GetValues<T>()
@@ -24,7 +25,7 @@ internal class BlobStorageBucketMigrationService<T>(IMinioClient minioClient, IL
                     (await minioClient.ListBucketsAsync(stoppingToken)).Buckets.Select(x => x.Name).ToList();
 
                 var missingBuckets = requiredBuckets.Except(existingBuckets).ToList();
-                logger.LogInformation("S3 buckets {@Buckets}",
+                logger.LogInformation("S3 buckets<{bucketType} {@Buckets}",bucketTypeName,
                     new
                     {
                         MissingBuckets = missingBuckets,
@@ -35,7 +36,7 @@ internal class BlobStorageBucketMigrationService<T>(IMinioClient minioClient, IL
                 if (missingBuckets.Count == 0) return;
                 foreach (var missingBucket in missingBuckets)
                 {
-                    logger.LogInformation("S3 buckets: create missing bucket {missingBucket}", missingBucket);
+                    logger.LogInformation("S3 buckets<{bucketType}>: create missing bucket {missingBucket}", bucketTypeName, missingBucket);
                     await minioClient.MakeBucketAsync(new MakeBucketArgs().WithBucket(missingBucket), stoppingToken);
                 }
 
@@ -43,7 +44,7 @@ internal class BlobStorageBucketMigrationService<T>(IMinioClient minioClient, IL
             }
             catch (Exception e)
             {
-                logger.LogError(e, "Could not migrate database");
+                logger.LogError(e, "Could not migrate s3 buckets<{bucketType}> -> retrying", bucketTypeName);
                 await Task.Delay(1000, stoppingToken);
             }
         }
