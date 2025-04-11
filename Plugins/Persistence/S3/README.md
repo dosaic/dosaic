@@ -99,7 +99,7 @@ public class FileProvider(IFileStorage fileStorage)
     private Task CheckPermissionAsync(FileId fileId, CancellationToken cancellationToken)
     {
         // check permissions or other logic
-        if (persmission == null)
+        if (permission == null)
             throw Exception("Could not find requested file");
     }
     public async Task<BlobFile> GetFileAsync(FileId id, CancellationToken cancellationToken = default)
@@ -114,7 +114,7 @@ public class FileProvider(IFileStorage fileStorage)
         await fileStorage.ConsumeStreamAsync(id, streamConsumer, cancellationToken);
     }
 
-    public Task<FileId> SetAsync(BlobFile file, Stream stream, CancellationToken cancellationToken = default)
+    public async Task<FileId> SetAsync(BlobFile file, Stream stream, CancellationToken cancellationToken = default)
     {
         await CheckPermissionAsync(id, cancellationToken);
         return fileStorage.SetAsync(file, stream, cancellationToken);

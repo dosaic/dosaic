@@ -4,7 +4,7 @@ namespace Dosaic.Hosting.Abstractions.Exceptions
 {
     public class DosaicException : Exception
     {
-        public DosaicException() : base("An unhandled error occured.")
+        public DosaicException() : base("An unhandled error occurred.")
         {
         }
 
@@ -16,7 +16,7 @@ namespace Dosaic.Hosting.Abstractions.Exceptions
         {
         }
 
-        public DosaicException(int httpStatus) : base("An unhandled error occured.")
+        public DosaicException(int httpStatus) : base("An unhandled error occurred.")
         {
             HttpStatus = httpStatus;
         }
