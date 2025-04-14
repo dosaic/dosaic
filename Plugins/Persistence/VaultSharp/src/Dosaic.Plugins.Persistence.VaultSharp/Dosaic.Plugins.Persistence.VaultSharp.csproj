@@ -1,0 +1,19 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+      <TargetFramework>net9.0</TargetFramework>
+      <Nullable>disable</Nullable>
+      <ImplicitUsings>disable</ImplicitUsings>
+    </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="AspNetCore.HealthChecks.Uris" />
+    <PackageReference Include="VaultSharp" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\..\..\Extensions\Sqids\src\Dosaic.Extensions.Sqids\Dosaic.Extensions.Sqids.csproj" />
+    <ProjectReference Include="..\..\..\Abstractions\src\Dosaic.Plugins.Persistence.Abstractions\Dosaic.Plugins.Persistence.Abstractions.csproj" />
+  </ItemGroup>
+
+</Project>

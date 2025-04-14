@@ -11,7 +11,7 @@ namespace Dosaic.Hosting.Abstractions.Tests.Exceptions
         public void CanInitEmpty()
         {
             var exception = new DosaicException();
-            exception.Message.Should().Be("An unhandled error occured.");
+            exception.Message.Should().Be("An unhandled error occurred.");
             exception.HttpStatus.Should().Be(500);
         }
 
@@ -36,7 +36,7 @@ namespace Dosaic.Hosting.Abstractions.Tests.Exceptions
         public void CanInitWithStatus()
         {
             var exception = new DosaicException(400);
-            exception.Message.Should().Be("An unhandled error occured.");
+            exception.Message.Should().Be("An unhandled error occurred.");
             exception.HttpStatus.Should().Be(400);
         }
 

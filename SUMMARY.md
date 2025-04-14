@@ -34,9 +34,14 @@
     * [InMemory](Plugins/Persistence/InMemory/README.md)
     * [MongoDb](Plugins/Persistence/MongoDb/README.md)
     * [S3](Plugins/Persistence/S3/README.md)
+    * [VaultSharp](Plugins/Persistence/VaultSharp/README.md)
 * Validations
   * [Abstractions](Plugins/Validations/Abstractions/README.md)
   * [Attribute](Plugins/Validations/Attribute/README.md)
+
+## Extensions
+* [RestEase](Extensions/RestEase/README.md)
+* [Sqids](Extensions/Sqids/README.md)
 
 ## Testing
 
