@@ -15,7 +15,8 @@ namespace Dosaic.Hosting.Abstractions.DependencyInjection
 
         public TService Create() =>
             CreateOrNull()
-            ?? throw new ArgumentException($"Could not create instance of {typeof(TService).Name} within ServiceFactory");
+            ?? throw new ArgumentException(
+                $"Could not create instance of {typeof(TService).Name} within ServiceFactory");
     }
 
     public interface IFactory<out TService> where TService : class
@@ -23,4 +24,5 @@ namespace Dosaic.Hosting.Abstractions.DependencyInjection
         TService CreateOrNull();
         TService Create();
     }
+
 }

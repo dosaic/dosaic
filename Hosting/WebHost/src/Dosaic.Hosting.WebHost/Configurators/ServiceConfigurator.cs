@@ -7,7 +7,6 @@ using Chronos;
 using Chronos.Abstractions;
 using Dosaic.Hosting.Abstractions;
 using Dosaic.Hosting.Abstractions.Attributes;
-using Dosaic.Hosting.Abstractions.DependencyInjection;
 using Dosaic.Hosting.Abstractions.Extensions;
 using Dosaic.Hosting.Abstractions.Middlewares.Models;
 using Dosaic.Hosting.Abstractions.Plugins;
@@ -230,8 +229,6 @@ namespace Dosaic.Hosting.WebHost.Configurators
         {
             var logLevel = _configuration.GetValue<LogEventLevel?>("serilog:minimumLevel") ?? LogEventLevel.Information;
             _serviceCollection.WithLogLevelSwitch(logLevel);
-
-            _serviceCollection.AddTransient(typeof(IFactory<>), typeof(Factory<>));
 
             _serviceCollection.AddDateTimeProvider();
             _serviceCollection.AddDateTimeOffsetProvider();

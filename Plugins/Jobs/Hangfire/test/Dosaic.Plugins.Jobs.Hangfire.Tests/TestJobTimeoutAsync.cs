@@ -22,6 +22,20 @@ namespace Dosaic.Plugins.Jobs.Hangfire.Tests
     }
 
     [RecurringJob("0 0 * * *")]
+    public class GenericTestJobAsync<T> : AsyncJob
+    {
+        public GenericTestJobAsync(ILogger logger) : base(logger)
+        {
+        }
+
+        protected override Task<object> ExecuteJobAsync(CancellationToken cancellationToken)
+        {
+            Logger.LogInformation("Run");
+            return Task.FromResult<object>(0);
+        }
+    }
+
+    [RecurringJob("0 0 * * *")]
     public class TestJobSuccessAsync : AsyncJob
     {
         public TestJobSuccessAsync(ILogger logger) : base(logger)

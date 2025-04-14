@@ -1,6 +1,5 @@
 using Chronos;
 using Dosaic.Hosting.Abstractions;
-using Dosaic.Hosting.Abstractions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Dosaic.Testing.NUnit
@@ -12,7 +11,6 @@ namespace Dosaic.Testing.NUnit
             var sc = new ServiceCollection();
             sc.AddDateTimeProvider().AddDateTimeOffsetProvider();
             sc.AddLogging();
-            sc.AddTransient(typeof(IFactory<>), typeof(Factory<>));
             sc.AddSingleton<GlobalStatusCodeOptions>();
             return sc;
         }

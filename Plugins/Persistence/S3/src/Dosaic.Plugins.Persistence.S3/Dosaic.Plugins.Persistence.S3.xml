@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>Dosaic.Plugins.Persistence.S3</name>
+    </assembly>
+    <members>
+        <member name="F:Dosaic.Plugins.Persistence.S3.ErrorType.Unhandled">
+            <summary>
+            Could not handle a case
+            </summary>
+        </member>
+        <member name="F:Dosaic.Plugins.Persistence.S3.ErrorType.NotFound">
+            <summary>
+            Could not find or access a object
+            </summary>
+        </member>
+        <member name="F:Dosaic.Plugins.Persistence.S3.ErrorType.Validation">
+            <summary>
+            Could not validate input data
+            </summary>
+        </member>
+    </members>
+</doc>
