@@ -108,6 +108,7 @@ public class SecretStorage<TSecretBucket>(
         catch (VaultApiException vaultApiException)
         {
             throw new DosaicException("Unexpected exception during writing of secret", vaultApiException);
+        }
     }
 
     private (int RemainingSeconds, DateTime ValidUntilUtc) GetTotpDuration()
