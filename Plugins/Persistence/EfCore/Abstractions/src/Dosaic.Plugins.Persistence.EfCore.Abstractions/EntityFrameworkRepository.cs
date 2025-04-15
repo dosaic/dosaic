@@ -4,7 +4,7 @@ using Dosaic.Hosting.Abstractions.Exceptions;
 using Dosaic.Plugins.Persistence.Abstractions;
 using Microsoft.EntityFrameworkCore;
 
-namespace Dosaic.Plugins.Persistence.EntityFramework
+namespace Dosaic.Plugins.Persistence.EfCore.Abstractions
 {
     public class EntityFrameworkRepository<TEntity, TId> : IRepository<TEntity, TId> where TEntity : class, IIdentifier<TId>
     {

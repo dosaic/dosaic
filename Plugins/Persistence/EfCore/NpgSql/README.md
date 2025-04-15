@@ -1,20 +1,20 @@
-# Dosaic.Plugins.Persistence.EntityFramework
+# Dosaic.Plugins.Persistence.EfCore.NpgSql
 
 
 
-Dosaic.Plugins.Persistence.EntityFramework is a `plugin` that allows other `Dosaic components` to `use the entityframework core to interact with certain databases`.
+Dosaic.Plugins.Persistence.EfCore.NpgSql is a `plugin` that allows other `Dosaic components` to `use the entityframework core to interact with certain databases`.
 
 ## Installation
 
 To install the nuget package follow these steps:
 
 ```shell
-dotnet add package Dosaic.Plugins.Persistence.EntityFramework
+dotnet add package Dosaic.Plugins.Persistence.EfCore.NpgSql
 ```
 or add as package reference to your .csproj
 
 ```xml
-<PackageReference Include="Dosaic.Plugins.Persistence.EntityFramework" Version="" />
+<PackageReference Include="Dosaic.Plugins.Persistence.EfCore.NpgSql" Version="" />
 ```
 
 ## Appsettings.yml

@@ -7,7 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 using OpenTelemetry.Instrumentation.EntityFrameworkCore;
 using OpenTelemetry.Trace;
 
-namespace Dosaic.Plugins.Persistence.EntityFramework
+namespace Dosaic.Plugins.Persistence.EfCore.Abstractions
 {
     public class EntityFrameworkPlugin(IImplementationResolver implementationResolver) : IPluginServiceConfiguration, IPluginApplicationConfiguration, IPluginHealthChecksConfiguration
     {
@@ -37,7 +37,7 @@ namespace Dosaic.Plugins.Persistence.EntityFramework
             var dbContexts = implementationResolver.FindAssemblies().SelectMany(x => x.GetTypes())
                 .Where(x => x.IsClass && !x.IsAbstract && x.IsAssignableTo(typeof(IDbContext)))
                 .ToList();
-            var registerHc = typeof(DependencyInjectionExtensions).GetMethods(BindingFlags.Static | BindingFlags.Public)
+            var registerHc = typeof(ServiceCollectionExtensions).GetMethods(BindingFlags.Static | BindingFlags.Public)
                 .Single(x => x.GetParameters().Length == 1 && x.GetParameters()[0].ParameterType == typeof(IHealthChecksBuilder));
 
             foreach (var dbContext in dbContexts)

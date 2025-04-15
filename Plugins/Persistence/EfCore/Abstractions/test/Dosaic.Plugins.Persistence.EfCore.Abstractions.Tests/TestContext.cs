@@ -1,4 +1,5 @@
 using Dosaic.Plugins.Persistence.Abstractions;
+using Dosaic.Plugins.Persistence.EfCore.Abstractions;
 using Microsoft.EntityFrameworkCore;
 
 namespace Dosaic.Plugins.Persistence.EntityFramework.Tests

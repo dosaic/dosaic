@@ -10,7 +10,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\..\..\..\..\Testing\NUnit\src\Dosaic.Testing.NUnit\Dosaic.Testing.NUnit.csproj" />
+      <ProjectReference Include="..\..\..\..\..\..\Testing\NUnit\src\Dosaic.Testing.NUnit\Dosaic.Testing.NUnit.csproj" />
       <ProjectReference Include="..\..\src\Dosaic.Plugins.Persistence.EfCore.Abstractions\Dosaic.Plugins.Persistence.EfCore.Abstractions.csproj" />
     </ItemGroup>
 

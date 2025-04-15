@@ -2,6 +2,7 @@ using System.Globalization;
 using Chronos.Abstractions;
 using Dosaic.Hosting.Abstractions.Exceptions;
 using Dosaic.Plugins.Persistence.Abstractions;
+using Dosaic.Plugins.Persistence.EfCore.Abstractions;
 using Dosaic.Testing.NUnit;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;

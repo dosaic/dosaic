@@ -1,4 +1,5 @@
 using Dosaic.Hosting.Abstractions;
+using Dosaic.Plugins.Persistence.EfCore.Abstractions;
 using Dosaic.Testing.NUnit.Assertions;
 using FluentAssertions;
 using Microsoft.AspNetCore.Builder;
@@ -11,7 +12,7 @@ using NUnit.Framework;
 
 namespace Dosaic.Plugins.Persistence.EntityFramework.Tests
 {
-    public class DependencyInjectionExtensionsTests
+    public class ServiceCollectionExtensionsTests
     {
         [Test]
         public void CanRegisterDbContextAndMapItsEntities()

@@ -3,6 +3,7 @@ using System.Diagnostics;
 using Chronos;
 using Chronos.Abstractions;
 using Dosaic.Hosting.Abstractions.Services;
+using Dosaic.Plugins.Persistence.EfCore.Abstractions;
 using Dosaic.Testing.NUnit.Extensions;
 using FluentAssertions;
 using Microsoft.AspNetCore.Builder;

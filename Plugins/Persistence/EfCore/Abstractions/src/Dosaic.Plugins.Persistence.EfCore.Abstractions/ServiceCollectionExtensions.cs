@@ -4,9 +4,9 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
-namespace Dosaic.Plugins.Persistence.EntityFramework
+namespace Dosaic.Plugins.Persistence.EfCore.Abstractions
 {
-    public static class DependencyInjectionExtensions
+    public static class ServiceCollectionExtensions
     {
         public static IServiceCollection AddEfContext<TContext>(this IServiceCollection serviceCollection,
             Action<DbContextOptionsBuilder> configureContext,

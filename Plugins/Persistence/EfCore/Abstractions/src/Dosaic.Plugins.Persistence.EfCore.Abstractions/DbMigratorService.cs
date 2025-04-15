@@ -4,7 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
-namespace Dosaic.Plugins.Persistence.EntityFramework
+namespace Dosaic.Plugins.Persistence.EfCore.Abstractions
 {
     [ExcludeFromCodeCoverage(Justification = "Needs an actual database")]
     internal class DbMigratorService<TContext>(IServiceScopeFactory scopeFactory, ILogger logger)

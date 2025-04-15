@@ -2,7 +2,7 @@ using System.Diagnostics.Metrics;
 using Dosaic.Hosting.Abstractions.Metrics;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 
-namespace Dosaic.Plugins.Persistence.EntityFramework
+namespace Dosaic.Plugins.Persistence.EfCore.Abstractions
 {
     public class MetricsObserver : IObserver<KeyValuePair<string, object>>
     {
