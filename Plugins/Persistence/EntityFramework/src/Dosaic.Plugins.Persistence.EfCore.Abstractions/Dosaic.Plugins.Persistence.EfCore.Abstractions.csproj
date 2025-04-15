@@ -4,6 +4,9 @@
 
 
     <IsPackable>true</IsPackable>
+
+
+    <RootNamespace>Dosaic.Plugins.Persistence.EntityFramework</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>

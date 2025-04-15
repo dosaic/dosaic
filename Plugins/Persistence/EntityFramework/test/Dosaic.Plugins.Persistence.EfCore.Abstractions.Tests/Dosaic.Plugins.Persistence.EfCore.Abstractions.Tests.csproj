@@ -4,11 +4,14 @@
 
 
         <IsPackable>false</IsPackable>
+
+
+        <RootNamespace>Dosaic.Plugins.Persistence.EntityFramework.Tests</RootNamespace>
     </PropertyGroup>
 
     <ItemGroup>
       <ProjectReference Include="..\..\..\..\..\Testing\NUnit\src\Dosaic.Testing.NUnit\Dosaic.Testing.NUnit.csproj" />
-      <ProjectReference Include="..\..\src\Dosaic.Plugins.Persistence.EntityFramework\Dosaic.Plugins.Persistence.EntityFramework.csproj" />
+      <ProjectReference Include="..\..\src\Dosaic.Plugins.Persistence.EfCore.Abstractions\Dosaic.Plugins.Persistence.EfCore.Abstractions.csproj" />
     </ItemGroup>
 
     <ItemGroup>

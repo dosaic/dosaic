@@ -80,7 +80,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{400BC11B-E
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Abstractions", "Abstractions", "{3AC92DA1-F8E3-42C5-B9FB-9D7A5EA615A8}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "EntityFramework", "EntityFramework", "{6C6B4E42-7984-4F71-927B-5AB3545B5E6F}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "EfCore", "EfCore", "{6C6B4E42-7984-4F71-927B-5AB3545B5E6F}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "MongoDb", "MongoDb", "{64A0BBAE-05CD-482B-BD07-972921BE2A68}"
 EndProject
@@ -138,9 +138,9 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dosaic.Plugins.Authorizatio
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dosaic.Plugins.Endpoints.RestResourceEntity.Tests", "Plugins\Endpoints\RestResourceEntity\test\Dosaic.Plugins.Endpoints.RestResourceEntity.Tests\Dosaic.Plugins.Endpoints.RestResourceEntity.Tests.csproj", "{88A2364F-FA53-4CA2-BF92-9ED5237E12CD}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dosaic.Plugins.Persistence.EntityFramework", "Plugins\Persistence\EntityFramework\src\Dosaic.Plugins.Persistence.EntityFramework\Dosaic.Plugins.Persistence.EntityFramework.csproj", "{6C85D50F-CD22-46D8-A106-D8DA28383A15}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dosaic.Plugins.Persistence.EfCore.Abstractions", "Plugins\Persistence\EntityFramework\src\Dosaic.Plugins.Persistence.EfCore.Abstractions\Dosaic.Plugins.Persistence.EfCore.Abstractions.csproj", "{6C85D50F-CD22-46D8-A106-D8DA28383A15}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DosaicPlugins.Persistence.EntityFramework.Tests", "Plugins\Persistence\EntityFramework\test\Dosaic.Plugins.Persistence.EntityFramework.Tests\Dosaic.Plugins.Persistence.EntityFramework.Tests.csproj", "{A2D2E490-A564-4A74-81DD-B8505D0664A8}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests", "Plugins\Persistence\EntityFramework\test\Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests\Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests.csproj", "{A2D2E490-A564-4A74-81DD-B8505D0664A8}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dosaic.Extensions.Abstractions", "Extensions\Abstractions\src\Dosaic.Extensions.Abstractions\Dosaic.Extensions.Abstractions.csproj", "{B8AA6C65-84B6-47E4-8E73-E2CB4DE58BE0}"
 EndProject
@@ -329,6 +329,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{3E2339F0-8E8
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{E4CE3A6F-5605-46C7-9020-9299CC9CC7A2}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Abstractions", "Abstractions", "{5FDD656E-E9E8-486C-B22E-4A9CB8144DC7}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -373,8 +375,6 @@ Global
 		{6C6B4E42-7984-4F71-927B-5AB3545B5E6F} = {ACF1B1CE-9017-454E-A657-1816AD283E95}
 		{64A0BBAE-05CD-482B-BD07-972921BE2A68} = {ACF1B1CE-9017-454E-A657-1816AD283E95}
 		{37F4D8CC-3CD2-4287-844D-A8BF8ECB9EAC} = {3AC92DA1-F8E3-42C5-B9FB-9D7A5EA615A8}
-		{047D7FEC-AAAB-4309-B66D-748F3060FC82} = {6C6B4E42-7984-4F71-927B-5AB3545B5E6F}
-		{5D137766-A715-48FB-9BA2-63BE30510931} = {6C6B4E42-7984-4F71-927B-5AB3545B5E6F}
 		{41B07F86-5835-45A2-948E-14EAF37BFD52} = {64A0BBAE-05CD-482B-BD07-972921BE2A68}
 		{12D70F2C-44FD-4BA3-8993-67DC2958BDFA} = {64A0BBAE-05CD-482B-BD07-972921BE2A68}
 		{92F5E1E5-0269-4378-BE3B-CDDC1864C0FA} = {0EBC7241-DF15-4D82-AF32-B931A3611AEA}
@@ -483,6 +483,9 @@ Global
 		{E4CE3A6F-5605-46C7-9020-9299CC9CC7A2} = {DF7C4FCE-7CCD-44C8-BE8F-92462176E838}
 		{4E11CFF7-4594-4D02-BCF6-39C93F10ACC0} = {3E2339F0-8E80-464A-B09F-21D00FBE355A}
 		{665F8EC1-AC10-45C3-A960-86F59F0AD134} = {E4CE3A6F-5605-46C7-9020-9299CC9CC7A2}
+		{5FDD656E-E9E8-486C-B22E-4A9CB8144DC7} = {6C6B4E42-7984-4F71-927B-5AB3545B5E6F}
+		{047D7FEC-AAAB-4309-B66D-748F3060FC82} = {5FDD656E-E9E8-486C-B22E-4A9CB8144DC7}
+		{5D137766-A715-48FB-9BA2-63BE30510931} = {5FDD656E-E9E8-486C-B22E-4A9CB8144DC7}
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{92F5E1E5-0269-4378-BE3B-CDDC1864C0FA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
