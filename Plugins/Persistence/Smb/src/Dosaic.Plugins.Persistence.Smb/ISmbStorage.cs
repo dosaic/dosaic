@@ -1,4 +1,4 @@
-namespace Dosaic.Plugins.Persistence.Abstractions
+namespace Dosaic.Plugins.Persistence.Smb
 {
     public interface ISmbStorage
     {
