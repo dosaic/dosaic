@@ -1,13 +1,12 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
+
     </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="AspNetCore.HealthChecks.Uris" />
-    <PackageReference Include="Minio" />
-    <PackageReference Include="Mime-Detective" />
-    <PackageReference Include="Sqids" />
+    <PackageReference Include="VaultSharp" />
   </ItemGroup>
 
   <ItemGroup>

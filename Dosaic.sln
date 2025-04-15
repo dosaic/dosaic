@@ -319,6 +319,16 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dosaic.Extensions.Sqids", "
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dosaic.Extensions.Sqids.Tests", "Extensions\Sqids\test\Dosaic.Extensions.Sqids.Tests\Dosaic.Extensions.Sqids.Tests.csproj", "{115C3C23-ACAE-4C19-8D66-4CF002A1962F}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "VaultSharp", "VaultSharp", "{DF7C4FCE-7CCD-44C8-BE8F-92462176E838}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dosaic.Plugins.Persistence.VaultSharp", "Plugins\Persistence\VaultSharp\src\Dosaic.Plugins.Persistence.VaultSharp\Dosaic.Plugins.Persistence.VaultSharp.csproj", "{4E11CFF7-4594-4D02-BCF6-39C93F10ACC0}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dosaic.Plugins.Persistence.VaultSharp.Tests", "Plugins\Persistence\VaultSharp\test\Dosaic.Plugins.Persistence.VaultSharp.Tests\Dosaic.Plugins.Persistence.VaultSharp.Tests.csproj", "{665F8EC1-AC10-45C3-A960-86F59F0AD134}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{3E2339F0-8E80-464A-B09F-21D00FBE355A}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{E4CE3A6F-5605-46C7-9020-9299CC9CC7A2}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -468,6 +478,11 @@ Global
 		{90F87A49-BD86-428E-8E02-03F045DAD364} = {BFB04E81-1645-4FAE-8277-62FD0E607CC4}
 		{597A021B-3BD8-4FBC-A67B-CC461630519A} = {90F87A49-BD86-428E-8E02-03F045DAD364}
 		{115C3C23-ACAE-4C19-8D66-4CF002A1962F} = {90F87A49-BD86-428E-8E02-03F045DAD364}
+		{DF7C4FCE-7CCD-44C8-BE8F-92462176E838} = {ACF1B1CE-9017-454E-A657-1816AD283E95}
+		{3E2339F0-8E80-464A-B09F-21D00FBE355A} = {DF7C4FCE-7CCD-44C8-BE8F-92462176E838}
+		{E4CE3A6F-5605-46C7-9020-9299CC9CC7A2} = {DF7C4FCE-7CCD-44C8-BE8F-92462176E838}
+		{4E11CFF7-4594-4D02-BCF6-39C93F10ACC0} = {3E2339F0-8E80-464A-B09F-21D00FBE355A}
+		{665F8EC1-AC10-45C3-A960-86F59F0AD134} = {E4CE3A6F-5605-46C7-9020-9299CC9CC7A2}
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{92F5E1E5-0269-4378-BE3B-CDDC1864C0FA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
@@ -686,5 +701,13 @@ Global
 		{115C3C23-ACAE-4C19-8D66-4CF002A1962F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{115C3C23-ACAE-4C19-8D66-4CF002A1962F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{115C3C23-ACAE-4C19-8D66-4CF002A1962F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4E11CFF7-4594-4D02-BCF6-39C93F10ACC0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4E11CFF7-4594-4D02-BCF6-39C93F10ACC0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4E11CFF7-4594-4D02-BCF6-39C93F10ACC0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4E11CFF7-4594-4D02-BCF6-39C93F10ACC0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{665F8EC1-AC10-45C3-A960-86F59F0AD134}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{665F8EC1-AC10-45C3-A960-86F59F0AD134}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{665F8EC1-AC10-45C3-A960-86F59F0AD134}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{665F8EC1-AC10-45C3-A960-86F59F0AD134}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

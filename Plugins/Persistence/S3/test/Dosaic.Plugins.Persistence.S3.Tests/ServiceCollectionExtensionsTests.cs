@@ -36,7 +36,7 @@ public class ServiceCollectionExtensionsTests
 
         _serviceCollection.Should().Contain(x =>
             x.ServiceType == typeof(IContentInspector) &&
-            x.ImplementationFactory != null);
+            x.ImplementationInstance.GetType().Name == "ContentInspectorImpl");
     }
 
     [Test]
