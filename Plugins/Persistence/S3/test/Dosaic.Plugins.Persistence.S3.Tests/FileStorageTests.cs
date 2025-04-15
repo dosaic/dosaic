@@ -61,9 +61,9 @@ namespace Dosaic.Plugins.Persistence.S3.Tests
         private static FileId<SampleBucket> GetId(string id, SampleBucket bucket = SampleBucket.Logos) =>
             new(bucket, id);
 
-        private static ObjectStat GetObjectStat(string objName, string? etag = null, string? lastModified = null,
-            string? filename = null,
-            string? other = null)
+        private static ObjectStat GetObjectStat(string objName, string etag = null, string lastModified = null,
+            string filename = null,
+            string other = null)
         {
             var headers = new Dictionary<string, string>
             {
@@ -100,7 +100,8 @@ namespace Dosaic.Plugins.Persistence.S3.Tests
         {
             var lastModified = DateTime.UtcNow;
             _minioClient.StatObjectAsync(Arg.Any<StatObjectArgs>(), Arg.Any<CancellationToken>())
-                .Returns(GetObjectStat("testObj", "etag", lastModified.ToString(CultureInfo.InvariantCulture), "inv.pdf",
+                .Returns(GetObjectStat("testObj", "etag", lastModified.ToString(CultureInfo.InvariantCulture),
+                    "inv.pdf",
                     "OTHER"));
             var result = await _fileStorage.GetFileAsync(GetId("123"));
             result.MetaData[BlobFileMetaData.Filename].Should().Be("inv.pdf");
