@@ -3,13 +3,15 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Dosaic.Plugins.Persistence.EntityFramework.Tests
 {
-    internal record TestEntity(Guid Id, string Name, DateTime CreationDate) : IGuidIdentifier, ICreationDate
+    internal record TestEntity(Guid Id, string Name, DateTime CreationDate) : IIdentifier<Guid>, ICreationDate
     {
         public Guid Id { get; set; } = Id;
+        public Guid NewId() => Guid.NewGuid();
+
         public DateTime CreationDate { get; set; } = CreationDate;
     }
 
-    internal class TestContext : DbContext, IDbContext<TestEntity>
+    internal class TestContext : DbContext, IDbContext<TestEntity, Guid>
     {
         public TestContext(DbContextOptions<TestContext> options) : base(options) { }
 

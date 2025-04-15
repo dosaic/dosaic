@@ -12,7 +12,7 @@ namespace Dosaic.Plugins.Handlers.Cqrs.Tests.SimpleResource.Handlers
 {
     public class SimpleResourceUpdateHandlerTests
     {
-        private IRepository<TestEntity> _repository = null!;
+        private IRepository<TestEntity, Guid> _repository = null!;
         private IUpdateHandler<TestEntity> _handler = null!;
         private CustomValidator _validator = null!;
 
@@ -20,7 +20,7 @@ namespace Dosaic.Plugins.Handlers.Cqrs.Tests.SimpleResource.Handlers
         public void Init()
         {
             ActivityTestBootstrapper.Setup();
-            _repository = Substitute.For<IRepository<TestEntity>>();
+            _repository = Substitute.For<IRepository<TestEntity, Guid>>();
             _validator = new CustomValidator();
             _handler = new SimpleResourceUpdateHandler<TestEntity>(_repository, _validator);
         }

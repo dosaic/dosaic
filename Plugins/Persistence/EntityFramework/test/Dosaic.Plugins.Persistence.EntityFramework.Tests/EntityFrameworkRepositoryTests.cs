@@ -26,8 +26,8 @@ namespace Dosaic.Plugins.Persistence.EntityFramework.Tests
             return testContext;
         }
 
-        private IRepository<TestEntity> GetRepository(IDbContext<TestEntity> dbContext) =>
-            new EntityFrameworkRepository<TestEntity>(dbContext, _dateTimeProvider);
+        private IRepository<TestEntity, Guid> GetRepository(IDbContext<TestEntity, Guid> dbContext) =>
+            new EntityFrameworkRepository<TestEntity, Guid>(dbContext, _dateTimeProvider);
 
         [Test]
         public async Task FindByIdAsyncWorks()

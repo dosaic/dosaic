@@ -29,7 +29,7 @@ namespace Dosaic.Plugins.Endpoints.RestResourceEntity.Endpoints
             [FromServices] IHttpContextAccessor httpContextAccessor,
             CancellationToken cancellationToken)
         {
-            var result = await handler.GetAsync(new GuidIdentifier(id), cancellationToken);
+            var result = await handler.GetAsync(new Identifier(id), cancellationToken);
             return Results.Ok(result);
         }
 
@@ -50,7 +50,7 @@ namespace Dosaic.Plugins.Endpoints.RestResourceEntity.Endpoints
             [FromServices] IHttpContextAccessor httpContextAccessor,
             CancellationToken cancellationToken)
         {
-            if (model is IGuidIdentifier guidIdentifier)
+            if (model is IIdentifier<Guid> guidIdentifier)
                 guidIdentifier.Id = id;
             var result = await handler.UpdateAsync(model!, cancellationToken);
             return Results.Ok(result);
@@ -62,7 +62,7 @@ namespace Dosaic.Plugins.Endpoints.RestResourceEntity.Endpoints
             [FromServices] IHttpContextAccessor httpContextAccessor,
             CancellationToken cancellationToken)
         {
-            await handler.DeleteAsync(new GuidIdentifier(id), cancellationToken);
+            await handler.DeleteAsync(new Identifier(id), cancellationToken);
             return Results.NoContent();
         }
     }

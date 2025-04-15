@@ -7,9 +7,9 @@ using ODataQueryHelper.Core.Model;
 
 namespace Dosaic.Plugins.Persistence.MongoDb
 {
-    public class MongoRepository<TEntity> : IRepository<TEntity> where TEntity : class, IGuidIdentifier
+    public class MongoRepository<TEntity, TId> : IRepository<TEntity, TId> where TEntity : class, IIdentifier<TId>
     {
-        private readonly ActivitySource _activitySource = new($"{nameof(MongoRepository<TEntity>)}<{typeof(TEntity)}>");
+        private readonly ActivitySource _activitySource = new($"{nameof(MongoRepository<TEntity, TId>)}<{typeof(TEntity)}>");
         private readonly IDateTimeProvider _dateTimeProvider;
         private readonly IMongoCollection<TEntity> _collection;
         private readonly List<KeyValuePair<string, object>> _activitySourceTags = new() { new("persistence", "mongodb") };
@@ -20,13 +20,13 @@ namespace Dosaic.Plugins.Persistence.MongoDb
             _collection = mongoDbInstance.GetCollectionFor<TEntity>();
         }
 
-        public async Task<TEntity> FindByIdAsync(Guid id, CancellationToken cancellationToken = default)
+        public async Task<TEntity> FindByIdAsync(TId id, CancellationToken cancellationToken = default)
         {
             using var activity = _activitySource.StartActivity(nameof(FindByIdAsync), kind: ActivityKind.Internal, parentContext: default,
                 _activitySourceTags!);
             activity!.AddTag("resource-id", id);
             var findOpts = new FindOptions<TEntity> { Limit = 1, Skip = 0 };
-            var asyncCursor = await _collection.FindAsync(entity => entity.Id == id, findOpts, cancellationToken);
+            var asyncCursor = await _collection.FindAsync(entity => Equals(entity.Id, id), findOpts, cancellationToken);
             return await asyncCursor.FirstOrDefaultAsync(cancellationToken);
         }
 
@@ -66,16 +66,16 @@ namespace Dosaic.Plugins.Persistence.MongoDb
             using var activity = _activitySource.StartActivity(nameof(UpdateAsync), kind: ActivityKind.Internal, parentContext: default,
                 _activitySourceTags!);
             activity!.AddTag("resource-id", entity.Id);
-            await _collection.ReplaceOneAsync(e => e.Id == entity.Id, entity, cancellationToken: cancellationToken);
+            await _collection.ReplaceOneAsync(e => Equals(e.Id, entity.Id), entity, cancellationToken: cancellationToken);
             return entity;
         }
 
-        public async Task RemoveAsync(Guid id, CancellationToken cancellationToken = default)
+        public async Task RemoveAsync(TId id, CancellationToken cancellationToken = default)
         {
             using var activity = _activitySource.StartActivity(nameof(RemoveAsync), kind: ActivityKind.Internal, parentContext: default,
                 _activitySourceTags!);
             activity!.AddTag("resource-id", id);
-            var deleteOneAsync = await _collection.DeleteOneAsync(f => f.Id == id, cancellationToken);
+            var deleteOneAsync = await _collection.DeleteOneAsync(f => Equals(f.Id, id), cancellationToken);
             if (deleteOneAsync.IsAcknowledged && deleteOneAsync.DeletedCount > 0)
             {
                 return;

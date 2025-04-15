@@ -5,10 +5,10 @@ using Dosaic.Plugins.Persistence.Abstractions;
 
 namespace Dosaic.Plugins.Persistence.InMemory
 {
-    public class InMemoryRepository<TEntity> : IRepository<TEntity>
-        where TEntity : class, IGuidIdentifier
+    public class InMemoryRepository<TEntity, TId> : IRepository<TEntity, TId>
+        where TEntity : class, IIdentifier<TId>
     {
-        private readonly ActivitySource _activitySource = new($"{nameof(InMemoryRepository<TEntity>)}<{typeof(TEntity)}>");
+        private readonly ActivitySource _activitySource = new($"{nameof(InMemoryRepository<TEntity, TId>)}<{typeof(TEntity)}>");
         private readonly List<KeyValuePair<string, object>> _activitySourceTags = new() { new("persistence", "in-memory") };
         private readonly HashSet<TEntity> _data;
         private readonly IDateTimeProvider _dateTimeProvider;
@@ -19,12 +19,12 @@ namespace Dosaic.Plugins.Persistence.InMemory
             _data = store.GetStore<TEntity>();
         }
 
-        public Task<TEntity> FindByIdAsync(Guid id, CancellationToken cancellationToken = default)
+        public Task<TEntity> FindByIdAsync(TId id, CancellationToken cancellationToken = default)
         {
             using var activity = _activitySource.StartActivity(nameof(FindByIdAsync), kind: ActivityKind.Internal, parentContext: default,
                 _activitySourceTags!);
             activity!.AddTag("resource-id", id);
-            var entity = _data.FirstOrDefault(x => x.Id == id);
+            var entity = _data.FirstOrDefault(x => Equals(x.Id, id));
             if (entity is null)
                 throw new DosaicException($"Could not find entity for id '{id}'", 404);
             return Task.FromResult(entity);
@@ -50,7 +50,7 @@ namespace Dosaic.Plugins.Persistence.InMemory
 
         public Task<TEntity> AddAsync(TEntity entity, CancellationToken cancellationToken = default)
         {
-            entity.Id = Guid.NewGuid();
+            entity.Id = entity.NewId();
             using var activity = _activitySource.StartActivity(nameof(AddAsync), kind: ActivityKind.Internal, parentContext: default,
                 _activitySourceTags!);
             activity!.AddTag("resource-id", entity.Id);
@@ -65,7 +65,7 @@ namespace Dosaic.Plugins.Persistence.InMemory
             using var activity = _activitySource.StartActivity(nameof(UpdateAsync), kind: ActivityKind.Internal, parentContext: default,
                 _activitySourceTags!);
             activity!.AddTag("resource-id", entity.Id);
-            var current = _data.FirstOrDefault(x => x.Id == entity.Id);
+            var current = _data.FirstOrDefault(x => Equals(x.Id, entity.Id));
             if (current is null)
             {
                 throw new DosaicException($"The entity with the id '{entity.Id}' does not exist.", 404);
@@ -81,12 +81,12 @@ namespace Dosaic.Plugins.Persistence.InMemory
             return Task.FromResult(entity);
         }
 
-        public Task RemoveAsync(Guid id, CancellationToken cancellationToken = default)
+        public Task RemoveAsync(TId id, CancellationToken cancellationToken = default)
         {
             using var activity = _activitySource.StartActivity(nameof(RemoveAsync), kind: ActivityKind.Internal, parentContext: default,
                 _activitySourceTags!);
             activity!.AddTag("resource-id", id);
-            var current = _data.FirstOrDefault(x => x.Id == id);
+            var current = _data.FirstOrDefault(x => Equals(x.Id, id));
             if (current is null)
                 throw new DosaicException($"The entity with the id '{id}' does not exist.", 404);
             _data.Remove(current);

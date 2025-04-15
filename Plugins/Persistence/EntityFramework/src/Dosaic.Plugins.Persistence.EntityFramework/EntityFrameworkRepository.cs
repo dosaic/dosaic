@@ -6,25 +6,25 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Dosaic.Plugins.Persistence.EntityFramework
 {
-    public class EntityFrameworkRepository<TEntity> : IRepository<TEntity> where TEntity : class, IGuidIdentifier
+    public class EntityFrameworkRepository<TEntity, TId> : IRepository<TEntity, TId> where TEntity : class, IIdentifier<TId>
     {
-        private readonly ActivitySource _activitySource = new($"{nameof(EntityFrameworkRepository<TEntity>)}<{typeof(TEntity)}>");
+        private readonly ActivitySource _activitySource = new($"{nameof(EntityFrameworkRepository<TEntity, TId>)}<{typeof(TEntity)}>");
         private readonly List<KeyValuePair<string, object>> _activitySourceTags = new() { new("persistence", "entityframework") };
-        private readonly IDbContext<TEntity> _dbContext;
+        private readonly IDbContext<TEntity, TId> _dbContext;
         private readonly IDateTimeProvider _dateTimeProvider;
 
-        public EntityFrameworkRepository(IDbContext<TEntity> dbContext, IDateTimeProvider dateTimeProvider)
+        public EntityFrameworkRepository(IDbContext<TEntity, TId> dbContext, IDateTimeProvider dateTimeProvider)
         {
             _dbContext = dbContext;
             _dateTimeProvider = dateTimeProvider;
         }
 
-        public async Task<TEntity> FindByIdAsync(Guid id, CancellationToken cancellationToken = default)
+        public async Task<TEntity> FindByIdAsync(TId id, CancellationToken cancellationToken = default)
         {
             using var activity = _activitySource.StartActivity(nameof(FindByIdAsync), kind: ActivityKind.Internal, parentContext: default,
                 _activitySourceTags!);
             activity!.AddTag("resource-id", id);
-            var entity = await _dbContext.GetSet().FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+            var entity = await _dbContext.GetSet().FirstOrDefaultAsync(x => Equals(x.Id, id), cancellationToken);
             if (entity is null)
                 throw new DosaicException($"Could not find {typeof(TEntity).Name} for id '{id}'", 404);
             return entity;
@@ -48,7 +48,7 @@ namespace Dosaic.Plugins.Persistence.EntityFramework
         public async Task<TEntity> AddAsync(TEntity entity, CancellationToken cancellationToken = default)
         {
             using var activity = _activitySource.StartActivity(nameof(AddAsync), kind: ActivityKind.Internal, parentContext: default, _activitySourceTags!);
-            entity.Id = Guid.NewGuid();
+            entity.Id = entity.NewId();
             if (entity is ICreationDate entityWithCreationData)
                 entityWithCreationData.CreationDate = _dateTimeProvider.UtcNow;
             var entry = await _dbContext.GetSet().AddAsync(entity, cancellationToken);
@@ -62,7 +62,7 @@ namespace Dosaic.Plugins.Persistence.EntityFramework
                 _activitySourceTags!);
             activity!.AddTag("resource-id", entity.Id);
             var dbSet = _dbContext.GetSet();
-            var current = await dbSet.FirstOrDefaultAsync(x => x.Id == entity.Id, cancellationToken);
+            var current = await dbSet.FirstOrDefaultAsync(x => Equals(x.Id, entity.Id), cancellationToken);
             if (current is null)
                 throw new DosaicException($"Could not find {typeof(TEntity).Name} for id '{entity.Id}'", 404);
             if (entity is ICreationDate creationDate)
@@ -72,13 +72,13 @@ namespace Dosaic.Plugins.Persistence.EntityFramework
             return entity;
         }
 
-        public async Task RemoveAsync(Guid id, CancellationToken cancellationToken = default)
+        public async Task RemoveAsync(TId id, CancellationToken cancellationToken = default)
         {
             using var activity = _activitySource.StartActivity(nameof(RemoveAsync), kind: ActivityKind.Internal, parentContext: default,
                 _activitySourceTags!);
             activity!.AddTag("resource-id", id);
             var dbSet = _dbContext.GetSet();
-            var current = await dbSet.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+            var current = await dbSet.FirstOrDefaultAsync(x => Equals(x.Id, id), cancellationToken);
             if (current is null)
                 throw new DosaicException($"Could not find {typeof(TEntity).Name} for id '{id}'", 404);
             _dbContext.GetSet().Remove(current);

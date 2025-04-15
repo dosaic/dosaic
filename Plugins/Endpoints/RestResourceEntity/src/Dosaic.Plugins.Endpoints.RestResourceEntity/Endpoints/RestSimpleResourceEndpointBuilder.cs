@@ -9,7 +9,7 @@ using Microsoft.AspNetCore.Routing;
 
 namespace Dosaic.Plugins.Endpoints.RestResourceEntity.Endpoints
 {
-    public class RestSimpleResourceEndpointBuilder<T> where T : class, IGuidIdentifier
+    public class RestSimpleResourceEndpointBuilder<T> where T : class, IIdentifier<Guid>
     {
         private readonly IEndpointRouteBuilder _endpointRouteBuilder;
         private readonly string _resource;

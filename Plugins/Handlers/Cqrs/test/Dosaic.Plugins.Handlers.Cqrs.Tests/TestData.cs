@@ -5,22 +5,24 @@ using FluentValidation;
 
 namespace Dosaic.Plugins.Handlers.Cqrs.Tests
 {
-    public class TestEntity : IGuidIdentifier
+    public class TestEntity : IIdentifier<Guid>
     {
         public Guid Id { get; set; }
+        public Guid NewId() => Guid.NewGuid();
+
         public string Name { get; set; }
     }
 
     public class CustomDeleteHandler : IDeleteHandler<TestEntity>
     {
-        private readonly IRepository<TestEntity> _repository;
+        private readonly IRepository<TestEntity, Guid> _repository;
 
-        public CustomDeleteHandler(IRepository<TestEntity> repository)
+        public CustomDeleteHandler(IRepository<TestEntity, Guid> repository)
         {
             _repository = repository;
         }
 
-        public Task DeleteAsync(IGuidIdentifier request, CancellationToken cancellationToken)
+        public Task DeleteAsync(IIdentifier<Guid> request, CancellationToken cancellationToken)
         {
             return _repository.RemoveAsync(request.Id, cancellationToken);
         }

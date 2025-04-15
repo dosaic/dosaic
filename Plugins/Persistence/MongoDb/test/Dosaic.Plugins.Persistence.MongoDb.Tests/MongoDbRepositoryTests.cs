@@ -61,7 +61,7 @@ namespace Dosaic.Plugins.Persistence.MongoDb
         [Test]
         public async Task FindByIdAsyncReturnsSingleResult()
         {
-            var readRepository = new MongoRepository<TestEntity>(_mongoDbInstanceMock, _dateTimeProvider);
+            var readRepository = new MongoRepository<TestEntity, Guid>(_mongoDbInstanceMock, _dateTimeProvider);
 
             var result = await readRepository.FindByIdAsync(_mockData[0].Id, CancellationToken.None);
 
@@ -79,7 +79,7 @@ namespace Dosaic.Plugins.Persistence.MongoDb
         [Test]
         public async Task CountAsyncReturnsAmountOfEntries()
         {
-            var readRepository = new MongoRepository<TestEntity>(_mongoDbInstanceMock, _dateTimeProvider);
+            var readRepository = new MongoRepository<TestEntity, Guid>(_mongoDbInstanceMock, _dateTimeProvider);
 
             var result = await readRepository.CountAsync(QueryOptions<TestEntity>.Empty);
 
@@ -93,7 +93,7 @@ namespace Dosaic.Plugins.Persistence.MongoDb
         [Test]
         public async Task FindAsyncWithoutFilterReturnsListResult()
         {
-            var readRepository = new MongoRepository<TestEntity>(_mongoDbInstanceMock, _dateTimeProvider);
+            var readRepository = new MongoRepository<TestEntity, Guid>(_mongoDbInstanceMock, _dateTimeProvider);
 
             var listResult = await readRepository.FindAsync(QueryOptions<TestEntity>.Empty);
 
@@ -119,7 +119,7 @@ namespace Dosaic.Plugins.Persistence.MongoDb
         [Test]
         public async Task FindAsyncWithFilterReturnsListResult()
         {
-            var readRepository = new MongoRepository<TestEntity>(_mongoDbInstanceMock, _dateTimeProvider);
+            var readRepository = new MongoRepository<TestEntity, Guid>(_mongoDbInstanceMock, _dateTimeProvider);
 
             var queryOptions = QueryOptions<TestEntity>.Parse("Name eq 'TestEntity-1'", "Name asc", 10, 0);
             var entities = await readRepository.FindAsync(queryOptions, CancellationToken.None);
@@ -133,7 +133,7 @@ namespace Dosaic.Plugins.Persistence.MongoDb
         [Test]
         public async Task AddAsyncReturnsCreatedEntity()
         {
-            var writeRepository = new MongoRepository<TestEntity>(_mongoDbInstanceMock, _dateTimeProvider);
+            var writeRepository = new MongoRepository<TestEntity, Guid>(_mongoDbInstanceMock, _dateTimeProvider);
             var testEntity = _mockData[0];
             var addResult = await writeRepository.AddAsync(testEntity, CancellationToken.None);
             addResult.Should().NotBeNull().And.BeOfType<TestEntity>();
@@ -150,7 +150,7 @@ namespace Dosaic.Plugins.Persistence.MongoDb
         [Test]
         public async Task UpdateAsyncReturnsUpdatedEntity()
         {
-            var writeRepository = new MongoRepository<TestEntity>(_mongoDbInstanceMock, _dateTimeProvider);
+            var writeRepository = new MongoRepository<TestEntity, Guid>(_mongoDbInstanceMock, _dateTimeProvider);
             var testEntity = new TestEntity(_mockData[1].Id,
                 _mockData[0].Name,
                 _mockData[0].CreationDate);
@@ -168,7 +168,7 @@ namespace Dosaic.Plugins.Persistence.MongoDb
         [Test]
         public async Task RemoveAsyncIsSuccessful()
         {
-            var writeRepository = new MongoRepository<TestEntity>(_mongoDbInstanceMock, _dateTimeProvider);
+            var writeRepository = new MongoRepository<TestEntity, Guid>(_mongoDbInstanceMock, _dateTimeProvider);
             await writeRepository.RemoveAsync(
                 _mockData[0].Id, CancellationToken.None);
             _mongoDbInstanceMock.Received().GetCollectionFor<TestEntity>();
@@ -181,7 +181,7 @@ namespace Dosaic.Plugins.Persistence.MongoDb
         {
             _mongoDbCollectionMock.DeleteOneAsync(Arg.Any<FilterDefinition<TestEntity>>(), CancellationToken.None)
                 .Returns(DeleteResult.Unacknowledged.Instance);
-            var writeRepository = new MongoRepository<TestEntity>(_mongoDbInstanceMock, _dateTimeProvider);
+            var writeRepository = new MongoRepository<TestEntity, Guid>(_mongoDbInstanceMock, _dateTimeProvider);
             await writeRepository.Invoking(async x => await x.RemoveAsync(
                 _mockData[0].Id, CancellationToken.None)).Should().ThrowAsync<DosaicException>();
             _mongoDbInstanceMock.Received().GetCollectionFor<TestEntity>();

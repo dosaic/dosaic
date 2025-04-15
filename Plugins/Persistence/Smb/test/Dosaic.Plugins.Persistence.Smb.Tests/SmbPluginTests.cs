@@ -1,4 +1,3 @@
-using Dosaic.Plugins.Persistence.Abstractions;
 using Dosaic.Testing.NUnit;
 using Dosaic.Testing.NUnit.Assertions;
 using Microsoft.Extensions.DependencyInjection;

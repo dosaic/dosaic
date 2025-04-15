@@ -8,13 +8,13 @@ using FluentValidation;
 
 namespace Dosaic.Plugins.Handlers.Cqrs.SimpleResource.Handlers
 {
-    public class SimpleResourceUpdateHandler<TResource> : IUpdateHandler<TResource> where TResource : class, IGuidIdentifier
+    public class SimpleResourceUpdateHandler<TResource> : IUpdateHandler<TResource> where TResource : class, IIdentifier<Guid>
     {
         private readonly ActivitySource _activitySource = new($"{nameof(SimpleResourceUpdateHandler<TResource>)}<{typeof(TResource)}>");
-        private readonly IRepository<TResource> _repository;
+        private readonly IRepository<TResource, Guid> _repository;
         private readonly IValidator<TResource> _validator;
 
-        public SimpleResourceUpdateHandler(IRepository<TResource> repository, IUpdateValidator<TResource> validator)
+        public SimpleResourceUpdateHandler(IRepository<TResource, Guid> repository, IUpdateValidator<TResource> validator)
         {
             _repository = repository;
             _validator = new GenericValidator<TResource>(validator.ValidateOnUpdate);

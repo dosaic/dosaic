@@ -21,7 +21,7 @@ namespace Dosaic.Plugins.Persistence.InMemory.Tests
             var dateToSet = DateTime.UtcNow;
             var dateTimeProvider = Substitute.For<IDateTimeProvider>();
             dateTimeProvider.UtcNow.Returns(dateToSet);
-            var repo = new InMemoryRepository<SampleModel>(dateTimeProvider, new InMemoryStore());
+            var repo = new InMemoryRepository<SampleModel, Guid>(dateTimeProvider, new InMemoryStore());
             var entity = await repo.AddAsync(new SampleModel { Name = "Test" });
             entity.Id.Should().NotBeEmpty();
             entity.Name.Should().Be("Test");
@@ -43,7 +43,7 @@ namespace Dosaic.Plugins.Persistence.InMemory.Tests
             inMemoryStore.GetStore<SampleModel>().Add(existingModel);
             var dateTimeProvider = Substitute.For<IDateTimeProvider>();
             dateTimeProvider.UtcNow.Returns(DateTime.UtcNow);
-            var repo = new InMemoryRepository<SampleModel>(dateTimeProvider, inMemoryStore);
+            var repo = new InMemoryRepository<SampleModel, Guid>(dateTimeProvider, inMemoryStore);
             var newModel = new SampleModel
             {
                 Id = id,
@@ -61,7 +61,7 @@ namespace Dosaic.Plugins.Persistence.InMemory.Tests
         [Test]
         public async Task UpdateWontWorkIfTheEntityDoesNotExist()
         {
-            var repo = new InMemoryRepository<SampleModel>(Substitute.For<IDateTimeProvider>(), new InMemoryStore());
+            var repo = new InMemoryRepository<SampleModel, Guid>(Substitute.For<IDateTimeProvider>(), new InMemoryStore());
             var id = Guid.Parse("24804b01-edea-4cfe-8c7c-b564f6dda563");
             var model = new SampleModel
             {
@@ -86,7 +86,7 @@ namespace Dosaic.Plugins.Persistence.InMemory.Tests
             var inMemoryStore = new InMemoryStore();
             inMemoryStore.GetStore<SampleModel>().Add(existingModel);
             var dateTimeProvider = Substitute.For<IDateTimeProvider>();
-            var repo = new InMemoryRepository<SampleModel>(dateTimeProvider, inMemoryStore);
+            var repo = new InMemoryRepository<SampleModel, Guid>(dateTimeProvider, inMemoryStore);
             await repo.RemoveAsync(id);
             var sampleStore = inMemoryStore.GetStore<SampleModel>();
             sampleStore.Count.Should().Be(0);
@@ -95,7 +95,7 @@ namespace Dosaic.Plugins.Persistence.InMemory.Tests
         [Test]
         public async Task RemoveWontWorkIfTheEntityDoesNotExist()
         {
-            var repo = new InMemoryRepository<SampleModel>(Substitute.For<IDateTimeProvider>(), new InMemoryStore());
+            var repo = new InMemoryRepository<SampleModel, Guid>(Substitute.For<IDateTimeProvider>(), new InMemoryStore());
             var id = Guid.Parse("24804b01-edea-4cfe-8c7c-b564f6dda563");
             await repo.Invoking(async x => await x.RemoveAsync(id)).Should().ThrowAsync<DosaicException>();
         }
@@ -119,7 +119,7 @@ namespace Dosaic.Plugins.Persistence.InMemory.Tests
                 CreationDate = new DateTime(2021, 1, 1)
             };
             sampleModelStore.Add(model2);
-            var repo = new InMemoryRepository<SampleModel>(Substitute.For<IDateTimeProvider>(), store);
+            var repo = new InMemoryRepository<SampleModel, Guid>(Substitute.For<IDateTimeProvider>(), store);
             var queryOptions = new QueryOptions<SampleModel>().WithFilter("startswith(Name, 'sam')");
             var result = await repo.FindAsync(queryOptions);
             var entry = result.Single();
@@ -146,7 +146,7 @@ namespace Dosaic.Plugins.Persistence.InMemory.Tests
                 CreationDate = new DateTime(2021, 1, 1)
             };
             sampleModelStore.Add(model2);
-            var repo = new InMemoryRepository<SampleModel>(Substitute.For<IDateTimeProvider>(), store);
+            var repo = new InMemoryRepository<SampleModel, Guid>(Substitute.For<IDateTimeProvider>(), store);
             var result = await repo.CountAsync(QueryOptions<SampleModel>.Empty);
             result.Should().Be(2);
         }
@@ -170,7 +170,7 @@ namespace Dosaic.Plugins.Persistence.InMemory.Tests
                 CreationDate = new DateTime(2021, 1, 1)
             };
             sampleModelStore.Add(model2);
-            var repo = new InMemoryRepository<SampleModel>(Substitute.For<IDateTimeProvider>(), store);
+            var repo = new InMemoryRepository<SampleModel, Guid>(Substitute.For<IDateTimeProvider>(), store);
             var queryOptions = new QueryOptions<SampleModel>().WithFilter("startswith(Name, 'sam')");
             var result = await repo.CountAsync(queryOptions);
             result.Should().Be(1);
@@ -182,7 +182,7 @@ namespace Dosaic.Plugins.Persistence.InMemory.Tests
             var id = Guid.Parse("c522e9ed-bf3d-4e99-91d9-a3e05ae5d380");
             var store = new InMemoryStore();
             store.GetStore<SampleModel>().Add(new SampleModel { Id = id, Name = "test" });
-            var repo = new InMemoryRepository<SampleModel>(Substitute.For<IDateTimeProvider>(), store);
+            var repo = new InMemoryRepository<SampleModel, Guid>(Substitute.For<IDateTimeProvider>(), store);
             var model = await repo.FindByIdAsync(id);
             model.Id.Should().Be(id);
         }
@@ -191,14 +191,14 @@ namespace Dosaic.Plugins.Persistence.InMemory.Tests
         public async Task FindByIdAsyncWontWorkIfTheIdDoesNotExist()
         {
             var id = Guid.Parse("c522e9ed-bf3d-4e99-91d9-a3e05ae5d380");
-            var repo = new InMemoryRepository<SampleModel>(Substitute.For<IDateTimeProvider>(), new InMemoryStore());
+            var repo = new InMemoryRepository<SampleModel, Guid>(Substitute.For<IDateTimeProvider>(), new InMemoryStore());
             await repo.Invoking(async x => await x.FindByIdAsync(id)).Should().ThrowAsync<DosaicException>();
         }
 
         [Test]
         public async Task QueryByIdFilterWorks()
         {
-            var repository = Substitute.For<IRepository<SampleModel>>();
+            var repository = Substitute.For<IRepository<SampleModel, Guid>>();
             var emptyGuid = Guid.Empty;
             var query = new QueryOptions<SampleModel>().WithFilter(x => x.Id == emptyGuid);
             repository.CountAsync(query).Returns(1);

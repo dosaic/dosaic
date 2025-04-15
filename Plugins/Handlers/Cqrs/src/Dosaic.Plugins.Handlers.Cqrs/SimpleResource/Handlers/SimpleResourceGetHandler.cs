@@ -8,19 +8,19 @@ using FluentValidation;
 namespace Dosaic.Plugins.Handlers.Cqrs.SimpleResource.Handlers
 {
     public class SimpleResourceGetHandler<TResource> : IGetHandler<TResource>
-        where TResource : class, IGuidIdentifier
+        where TResource : class, IIdentifier<Guid>
     {
         private readonly ActivitySource _activitySource = new($"{nameof(SimpleResourceGetHandler<TResource>)}<{typeof(TResource)}>");
-        private readonly IReadRepository<TResource> _repository;
-        private readonly IValidator<IGuidIdentifier> _validator;
+        private readonly IReadRepository<TResource, Guid> _repository;
+        private readonly IValidator<IIdentifier<Guid>> _validator;
 
-        public SimpleResourceGetHandler(IReadRepository<TResource> repository)
+        public SimpleResourceGetHandler(IReadRepository<TResource, Guid> repository)
         {
             _repository = repository;
-            _validator = new GenericValidator<IGuidIdentifier>(GuidIdentifierValidator.Validate);
+            _validator = new GenericValidator<IIdentifier<Guid>>(GuidIdentifierValidator.Validate);
         }
 
-        public async Task<TResource> GetAsync(IGuidIdentifier request, CancellationToken cancellationToken)
+        public async Task<TResource> GetAsync(IIdentifier<Guid> request, CancellationToken cancellationToken)
         {
             using var activity = _activitySource.StartActivity(nameof(GetAsync), kind: ActivityKind.Internal, parentContext: default);
             activity!.AddTag("resource-id", request);

@@ -10,13 +10,13 @@ using FluentValidation;
 namespace Dosaic.Plugins.Handlers.Cqrs.SimpleResource.Handlers
 {
     public class SimpleResourceGetListHandler<TResource> : IGetListHandler<TResource>
-        where TResource : class, IGuidIdentifier
+        where TResource : class, IIdentifier<Guid>
     {
         private readonly ActivitySource _activitySource = new($"{nameof(SimpleResourceGetListHandler<TResource>)}<{typeof(TResource)}>");
-        private readonly IFactory<IReadRepository<TResource>> _repositoryFactory;
+        private readonly IFactory<IReadRepository<TResource, Guid>> _repositoryFactory;
         private readonly IValidator<PagingRequest> _validator;
 
-        public SimpleResourceGetListHandler(IFactory<IReadRepository<TResource>> repositoryFactory)
+        public SimpleResourceGetListHandler(IFactory<IReadRepository<TResource, Guid>> repositoryFactory)
         {
             _repositoryFactory = repositoryFactory;
             _validator = new GenericValidator<PagingRequest>(PagingRequestValidator.Validate);

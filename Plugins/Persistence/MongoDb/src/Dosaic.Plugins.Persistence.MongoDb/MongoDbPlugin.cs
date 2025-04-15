@@ -1,6 +1,5 @@
 using Dosaic.Hosting.Abstractions;
 using Dosaic.Hosting.Abstractions.Plugins;
-using Dosaic.Plugins.Persistence.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
 using MongoDB.Driver;
 
@@ -19,8 +18,6 @@ namespace Dosaic.Plugins.Persistence.MongoDb
         {
             serviceCollection.AddSingleton(_configuration);
             serviceCollection.AddSingleton<IMongoDbInstance, MongoDbInstance>();
-            serviceCollection.AddTransient(typeof(IRepository<>), typeof(MongoRepository<>));
-            serviceCollection.AddTransient(typeof(IReadRepository<>), typeof(MongoRepository<>));
         }
 
         public void ConfigureHealthChecks(IHealthChecksBuilder healthChecksBuilder)

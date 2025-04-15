@@ -7,13 +7,13 @@ using FluentValidation;
 
 namespace Dosaic.Plugins.Handlers.Cqrs.SimpleResource.Handlers
 {
-    public class SimpleResourceCreateHandler<TResource> : ICreateHandler<TResource> where TResource : class, IGuidIdentifier
+    public class SimpleResourceCreateHandler<TResource> : ICreateHandler<TResource> where TResource : class, IIdentifier<Guid>
     {
         private readonly ActivitySource _activitySource = new($"{nameof(SimpleResourceCreateHandler<TResource>)}<{typeof(TResource)}>");
-        private readonly IRepository<TResource> _repository;
+        private readonly IRepository<TResource, Guid> _repository;
         private readonly IValidator<TResource> _validator;
 
-        public SimpleResourceCreateHandler(IRepository<TResource> repository, ICreateValidator<TResource> validator)
+        public SimpleResourceCreateHandler(IRepository<TResource, Guid> repository, ICreateValidator<TResource> validator)
         {
             _repository = repository;
             _validator = new GenericValidator<TResource>(validator.ValidateOnCreate);

@@ -1,7 +1,6 @@
 using Chronos;
 using Chronos.Abstractions;
 using Dosaic.Hosting.Abstractions;
-using Dosaic.Plugins.Persistence.Abstractions;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
@@ -30,6 +29,7 @@ namespace Dosaic.Plugins.Persistence.MongoDb
 
             // register dbContext and map as interface
             sc.AddSingleton<IMongoDbInstance, MongoDbInstance>();
+            sc.AddMongoDbRepository<TestEntity, Guid>();
             var plugin = new MongoDbPlugin(_mongoDbConfiguration);
             plugin.ConfigureServices(sc);
             var sp = sc.BuildServiceProvider();
@@ -46,13 +46,9 @@ namespace Dosaic.Plugins.Persistence.MongoDb
             var mongoDbInstance = sp.GetRequiredService<IMongoDbInstance>();
             mongoDbInstance.Should().BeOfType<MongoDbInstance>();
 
-            var readRepo = sp.GetRequiredService<IReadRepository<TestEntity>>();
-            readRepo.Should().NotBeNull();
-            readRepo.Should().BeOfType<MongoRepository<TestEntity>>();
-
-            var repo = sp.GetRequiredService<IRepository<TestEntity>>();
+            var repo = sp.GetRequiredService<MongoRepository<TestEntity, Guid>>();
             repo.Should().NotBeNull();
-            repo.Should().BeOfType<MongoRepository<TestEntity>>();
+            repo.Should().BeOfType<MongoRepository<TestEntity, Guid>>();
         }
 
         [Test]

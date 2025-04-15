@@ -46,7 +46,7 @@ namespace Dosaic.Example.Service
         private static Validation Validate(int input) => input < 1 ? Validation.Invalid("lower as one") : Validation.Ok;
     }
 
-    public class Entry : IGuidIdentifier
+    public class Entry : IIdentifier<Guid>
     {
         /// <summary>
         /// The identifier
@@ -64,6 +64,7 @@ namespace Dosaic.Example.Service
 
         public IList<Entry2> Dentries { get; set; }
         public Guid Id { get; set; }
+        public Guid NewId() => Guid.NewGuid();
     }
 
     public class Entry2

@@ -68,7 +68,7 @@ namespace Dosaic.Plugins.Endpoints.RestResourceEntity.Tests.Endpoints
             SetMethod(HttpMethod.Get);
             var entity = new TestEntity(Guid.NewGuid(), "test");
             var handler = Substitute.For<IGetHandler<TestEntity>>();
-            handler.GetAsync(new GuidIdentifier(entity.Id), CancellationToken.None).Returns(entity);
+            handler.GetAsync(new Identifier(entity.Id), CancellationToken.None).Returns(entity);
             var result = await RestActions.GetAsync(entity.Id, handler, _httpContextAccessor, CancellationToken.None);
             await result.ExecuteAsync(_httpContext);
             Response.StatusCode.Should().Be(200);

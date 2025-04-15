@@ -13,21 +13,21 @@ namespace Dosaic.Plugins.Handlers.Cqrs.Tests.SimpleResource.Handlers
 {
     public class SimpleResourceGetHandlerTests
     {
-        private IReadRepository<TestEntity> _repository = null!;
+        private IReadRepository<TestEntity, Guid> _repository = null!;
         private IGetHandler<TestEntity> _handler = null!;
 
         [SetUp]
         public void Init()
         {
             ActivityTestBootstrapper.Setup();
-            _repository = Substitute.For<IReadRepository<TestEntity>>();
+            _repository = Substitute.For<IReadRepository<TestEntity, Guid>>();
             _handler = new SimpleResourceGetHandler<TestEntity>(_repository);
         }
 
         [Test]
         public async Task ReturnsAValidationErrorWhenTheRequestIsInvalid()
         {
-            await _handler.Invoking(async x => await x.GetAsync(GuidIdentifier.Empty, CancellationToken.None))
+            await _handler.Invoking(async x => await x.GetAsync(Identifier.Empty, CancellationToken.None))
                 .Should().ThrowAsync<ValidationDosaicException>();
         }
 
@@ -37,7 +37,7 @@ namespace Dosaic.Plugins.Handlers.Cqrs.Tests.SimpleResource.Handlers
             var entity = new TestEntity { Id = Guid.NewGuid(), Name = "Sample" };
             _repository.FindByIdAsync(entity.Id, CancellationToken.None)
                 .Returns(entity);
-            var identifier = new GuidIdentifier(entity.Id);
+            var identifier = new Identifier(entity.Id);
             var result = await _handler.GetAsync(identifier, CancellationToken.None);
             result.Should().Be(entity);
         }
@@ -48,7 +48,7 @@ namespace Dosaic.Plugins.Handlers.Cqrs.Tests.SimpleResource.Handlers
             var id = Guid.NewGuid();
             _repository.FindByIdAsync(id, CancellationToken.None)
                 .Throws(new DosaicException("not found", 404));
-            var identifier = new GuidIdentifier(id);
+            var identifier = new Identifier(id);
             await _handler.Invoking(async x => await x.GetAsync(identifier, CancellationToken.None))
                 .Should().ThrowAsync<DosaicException>();
         }

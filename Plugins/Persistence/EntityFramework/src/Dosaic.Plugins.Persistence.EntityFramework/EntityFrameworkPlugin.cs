@@ -2,7 +2,6 @@ using System.Diagnostics;
 using System.Reflection;
 using Dosaic.Hosting.Abstractions.Plugins;
 using Dosaic.Hosting.Abstractions.Services;
-using Dosaic.Plugins.Persistence.Abstractions;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using OpenTelemetry.Instrumentation.EntityFrameworkCore;
@@ -14,8 +13,6 @@ namespace Dosaic.Plugins.Persistence.EntityFramework
     {
         public void ConfigureServices(IServiceCollection serviceCollection)
         {
-            serviceCollection.AddTransient(typeof(IRepository<>), typeof(EntityFrameworkRepository<>));
-            serviceCollection.AddTransient(typeof(IReadRepository<>), typeof(EntityFrameworkRepository<>));
             serviceCollection.AddOpenTelemetry().WithTracing(builder => builder
                 .AddEntityFrameworkCoreInstrumentation(EnrichEfCoreWithActivity));
         }

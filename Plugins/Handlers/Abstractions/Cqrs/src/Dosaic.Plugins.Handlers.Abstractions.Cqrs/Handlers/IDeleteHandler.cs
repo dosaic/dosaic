@@ -6,7 +6,7 @@ namespace Dosaic.Plugins.Handlers.Abstractions.Cqrs.Handlers
 #pragma warning disable S2326
     public interface IDeleteHandler<in TResource> : IHandler
     {
-        Task DeleteAsync(IGuidIdentifier request, CancellationToken cancellationToken);
+        Task DeleteAsync(IIdentifier<Guid> request, CancellationToken cancellationToken);
     }
 #pragma warning restore S2326
 }

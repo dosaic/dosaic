@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Dosaic.Plugins.Persistence.EntityFramework
 {
-    public interface IDbContext<TEntity> : IDbContext where TEntity : class, IGuidIdentifier
+    public interface IDbContext<TEntity, TId> : IDbContext where TEntity : class, IIdentifier<TId>
     {
         DbSet<TEntity> GetSet();
     }

@@ -18,17 +18,17 @@ namespace Dosaic.Plugins.Handlers.Cqrs.Tests.SimpleResource
         private IImplementationResolver _implementationResolver = null!;
         private CqrsSimpleResourcePlugin _plugin = null!;
         private IServiceCollection _serviceCollection = null!;
-        private IRepository<TestEntity> _repository = null!;
+        private IRepository<TestEntity, Guid> _repository = null!;
 
         [SetUp]
         public void Init()
         {
             _implementationResolver = Substitute.For<IImplementationResolver>();
             _plugin = new CqrsSimpleResourcePlugin(_implementationResolver, Substitute.For<ILogger<CqrsSimpleResourcePlugin>>());
-            _repository = Substitute.For<IRepository<TestEntity>>();
+            _repository = Substitute.For<IRepository<TestEntity, Guid>>();
             _serviceCollection = TestingDefaults.ServiceCollection();
             _serviceCollection.AddSingleton(_repository);
-            _serviceCollection.AddSingleton<IReadRepository<TestEntity>>(_repository);
+            _serviceCollection.AddSingleton<IReadRepository<TestEntity, Guid>>(_repository);
         }
 
         [Test]
@@ -37,7 +37,7 @@ namespace Dosaic.Plugins.Handlers.Cqrs.Tests.SimpleResource
             _implementationResolver.FindTypes().Returns(new List<Type> { typeof(CustomValidator) });
             _plugin.ConfigureServices(_serviceCollection);
 
-            _serviceCollection.AddFactory(typeof(IReadRepository<TestEntity>));
+            _serviceCollection.AddFactory(typeof(IReadRepository<TestEntity, Guid>));
             var sp = _serviceCollection.BuildServiceProvider();
 
             var createHandler = sp.GetRequiredService<ICreateHandler<TestEntity>>();

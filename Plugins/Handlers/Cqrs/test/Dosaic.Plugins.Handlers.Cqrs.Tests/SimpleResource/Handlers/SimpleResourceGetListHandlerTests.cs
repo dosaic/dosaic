@@ -15,16 +15,16 @@ namespace Dosaic.Plugins.Handlers.Cqrs.Tests.SimpleResource.Handlers
 {
     public class SimpleResourceGetListHandlerTests
     {
-        private IReadRepository<TestEntity> _repository = null!;
+        private IReadRepository<TestEntity, Guid> _repository = null!;
         private IGetListHandler<TestEntity> _handler = null!;
 
         [SetUp]
         public void Init()
         {
-            _repository = Substitute.For<IReadRepository<TestEntity>>();
+            _repository = Substitute.For<IReadRepository<TestEntity, Guid>>();
             var sp = Substitute.For<IServiceProvider>();
-            sp.GetService(typeof(IReadRepository<TestEntity>)).Returns(_repository);
-            var repoFactory = new Factory<IReadRepository<TestEntity>>(sp);
+            sp.GetService(typeof(IReadRepository<TestEntity, Guid>)).Returns(_repository);
+            var repoFactory = new Factory<IReadRepository<TestEntity, Guid>>(sp);
             _handler = new SimpleResourceGetListHandler<TestEntity>(repoFactory);
         }
 

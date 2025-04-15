@@ -19,7 +19,7 @@ namespace Dosaic.Plugins.Persistence.EntityFramework.Tests
             var sc = new ServiceCollection();
             sc.AddEfContext<TestContext>(o => o.UseInMemoryDatabase(Guid.NewGuid().ToString()));
             var sp = sc.BuildServiceProvider();
-            var dbContext = sp.GetRequiredService<IDbContext<TestEntity>>();
+            var dbContext = sp.GetRequiredService<IDbContext<TestEntity, Guid>>();
             dbContext.Should().BeOfType<TestContext>();
             var generalDbContext = sp.GetServices<IDbContext>();
             generalDbContext.Should().HaveCount(1);
