@@ -87,6 +87,11 @@ public class SecretStorage<TSecretBucket>(
                 if (totpKeySecret.Totp.TotpKey is null)
                     throw new ValidationDosaicException(typeof(UsernamePasswordTotpSecret),
                         "You need to provide the totp-key for writes");
+
+                if (string.IsNullOrWhiteSpace(totpKeySecret.Totp.TotpKey.Base32Key))
+                    throw new ValidationDosaicException(typeof(UsernamePasswordTotpSecret),
+                        "The totp-key's Base32Key must not be null, empty, or whitespace");
+
                 await totpSecretEngine.CreateKeyAsync(secretId.Id,
                     new TOTPCreateKeyRequest
                     {
