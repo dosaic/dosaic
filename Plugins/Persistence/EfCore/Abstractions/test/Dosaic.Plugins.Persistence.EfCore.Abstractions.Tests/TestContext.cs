@@ -1,18 +1,15 @@
-using Dosaic.Plugins.Persistence.Abstractions;
-using Dosaic.Plugins.Persistence.EfCore.Abstractions;
 using Microsoft.EntityFrameworkCore;
 
-namespace Dosaic.Plugins.Persistence.EntityFramework.Tests
+namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests
 {
-    internal record TestEntity(Guid Id, string Name, DateTime CreationDate) : IIdentifier<Guid>, ICreationDate
+    internal record TestEntity(Guid Id, string Name, DateTime CreationDate)
     {
         public Guid Id { get; set; } = Id;
-        public Guid NewId() => Guid.NewGuid();
 
         public DateTime CreationDate { get; set; } = CreationDate;
     }
 
-    internal class TestContext : DbContext, IDbContext<TestEntity, Guid>
+    internal class TestContext : DbContext
     {
         public TestContext(DbContextOptions<TestContext> options) : base(options) { }
 

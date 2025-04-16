@@ -8,24 +8,6 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions
 {
     public static class ServiceCollectionExtensions
     {
-        public static IServiceCollection AddEfContext<TContext>(this IServiceCollection serviceCollection,
-            Action<DbContextOptionsBuilder> configureContext,
-            ServiceLifetime contextLifetime = ServiceLifetime.Transient,
-            ServiceLifetime optionsLifetime = ServiceLifetime.Singleton)
-            where TContext : DbContext, IDbContext
-        {
-            serviceCollection.AddDbContext<TContext>(configureContext, contextLifetime, optionsLifetime);
-            serviceCollection.AddTransient<IDbContext, TContext>();
-            var dbContextInterfaces = typeof(TContext).GetInterfaces()
-                .Where(x => x.IsInterface && x.IsAssignableTo(typeof(IDbContext)) && x != typeof(IDbContext));
-            foreach (var dbContextInterface in dbContextInterfaces)
-            {
-                serviceCollection.AddTransient(dbContextInterface, typeof(TContext));
-            }
-
-            return serviceCollection;
-        }
-
         public static IHealthChecksBuilder AddEfContext<TContext>(this IHealthChecksBuilder healthChecksBuilder)
             where TContext : DbContext
         {
@@ -34,15 +16,16 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions
             return healthChecksBuilder;
         }
 
-        public static void MigrateEfContexts(this IApplicationBuilder applicationBuilder)
+        public static void MigrateEfContexts<TDbContext>(this IApplicationBuilder applicationBuilder)
+            where TDbContext : DbContext
         {
             var logger = applicationBuilder.ApplicationServices.GetRequiredService<ILogger<EntityFrameworkPlugin>>();
-            applicationBuilder.ApplicationServices.GetServices<IDbContext>().ToList()
+            applicationBuilder.ApplicationServices.GetServices<TDbContext>().ToList()
                 .ForEach(dbContext =>
                 {
                     var dbContextName = dbContext.GetType().Name;
                     logger.LogDebug("Migrating '{DbContextName}'", dbContextName);
-                    dbContext.Migrate();
+                    dbContext.Database.Migrate();
                     logger.LogDebug("Migrated '{DbContextName}'", dbContextName);
                 });
         }

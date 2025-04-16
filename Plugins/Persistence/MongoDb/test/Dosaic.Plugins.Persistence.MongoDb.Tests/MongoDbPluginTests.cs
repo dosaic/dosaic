@@ -29,7 +29,6 @@ namespace Dosaic.Plugins.Persistence.MongoDb
 
             // register dbContext and map as interface
             sc.AddSingleton<IMongoDbInstance, MongoDbInstance>();
-            sc.AddMongoDbRepository<TestEntity, Guid>();
             var plugin = new MongoDbPlugin(_mongoDbConfiguration);
             plugin.ConfigureServices(sc);
             var sp = sc.BuildServiceProvider();
@@ -46,9 +45,7 @@ namespace Dosaic.Plugins.Persistence.MongoDb
             var mongoDbInstance = sp.GetRequiredService<IMongoDbInstance>();
             mongoDbInstance.Should().BeOfType<MongoDbInstance>();
 
-            var repo = sp.GetRequiredService<MongoRepository<TestEntity, Guid>>();
-            repo.Should().NotBeNull();
-            repo.Should().BeOfType<MongoRepository<TestEntity, Guid>>();
+
         }
 
         [Test]

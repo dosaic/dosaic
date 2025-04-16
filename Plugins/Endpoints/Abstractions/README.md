@@ -1,3 +1,0 @@
-# Dosaic.Plugins.Endpoints.Abstractions
-
-

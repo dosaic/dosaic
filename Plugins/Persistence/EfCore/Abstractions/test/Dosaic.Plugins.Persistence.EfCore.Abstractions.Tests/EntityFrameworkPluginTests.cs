@@ -3,18 +3,16 @@ using System.Diagnostics;
 using Chronos;
 using Chronos.Abstractions;
 using Dosaic.Hosting.Abstractions.Services;
-using Dosaic.Plugins.Persistence.EfCore.Abstractions;
 using Dosaic.Testing.NUnit.Extensions;
 using FluentAssertions;
 using Microsoft.AspNetCore.Builder;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using NSubstitute;
 using NUnit.Framework;
 using OpenTelemetry.Instrumentation.EntityFrameworkCore;
 
-namespace Dosaic.Plugins.Persistence.EntityFramework.Tests
+namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests
 {
     public class EntityFrameworkPluginTests
     {
@@ -34,19 +32,9 @@ namespace Dosaic.Plugins.Persistence.EntityFramework.Tests
             var sc = new ServiceCollection();
             sc.AddSingleton<IDateTimeProvider, DateTimeProvider>();
 
-            // register dbContext and map as interface
-            sc.AddDbContext<TestContext>(o => o.UseInMemoryDatabase("test"), ServiceLifetime.Transient);
-            sc.AddTransient<IDbContext<TestEntity, Guid>, TestContext>();
-            sc.AddSingleton<EntityFrameworkRepository<TestEntity, Guid>>();
             _plugin.ConfigureServices(sc);
             var sp = sc.BuildServiceProvider();
-            var readRepo = sp.GetRequiredService<EntityFrameworkRepository<TestEntity, Guid>>();
-            readRepo.Should().NotBeNull();
-            readRepo.Should().BeOfType<EntityFrameworkRepository<TestEntity, Guid>>();
 
-            var repo = sp.GetRequiredService<EntityFrameworkRepository<TestEntity, Guid>>();
-            repo.Should().NotBeNull();
-            repo.Should().BeOfType<EntityFrameworkRepository<TestEntity, Guid>>();
         }
 
         [Test]

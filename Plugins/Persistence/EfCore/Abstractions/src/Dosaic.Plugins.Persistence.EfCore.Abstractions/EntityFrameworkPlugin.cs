@@ -3,6 +3,7 @@ using System.Reflection;
 using Dosaic.Hosting.Abstractions.Plugins;
 using Dosaic.Hosting.Abstractions.Services;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using OpenTelemetry.Instrumentation.EntityFrameworkCore;
 using OpenTelemetry.Trace;
@@ -35,7 +36,7 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions
         public void ConfigureHealthChecks(IHealthChecksBuilder healthChecksBuilder)
         {
             var dbContexts = implementationResolver.FindAssemblies().SelectMany(x => x.GetTypes())
-                .Where(x => x.IsClass && !x.IsAbstract && x.IsAssignableTo(typeof(IDbContext)))
+                .Where(x => x.IsClass && !x.IsAbstract && x.IsAssignableTo(typeof(DbContext)))
                 .ToList();
             var registerHc = typeof(ServiceCollectionExtensions).GetMethods(BindingFlags.Static | BindingFlags.Public)
                 .Single(x => x.GetParameters().Length == 1 && x.GetParameters()[0].ParameterType == typeof(IHealthChecksBuilder));

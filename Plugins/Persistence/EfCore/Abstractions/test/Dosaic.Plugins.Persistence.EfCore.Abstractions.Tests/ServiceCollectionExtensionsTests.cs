@@ -1,5 +1,4 @@
 using Dosaic.Hosting.Abstractions;
-using Dosaic.Plugins.Persistence.EfCore.Abstractions;
 using Dosaic.Testing.NUnit.Assertions;
 using FluentAssertions;
 using Microsoft.AspNetCore.Builder;
@@ -10,22 +9,10 @@ using Microsoft.Extensions.Logging;
 using NSubstitute;
 using NUnit.Framework;
 
-namespace Dosaic.Plugins.Persistence.EntityFramework.Tests
+namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests
 {
     public class ServiceCollectionExtensionsTests
     {
-        [Test]
-        public void CanRegisterDbContextAndMapItsEntities()
-        {
-            var sc = new ServiceCollection();
-            sc.AddEfContext<TestContext>(o => o.UseInMemoryDatabase(Guid.NewGuid().ToString()));
-            var sp = sc.BuildServiceProvider();
-            var dbContext = sp.GetRequiredService<IDbContext<TestEntity, Guid>>();
-            dbContext.Should().BeOfType<TestContext>();
-            var generalDbContext = sp.GetServices<IDbContext>();
-            generalDbContext.Should().HaveCount(1);
-        }
-
         [Test]
         public void CanAddDbContextHealthCheck()
         {
@@ -36,35 +23,34 @@ namespace Dosaic.Plugins.Persistence.EntityFramework.Tests
         }
 
         [Test]
-        public void DoesNotThrowExceptionWhenDbIsNotRelational()
-        {
-            var opts = new DbContextOptionsBuilder<TestContext>();
-            opts.UseInMemoryDatabase(Guid.NewGuid().ToString("N"));
-            IDbContext context = new TestContext(opts.Options);
-            context.Invoking(x => x.Migrate()).Should().NotThrow();
-        }
-
-        [Test]
         public void MigratesRelationalDatabases()
         {
             var opts = new DbContextOptionsBuilder<TestContext>();
             opts.UseSqlite($"Data Source=./test-${Guid.NewGuid():N}.db");
-            IDbContext context = new TestContext(opts.Options);
-            context.Invoking(x => x.Migrate()).Should().NotThrow();
+            DbContext context = new TestContext(opts.Options);
+            context.Invoking(x => x.Database.Migrate()).Should().NotThrow();
         }
 
         [Test]
         public void CanMigrateAllContexts()
         {
             var sp = Substitute.For<IServiceProvider>();
-            var dbContext = Substitute.For<IDbContext>();
-            sp.GetService(typeof(IEnumerable<IDbContext>)).Returns(new List<IDbContext> { dbContext });
-            sp.GetService(typeof(ILogger<EntityFrameworkPlugin>)).Returns(new FakeLogger<EntityFrameworkPlugin>());
+            var opts = new DbContextOptionsBuilder<TestContext>();
+            opts.UseSqlite($"Data Source=./test-${Guid.NewGuid():N}.db");
+            DbContext dbContext = new TestContext(opts.Options);
+            sp.GetService(typeof(IEnumerable<DbContext>)).Returns(new List<DbContext> { dbContext });
+            var fakeLogger = new FakeLogger<EntityFrameworkPlugin>();
+            sp.GetService(typeof(ILogger<EntityFrameworkPlugin>)).Returns(fakeLogger);
             var appBuilder = Substitute.For<IApplicationBuilder>();
             appBuilder.ApplicationServices.Returns(sp);
-            appBuilder.MigrateEfContexts();
-            appBuilder.ApplicationServices.Received(1).GetService(typeof(IEnumerable<IDbContext>));
-            dbContext.Received(1).Migrate();
+            var invoke = () =>
+            appBuilder.MigrateEfContexts<DbContext>();
+            invoke();
+            appBuilder.ApplicationServices.Received(1).GetService(typeof(IEnumerable<DbContext>));
+            fakeLogger.Entries[0].Message.Should().Be("Migrating 'TestContext'");
+            fakeLogger.Entries[1].Message.Should().Be("Migrated 'TestContext'");
+            invoke.Should().NotThrow();
+
         }
     }
 }

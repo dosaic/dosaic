@@ -1,6 +1,5 @@
 using System.ComponentModel.DataAnnotations;
 using System.Diagnostics.CodeAnalysis;
-using Dosaic.Plugins.Persistence.Abstractions;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 using Vogen;
@@ -46,7 +45,7 @@ namespace Dosaic.Example.Service
         private static Validation Validate(int input) => input < 1 ? Validation.Invalid("lower as one") : Validation.Ok;
     }
 
-    public class Entry : IIdentifier<Guid>
+    public class Entry
     {
         /// <summary>
         /// The identifier

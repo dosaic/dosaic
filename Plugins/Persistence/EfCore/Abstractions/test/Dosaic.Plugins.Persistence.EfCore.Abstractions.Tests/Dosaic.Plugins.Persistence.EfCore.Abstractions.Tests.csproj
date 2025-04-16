@@ -1,12 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-
-
         <IsPackable>false</IsPackable>
-
-
-        <RootNamespace>Dosaic.Plugins.Persistence.EntityFramework.Tests</RootNamespace>
     </PropertyGroup>
 
     <ItemGroup>

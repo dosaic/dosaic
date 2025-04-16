@@ -55,5 +55,7 @@ namespace Dosaic.Plugins.Persistence.MongoDb
             mongoCollection.Should().BeAssignableTo<IMongoCollection<TestEntity>>().And.NotBeNull();
             mongoCollection.CollectionNamespace.CollectionName.Should().Be(nameof(TestEntity));
         }
+
+        internal record TestEntity(Guid Id, string Name, DateTime CreationDate);
     }
 }
