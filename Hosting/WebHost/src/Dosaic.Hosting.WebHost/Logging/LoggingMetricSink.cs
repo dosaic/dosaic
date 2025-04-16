@@ -7,8 +7,11 @@ namespace Dosaic.Hosting.WebHost.Logging
 {
     internal class LoggingMetricSink : ILogEventSink
     {
-        private readonly Counter<long> _loggingCounter = Metrics.CreateCounter<long>("monitoring_logging", "calls", "count of logged messages");
-        private readonly Counter<long> _exceptionCounter = Metrics.CreateCounter<long>("monitoring_logging_exception", "calls", "count of exceptions logged");
+        public const string MonitoringLogging = "monitoring_logging";
+        public const string MonitoringLoggingException = "monitoring_logging_exception";
+
+        internal readonly Counter<long> _loggingCounter = Metrics.CreateCounter<long>(MonitoringLogging, "calls", "count of logged messages");
+        internal readonly Counter<long> _exceptionCounter = Metrics.CreateCounter<long>(MonitoringLoggingException, "calls", "count of exceptions logged");
 
         public void Emit(LogEvent logEvent)
         {

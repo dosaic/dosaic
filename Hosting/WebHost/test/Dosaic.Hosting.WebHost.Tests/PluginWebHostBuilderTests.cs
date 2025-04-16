@@ -102,7 +102,7 @@ namespace Dosaic.Hosting.WebHost.Tests
             var logger = host.Services.GetRequiredService<ILogger>();
             logger.Should().BeOfType<Logger<ILogger>>();
             var logEventSink = host.Services.GetService<ILogEventSink>();
-            logEventSink.Should().BeOfType<LoggingMetricSink>();
+            logEventSink.Should().BeOfType<WebHost.Logging.LoggingMetricSink>();
 
             var corsPolicy = webApplication.Configuration.BindToSection<CorsPolicy>(DosaicWebHostDefaults.CorsConfigSectionName);
             AssertCorsPolicy(corsPolicy, false);
