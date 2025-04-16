@@ -1,16 +1,14 @@
-using Dosaic.Hosting.Abstractions;
-using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 
-namespace Dosaic.Plugins.Persistence.EntityFramework
+namespace Dosaic.Plugins.Persistence.EfCore.NpgSql
 {
     public static class ServiceCollectionExtensions
     {
-
-
-
-
+        public static void AddNpgsqlDbMigratorService<TDbContext>(this IServiceCollection serviceCollection)
+            where TDbContext : DbContext
+        {
+            serviceCollection.AddHostedService<NpgsqlDbMigratorService<TDbContext>>();
+        }
     }
 }

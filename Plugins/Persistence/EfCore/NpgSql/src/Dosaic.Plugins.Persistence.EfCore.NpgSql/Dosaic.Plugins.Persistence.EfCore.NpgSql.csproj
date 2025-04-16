@@ -1,17 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-
-
     <IsPackable>true</IsPackable>
-
-
-    <RootNamespace>Dosaic.Plugins.Persistence.EntityFramework</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="OpenTelemetry.Instrumentation.EntityFrameworkCore" />
-    <PackageReference Include="OpenTelemetry.Extensions.Hosting" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
     <PackageReference Include="EntityFrameworkCore.Projectables" />
     <PackageReference Include="Linq.Expression.Optimizer" />
@@ -22,6 +16,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\..\..\..\..\Hosting\Abstractions\src\Dosaic.Hosting.Abstractions\Dosaic.Hosting.Abstractions.csproj" />
+    <ProjectReference Include="..\..\..\Abstractions\src\Dosaic.Plugins.Persistence.EfCore.Abstractions\Dosaic.Plugins.Persistence.EfCore.Abstractions.csproj" />
  </ItemGroup>
 
 </Project>

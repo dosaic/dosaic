@@ -1,5 +1,7 @@
 using Dosaic.Hosting.Abstractions.Attributes;
 
+namespace Dosaic.Plugins.Persistence.EfCore.NpgSql;
+
 /// <summary>
 /// Configuration for the persistence layer
 /// </summary>

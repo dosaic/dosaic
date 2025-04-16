@@ -6,10 +6,10 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Npgsql;
 
-namespace Dosaic.Plugins.Persistence.EntityFramework
+namespace Dosaic.Plugins.Persistence.EfCore.NpgSql
 {
     [ExcludeFromCodeCoverage(Justification = "Needs an actual postgres database")]
-    internal class DbMigratorService<TDbContext>(IServiceScopeFactory scopeFactory, ILogger logger)
+    internal class NpgsqlDbMigratorService<TDbContext>(IServiceScopeFactory scopeFactory, ILogger logger)
         : BackgroundService where TDbContext : DbContext
     {
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)

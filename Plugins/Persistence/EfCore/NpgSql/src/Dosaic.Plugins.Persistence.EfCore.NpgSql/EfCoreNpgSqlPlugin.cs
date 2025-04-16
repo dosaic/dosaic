@@ -1,8 +1,10 @@
 using Dosaic.Hosting.Abstractions.Extensions;
-using EntityFrameworkCore.Projectables.Infrastructure;
-using EntityFrameworkCore.Projectables.Infrastructure.Internal;
 using Dosaic.Hosting.Abstractions.Plugins;
 using Dosaic.Hosting.Abstractions.Services;
+using Dosaic.Plugins.Persistence.EfCore.Abstractions;
+using Dosaic.Plugins.Persistence.EfCore.Abstractions.Database;
+using EntityFrameworkCore.Projectables.Infrastructure;
+using EntityFrameworkCore.Projectables.Infrastructure.Internal;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
@@ -13,8 +15,7 @@ using Npgsql;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Infrastructure;
 using Npgsql.NameTranslation;
 
-
-namespace Dosaic.Plugins.Persistence.EntityFramework
+namespace Dosaic.Plugins.Persistence.EfCore.NpgSql
 {
     public class EfCoreNpgSqlPlugin(
         IImplementationResolver implementationResolver,
@@ -57,9 +58,9 @@ namespace Dosaic.Plugins.Persistence.EntityFramework
             };
             builder
                 .UseNpgsql(new NpgsqlDataSourceBuilder(connectionStringBuilder.ConnectionString)
-                        .MapDbEnums<TDbContext>().Build(),
+                        .MapDbEnums().Build(),
                     o => o.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery)
-                        .UseDbEnums<TDbContext>())
+                        .UseDbEnums())
 #if DEBUG
                 .EnableSensitiveDataLogging();
 #endif
@@ -107,79 +108,5 @@ namespace Dosaic.Plugins.Persistence.EntityFramework
 
             return optionsBuilder;
         }
-    }
-
-    internal static class PostgresEnumExtensions
-    {
-        private static readonly NpgsqlSnakeCaseNameTranslator _translator = new();
-
-        private static HashSet<Type> getEnumTypes<T>() =>
-            typeof(T).GetAssemblyTypes(x => x.IsEnum && x.HasAttribute<DbEnumAttribute>()).ToHashSet();
-
-        public static void MapDbEnums<TDbContext>(this ModelBuilder builder)
-        {
-            var register = typeof(NpgsqlModelBuilderExtensions).GetMethods()
-                .Single(x =>
-                {
-                    if (x is not
-                        {
-                            Name: nameof(NpgsqlModelBuilderExtensions.HasPostgresEnum), ContainsGenericParameters: false
-                        })
-                        return false;
-                    var parameters = x.GetParameters();
-                    return parameters.Length == 4
-                           && parameters[0].ParameterType == typeof(ModelBuilder)
-                           && parameters[1].ParameterType == typeof(string)
-                           && parameters[2].ParameterType == typeof(string)
-                           && parameters[3].ParameterType == typeof(string[]);
-                });
-            foreach (var e in getEnumTypes<TDbContext>())
-            {
-                var dbEnum = e.GetAttribute<DbEnumAttribute>();
-                var labels = Enum.GetNames(e).Select(_translator.TranslateMemberName).Order().ToArray();
-                register.Invoke(null, [builder, dbEnum.Schema, dbEnum.Name, labels]);
-            }
-        }
-
-        public static NpgsqlDataSourceBuilder MapDbEnums<TDbContext>(this NpgsqlDataSourceBuilder dataSourceBuilder)
-        {
-            dataSourceBuilder.EnableUnmappedTypes();
-            foreach (var e in getEnumTypes<TDbContext>())
-            {
-                var dbName = e.GetAttribute<DbEnumAttribute>()!.DbName;
-                dataSourceBuilder.MapEnum(e, dbName);
-            }
-
-            return dataSourceBuilder;
-        }
-
-        public static NpgsqlDbContextOptionsBuilder UseDbEnums<TDbContext>(this NpgsqlDbContextOptionsBuilder builder)
-        {
-            foreach (var e in getEnumTypes<TDbContext>())
-            {
-                var dbEnum = e.GetAttribute<DbEnumAttribute>();
-                builder.MapEnum(e, dbEnum.Name, dbEnum.Schema, _translator);
-            }
-
-            return builder;
-        }
-    }
-
-    [AttributeUsage(AttributeTargets.Enum)]
-    public class DbEnumAttribute(string name, string schema) : Attribute
-    {
-        public string Name { get; } = name;
-        public string Schema { get; } = schema;
-
-        public string DbName => $"{Schema}.{Name}";
-    }
-
-
-    [AttributeUsage(AttributeTargets.Class)]
-    public class DbNanoIdPrimaryKeyAttribute(byte length, string prefix = "") : Attribute
-    {
-        public string Prefix { get; } = prefix;
-        public byte Length { get; } = length;
-        public byte LengthWithPrefix => (byte)(Length + Prefix.Length);
     }
 }
