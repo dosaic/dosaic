@@ -2,7 +2,7 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using Microsoft.EntityFrameworkCore;
 
-namespace Dosaic.Plugins.Persistence.EfCore.Abstractions
+namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Monitoring
 {
     [ExcludeFromCodeCoverage] //can't check if observer where subscribed
     public class DiagnosticObserver : IObserver<DiagnosticListener>
@@ -30,4 +30,7 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions
             }
         }
     }
+
+
+
 }

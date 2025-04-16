@@ -3,6 +3,7 @@ using System.Diagnostics;
 using Chronos;
 using Chronos.Abstractions;
 using Dosaic.Hosting.Abstractions.Services;
+using Dosaic.Plugins.Persistence.EfCore.Abstractions.Monitoring;
 using Dosaic.Testing.NUnit.Extensions;
 using FluentAssertions;
 using Microsoft.AspNetCore.Builder;
@@ -14,16 +15,16 @@ using OpenTelemetry.Instrumentation.EntityFrameworkCore;
 
 namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests
 {
-    public class EntityFrameworkPluginTests
+    public class EfCorePluginTests
     {
         private IImplementationResolver _implementationResolver;
-        private EntityFrameworkPlugin _plugin;
+        private EfCorePlugin _plugin;
 
         [SetUp]
         public void Up()
         {
             _implementationResolver = Substitute.For<IImplementationResolver>();
-            _plugin = new EntityFrameworkPlugin(_implementationResolver);
+            _plugin = new EfCorePlugin(_implementationResolver);
         }
 
         [Test]
@@ -53,7 +54,7 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests
         [Test]
         public void ConfiguresHealthChecks()
         {
-            _implementationResolver.FindAssemblies().Returns([typeof(EntityFrameworkPluginTests).Assembly]);
+            _implementationResolver.FindAssemblies().Returns([typeof(EfCorePluginTests).Assembly]);
             var healthCheckBuilder = Substitute.For<IHealthChecksBuilder>();
             _plugin.ConfigureHealthChecks(healthCheckBuilder);
             healthCheckBuilder.Received(1).Add(Arg.Any<HealthCheckRegistration>());
@@ -64,7 +65,7 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests
         public void EnrichEfCoreWithActivitySetsOptions()
         {
             var opts = new EntityFrameworkInstrumentationOptions();
-            EntityFrameworkPlugin.EnrichEfCoreWithActivity(opts);
+            EfCorePlugin.EnrichEfCoreWithActivity(opts);
             opts.EnrichWithIDbCommand.Should().NotBeNull();
             using var activity = new Activity("unit-test");
             var command = Substitute.For<IDbCommand>();

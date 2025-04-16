@@ -1,10 +1,11 @@
 using Dosaic.Hosting.Abstractions.Metrics;
+using Dosaic.Plugins.Persistence.EfCore.Abstractions.Monitoring;
 using Dosaic.Testing.NUnit;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using NUnit.Framework;
 
-namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests
+namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests.Monitoring
 {
     [TestFixture]
     public class ObserverTests

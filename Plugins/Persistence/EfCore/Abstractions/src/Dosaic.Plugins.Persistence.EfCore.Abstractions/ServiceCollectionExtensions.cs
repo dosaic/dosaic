@@ -1,4 +1,4 @@
-using Dosaic.Hosting.Abstractions;
+using Dosaic.Plugins.Persistence.EfCore.Abstractions.Database;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -8,18 +8,15 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions
 {
     public static class ServiceCollectionExtensions
     {
-        public static IHealthChecksBuilder AddEfContext<TContext>(this IHealthChecksBuilder healthChecksBuilder)
-            where TContext : DbContext
+        public static void AddDbMigratorService<TDbContext>(this IServiceCollection serviceCollection)
+            where TDbContext : DbContext
         {
-            healthChecksBuilder.AddDbContextCheck<TContext>(typeof(TContext).Name,
-                tags: [HealthCheckTag.Readiness.Value]);
-            return healthChecksBuilder;
+            serviceCollection.AddHostedService<DbMigratorService<TDbContext>>();
         }
-
         public static void MigrateEfContexts<TDbContext>(this IApplicationBuilder applicationBuilder)
             where TDbContext : DbContext
         {
-            var logger = applicationBuilder.ApplicationServices.GetRequiredService<ILogger<EntityFrameworkPlugin>>();
+            var logger = applicationBuilder.ApplicationServices.GetRequiredService<ILogger<EfCorePlugin>>();
             applicationBuilder.ApplicationServices.GetServices<TDbContext>().ToList()
                 .ForEach(dbContext =>
                 {
