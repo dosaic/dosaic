@@ -7,31 +7,17 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.DependencyInjection;
+using LinqKit;
 
 namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Database
 {
-    public class EfCoreDb(DbContextOptions<EfCoreDb> opts) : DbContext(opts), IDb
+    public abstract class EfCoreDbContext(DbContextOptions<EfCoreDbContext> opts) : DbContext(opts), IDb
     {
-        private IServiceScope GetServiceScope() => opts.GetExtension<CoreOptionsExtension>()?.ApplicationServiceProvider?.GetRequiredService<IServiceScopeFactory>()?.CreateScope();
+        private IServiceScope GetServiceScope() => opts.GetExtension<CoreOptionsExtension>().ApplicationServiceProvider?.GetRequiredService<IServiceScopeFactory>()?.CreateScope();
         protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
         {
             configurationBuilder.Properties(typeof(NanoId)).HaveConversion(typeof(NanoIdConverter));
             base.ConfigureConventions(configurationBuilder);
-        }
-
-        protected override void OnModelCreating(ModelBuilder modelBuilder)
-        {
-            modelBuilder.HasDefaultSchema("public");
-            modelBuilder.MapDbEnums();
-            modelBuilder.ApplyConfigurationsFromAssembly(typeof(EfCoreDb).Assembly);
-            modelBuilder.ApplyHistories();
-            modelBuilder.ApplyEventSourcing();
-            modelBuilder.ApplyAuditFields();
-            modelBuilder.ApplyKeys();
-            modelBuilder.ApplySnakeCaseNamingConventions();
-            modelBuilder.ApplyEnumFields();
-
-            base.OnModelCreating(modelBuilder);
         }
 
         public DbSet<TEntity> Get<TEntity>() where TEntity : class, IModel
@@ -60,7 +46,7 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Database
         }
 
         [ExcludeFromCodeCoverage(Justification = "Only shorthand for interface")]
-        public Task<IDbContextTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default)
+        public virtual Task<IDbContextTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default)
         {
             return Database.BeginTransactionAsync(cancellationToken);
         }

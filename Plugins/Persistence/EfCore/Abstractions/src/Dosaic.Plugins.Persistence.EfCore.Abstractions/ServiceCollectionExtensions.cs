@@ -26,5 +26,7 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions
                     logger.LogDebug("Migrated '{DbContextName}'", dbContextName);
                 });
         }
+
+
     }
 }

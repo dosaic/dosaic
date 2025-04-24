@@ -112,6 +112,7 @@
     <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.0.4" />
     <PackageVersion Include="Linq.Expression.Optimizer" Version="1.0.27" />
     <PackageVersion Include="LinqKit.Microsoft.EntityFrameworkCore" Version="9.0.8" />
+    <PackageVersion Include="GracefulExpandoObject" Version="1.6.0" />
     <PackageVersion Include="EntityFrameworkCore.Projectables" Version="4.0.0" />
     <PackageVersion Include="Nanoid" Version="3.1.0" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.3">

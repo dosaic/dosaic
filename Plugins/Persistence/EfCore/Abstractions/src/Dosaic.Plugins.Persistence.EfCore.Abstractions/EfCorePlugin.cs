@@ -13,7 +13,7 @@ using OpenTelemetry.Trace;
 
 namespace Dosaic.Plugins.Persistence.EfCore.Abstractions
 {
-    public class EfCorePlugin(IImplementationResolver implementationResolver) : IPluginServiceConfiguration,
+    public class EfCorePlugin(IImplementationResolver implementationResolver,  IEfCoreConfigurator[] configurators) : IPluginServiceConfiguration,
         IPluginApplicationConfiguration, IPluginHealthChecksConfiguration
     {
         public void ConfigureServices(IServiceCollection serviceCollection)
@@ -21,8 +21,14 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions
             RegisterBusinessLogicInterceptors(serviceCollection);
             serviceCollection.AddSingleton<IBusinessLogicInterceptor, BusinessLogicInterceptor>();
 
-            serviceCollection.AddOpenTelemetry().WithTracing(builder => builder
-                .AddEntityFrameworkCoreInstrumentation(EnrichEfCoreWithActivity));
+            serviceCollection.AddOpenTelemetry().WithTracing(builder =>
+            {
+                var enrichEfCoreWithActivity = EnrichEfCoreWithActivity;
+                configurators.ForEach(x => x.ConfigureEntityFrameworkCoreInstrumentation(enrichEfCoreWithActivity));
+                builder
+                    .AddEntityFrameworkCoreInstrumentation(enrichEfCoreWithActivity);
+                configurators.ForEach(x => x.ConfigureOtelWithTracing(builder));
+            });
         }
 
         private void RegisterBusinessLogicInterceptors(IServiceCollection serviceCollection)
@@ -73,5 +79,11 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions
             foreach (var dbContext in dbContexts)
                 registerHc.MakeGenericMethod(dbContext).Invoke(null, [healthChecksBuilder]);
         }
+    }
+
+    public interface IEfCoreConfigurator : IPluginConfigurator
+    {
+        void ConfigureEntityFrameworkCoreInstrumentation(Action<EntityFrameworkInstrumentationOptions> options);
+        void ConfigureOtelWithTracing(TracerProviderBuilder options);
     }
 }

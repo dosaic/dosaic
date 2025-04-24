@@ -24,7 +24,7 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests
         public void Up()
         {
             _implementationResolver = Substitute.For<IImplementationResolver>();
-            _plugin = new EfCorePlugin(_implementationResolver);
+            _plugin = new EfCorePlugin(_implementationResolver, [Substitute.For<IEfCoreConfigurator>()]);
         }
 
         [Test]

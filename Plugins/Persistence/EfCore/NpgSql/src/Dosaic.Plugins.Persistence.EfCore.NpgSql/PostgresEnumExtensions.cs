@@ -12,7 +12,7 @@ namespace Dosaic.Plugins.Persistence.EfCore.NpgSql
         private static readonly NpgsqlSnakeCaseNameTranslator _translator = new();
 
         private static readonly HashSet<Type> _enumTypes =
-            typeof(EfCoreDb).GetAssemblyTypes(x => x.IsEnum && x.HasAttribute<DbEnumAttribute>()).ToHashSet();
+            typeof(EfCoreDbContext).GetAssemblyTypes(x => x.IsEnum && x.HasAttribute<DbEnumAttribute>()).ToHashSet();
 
         public static void MapDbEnums(this ModelBuilder builder)
         {
