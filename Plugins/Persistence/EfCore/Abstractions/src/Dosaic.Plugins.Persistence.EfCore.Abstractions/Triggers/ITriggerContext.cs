@@ -8,6 +8,7 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Triggers
     {
         public ChangeSet<T> ChangeSet { get; }
         public IDb Database { get; }
-        public IServiceProvider ServiceProvider { get; }
     }
+
+
 }

@@ -87,22 +87,5 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests.Interceptors
         }
     }
 
-    public class TestEfCoreDb(DbContextOptions<EfCoreDbContext> opts) : EfCoreDbContext(opts)
-    {
-        protected override void OnModelCreating(ModelBuilder modelBuilder)
-        {
-            modelBuilder.HasDefaultSchema("public");
-            // modelBuilder.MapDbEnums();
-            modelBuilder.ApplyConfigurationsFromAssembly(typeof(TestEfCoreDb).Assembly);
-            // modelBuilder.ApplyHistories();
-            // modelBuilder.ApplyEventSourcing();
-            // modelBuilder.ApplyAuditFields();
-            // modelBuilder.ApplyKeasyModels();
-            modelBuilder.ApplyKeys();
-            // modelBuilder.ApplyNamingConventions();
-            // modelBuilder.ApplyEnumFields();
 
-            base.OnModelCreating(modelBuilder);
-        }
-    }
 }

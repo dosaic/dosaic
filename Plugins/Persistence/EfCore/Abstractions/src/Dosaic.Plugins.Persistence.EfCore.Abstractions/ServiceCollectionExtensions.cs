@@ -1,3 +1,4 @@
+using Dosaic.Hosting.Abstractions;
 using Dosaic.Plugins.Persistence.EfCore.Abstractions.Database;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
@@ -8,11 +9,20 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions
 {
     public static class ServiceCollectionExtensions
     {
+        public static IHealthChecksBuilder AddEfCoreContext<TContext>(this IHealthChecksBuilder healthChecksBuilder)
+            where TContext : DbContext
+        {
+            healthChecksBuilder.AddDbContextCheck<TContext>(typeof(TContext).Name,
+                tags: [HealthCheckTag.Readiness.Value]);
+            return healthChecksBuilder;
+        }
+
         public static void AddDbMigratorService<TDbContext>(this IServiceCollection serviceCollection)
             where TDbContext : DbContext
         {
             serviceCollection.AddHostedService<DbMigratorService<TDbContext>>();
         }
+
         public static void MigrateEfContexts<TDbContext>(this IApplicationBuilder applicationBuilder)
             where TDbContext : DbContext
         {
@@ -26,7 +36,5 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions
                     logger.LogDebug("Migrated '{DbContextName}'", dbContextName);
                 });
         }
-
-
     }
 }

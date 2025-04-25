@@ -23,7 +23,7 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Interceptors
         {
             var triggers = GetTriggers<IBeforeTrigger<T>>();
             if (triggers.Count == 0) return;
-            var context = new TriggerContext<T>(changeSet, db, serviceProvider);
+            var context = new TriggerContext<T>(changeSet, db);
             foreach (var trigger in triggers)
             {
                 await trigger.HandleBeforeAsync(context, cancellationToken);
@@ -39,7 +39,7 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Interceptors
         {
             var triggers = GetTriggers<IAfterTrigger<T>>();
             if (triggers.Count == 0) return;
-            var context = new TriggerContext<T>(changeSet, db, serviceProvider);
+            var context = new TriggerContext<T>(changeSet, db);
             foreach (var trigger in triggers)
             {
                 await trigger.HandleAfterAsync(context, cancellationToken);

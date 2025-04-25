@@ -4,6 +4,7 @@ using Chronos;
 using Chronos.Abstractions;
 using Dosaic.Hosting.Abstractions.Services;
 using Dosaic.Plugins.Persistence.EfCore.Abstractions.Monitoring;
+using Dosaic.Testing.NUnit;
 using Dosaic.Testing.NUnit.Extensions;
 using FluentAssertions;
 using Microsoft.AspNetCore.Builder;
@@ -24,18 +25,24 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests
         public void Up()
         {
             _implementationResolver = Substitute.For<IImplementationResolver>();
+            _implementationResolver.FindTypes().Returns(
+            [
+                typeof(EfCorePlugin)
+            ]);
+            _implementationResolver.ResolveInstance(Arg.Is<Type>(t => t == typeof(EfCorePlugin)))
+                .Returns(new EfCorePlugin(_implementationResolver, [Substitute.For<IEfCoreConfigurator>()]));
+
             _plugin = new EfCorePlugin(_implementationResolver, [Substitute.For<IEfCoreConfigurator>()]);
         }
 
         [Test]
         public void ConfigureServicesWorks()
         {
-            var sc = new ServiceCollection();
+            var sc = TestingDefaults.ServiceCollection();
             sc.AddSingleton<IDateTimeProvider, DateTimeProvider>();
 
             _plugin.ConfigureServices(sc);
             var sp = sc.BuildServiceProvider();
-
         }
 
         [Test]
@@ -58,7 +65,7 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests
             var healthCheckBuilder = Substitute.For<IHealthChecksBuilder>();
             _plugin.ConfigureHealthChecks(healthCheckBuilder);
             healthCheckBuilder.Received(1).Add(Arg.Any<HealthCheckRegistration>());
-            healthCheckBuilder.Received(1).Add(Arg.Is<HealthCheckRegistration>(h => h.Name == nameof(TestContext)));
+            healthCheckBuilder.Received(1).Add(Arg.Is<HealthCheckRegistration>(h => h.Name == nameof(TestEfCoreDb)));
         }
 
         [Test]

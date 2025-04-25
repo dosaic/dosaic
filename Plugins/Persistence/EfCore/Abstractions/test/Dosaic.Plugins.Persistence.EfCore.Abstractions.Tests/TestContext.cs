@@ -1,3 +1,5 @@
+using Dosaic.Plugins.Persistence.EfCore.Abstractions.Database;
+using Dosaic.Plugins.Persistence.EfCore.Abstractions.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests
@@ -9,23 +11,42 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests
         public DateTime CreationDate { get; set; } = CreationDate;
     }
 
-    internal class TestContext : DbContext
+    public class TestEfCoreDb(DbContextOptions<EfCoreDbContext> opts) : EfCoreDbContext(opts)
     {
-        public TestContext(DbContextOptions<TestContext> options) : base(options) { }
-
-        public DbContext GetContext() => this;
-
-        public DbSet<TestEntity> GetSet() => Set<TestEntity>();
-
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            modelBuilder.Entity<TestEntity>(e =>
-            {
-                e.HasKey(x => x.Id);
-                e.Property(x => x.Id).IsRequired();
-                e.Property(x => x.Name).IsRequired().HasMaxLength(255);
-            });
+            modelBuilder.HasDefaultSchema("public");
+            // modelBuilder.MapDbEnums();
+            modelBuilder.ApplyConfigurationsFromAssembly(typeof(TestEfCoreDb).Assembly);
+            // modelBuilder.ApplyHistories();
+            // modelBuilder.ApplyEventSourcing();
+            // modelBuilder.ApplyAuditFields();
+            // modelBuilder.ApplyKeasyModels();
+            modelBuilder.ApplyKeys();
+            // modelBuilder.ApplyNamingConventions();
+            // modelBuilder.ApplyEnumFields();
+
             base.OnModelCreating(modelBuilder);
         }
     }
+
+    // internal class TestContext : DbContext
+    // {
+    //     public TestContext(DbContextOptions<TestContext> options) : base(options) { }
+    //
+    //     public DbContext GetContext() => this;
+    //
+    //     public DbSet<TestEntity> GetSet() => Set<TestEntity>();
+    //
+    //     protected override void OnModelCreating(ModelBuilder modelBuilder)
+    //     {
+    //         modelBuilder.Entity<TestEntity>(e =>
+    //         {
+    //             e.HasKey(x => x.Id);
+    //             e.Property(x => x.Id).IsRequired();
+    //             e.Property(x => x.Name).IsRequired().HasMaxLength(255);
+    //         });
+    //         base.OnModelCreating(modelBuilder);
+    //     }
+    // }
 }

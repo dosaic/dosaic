@@ -1,4 +1,5 @@
 using Dosaic.Hosting.Abstractions;
+using Dosaic.Plugins.Persistence.EfCore.Abstractions.Database;
 using Dosaic.Testing.NUnit.Assertions;
 using FluentAssertions;
 using Microsoft.AspNetCore.Builder;
@@ -17,17 +18,17 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests
         // public void CanAddDbContextHealthCheck()
         // {
         //     var hc = Substitute.For<IHealthChecksBuilder>();
-        //     hc.AddEfContext<TestContext>();
+        //     hc.AddEfContext<TestEfCoreDb>();
         //     hc.Received().Add(Arg.Is<HealthCheckRegistration>(h =>
-        //         h.Name == nameof(TestContext) && h.Tags.Contains(HealthCheckTag.Readiness.Value)));
+        //         h.Name == nameof(TestEfCoreDb) && h.Tags.Contains(HealthCheckTag.Readiness.Value)));
         // }
 
         [Test]
         public void MigratesRelationalDatabases()
         {
-            var opts = new DbContextOptionsBuilder<TestContext>();
+            var opts = new DbContextOptionsBuilder<EfCoreDbContext>();
             opts.UseSqlite($"Data Source=./test-${Guid.NewGuid():N}.db");
-            DbContext context = new TestContext(opts.Options);
+            DbContext context = new TestEfCoreDb(opts.Options);
             context.Invoking(x => x.Database.Migrate()).Should().NotThrow();
         }
 
@@ -35,9 +36,9 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests
         public void CanMigrateAllContexts()
         {
             var sp = Substitute.For<IServiceProvider>();
-            var opts = new DbContextOptionsBuilder<TestContext>();
+            var opts = new DbContextOptionsBuilder<EfCoreDbContext>();
             opts.UseSqlite($"Data Source=./test-${Guid.NewGuid():N}.db");
-            DbContext dbContext = new TestContext(opts.Options);
+            DbContext dbContext = new TestEfCoreDb(opts.Options);
             sp.GetService(typeof(IEnumerable<DbContext>)).Returns(new List<DbContext> { dbContext });
             var fakeLogger = new FakeLogger<EfCorePlugin>();
             sp.GetService(typeof(ILogger<EfCorePlugin>)).Returns(fakeLogger);
@@ -47,8 +48,8 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests
             appBuilder.MigrateEfContexts<DbContext>();
             invoke();
             appBuilder.ApplicationServices.Received(1).GetService(typeof(IEnumerable<DbContext>));
-            fakeLogger.Entries[0].Message.Should().Be("Migrating 'TestContext'");
-            fakeLogger.Entries[1].Message.Should().Be("Migrated 'TestContext'");
+            fakeLogger.Entries[0].Message.Should().Be("Migrating 'TestEfCoreDb'");
+            fakeLogger.Entries[1].Message.Should().Be("Migrated 'TestEfCoreDb'");
             invoke.Should().NotThrow();
 
         }
