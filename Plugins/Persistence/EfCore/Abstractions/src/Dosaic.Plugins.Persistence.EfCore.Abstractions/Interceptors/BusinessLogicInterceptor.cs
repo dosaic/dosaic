@@ -17,14 +17,12 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Interceptors
         {
             var entityType = model.GetType();
             var interceptorType = typeof(IBusinessLogic<>).MakeGenericType(entityType);
-            var interceptors = serviceProvider.GetServices(interceptorType);
-
             var method = interceptorType.GetMethod(methodName)!;
+            using var scope = serviceProvider.CreateScope();
+            var interceptors = scope.ServiceProvider.GetServices(interceptorType);
             foreach (var interceptor in interceptors)
-            {
-                var result = method.Invoke(interceptor, [entityState, model, cancellationToken]);
-                await (result as Task)!;
-            }
+                await (method.Invoke(interceptor, [entityState, model, cancellationToken]) as Task)!;
         }
     }
+
 }

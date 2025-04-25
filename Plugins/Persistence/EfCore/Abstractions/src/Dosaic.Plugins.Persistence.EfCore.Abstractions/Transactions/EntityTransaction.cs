@@ -2,7 +2,7 @@ using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Transactions
 {
-    public class EntityTransaction(IDbContextTransaction dbContextTransaction, Action onComplete) : ITransaction
+    public class EntityTransaction(IDbContextTransaction dbContextTransaction, Action? onComplete) : ITransaction
     {
         private bool _completeInvoked;
 

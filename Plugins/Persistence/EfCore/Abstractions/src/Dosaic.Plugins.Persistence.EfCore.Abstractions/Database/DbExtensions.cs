@@ -1,18 +1,23 @@
+using System.Collections.Immutable;
 using System.Linq.Expressions;
 using System.Reflection;
 using Chronos.Abstractions;
 using Dosaic.Plugins.Persistence.EfCore.Abstractions.Eventsourcing;
+using Microsoft.EntityFrameworkCore;
 
 namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Database
 {
     public static class DbExtensions
     {
-        public static IQueryable<TAggregate> GetEvents<TAggregate>(this IDb db, TAggregate aggregate,
+        public static async Task<ImmutableArray<TAggregate>> GetEvents<TAggregate>(this IDb db, TAggregate aggregate,
             IDateTimeProvider dateTimeProvider)
             where TAggregate : AggregateEvent
         {
-            return db.GetQuery<TAggregate>().Where(BuildLambdaExpression(aggregate))
-                .Where(x => !x.IsDeleted && x.ValidFrom <= dateTimeProvider.UtcNow);
+            var result = await db.GetQuery<TAggregate>()
+                .Where(x => !x.IsDeleted && x.ValidFrom <= dateTimeProvider.UtcNow)
+                .Where(BuildLambdaExpression(aggregate))
+                .ToArrayAsync();
+            return [.. result];
         }
 
         private static Expression<Func<TAggregate, bool>> BuildLambdaExpression<TAggregate>(TAggregate entity)
@@ -26,15 +31,9 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Database
                 .Select(p =>
                 {
                     var propertyValue = p.GetValue(entity);
-
-                    // Create a member access expression for the property
                     var propertyAccess = Expression.Property(parameter, p.Name);
-
-                    // Create a parameterized expression for the value instead of a constant
                     Expression<Func<object>> valueExpr = () => propertyValue;
                     var valueExpression = Expression.Convert(valueExpr.Body, p.PropertyType);
-
-                    // Create an equality comparison
                     return Expression.Equal(propertyAccess, valueExpression);
                 }).ToArray();
 
@@ -43,24 +42,6 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Database
 
             var body = expressions.Aggregate(Expression.AndAlso);
             return Expression.Lambda<Func<TAggregate, bool>>(body, parameter);
-        }
-
-        // Helper class to replace parameters in expressions
-        private class ParameterReplacer : ExpressionVisitor
-        {
-            private readonly ParameterExpression _oldParameter;
-            private readonly ParameterExpression _newParameter;
-
-            public ParameterReplacer(ParameterExpression oldParameter, ParameterExpression newParameter)
-            {
-                _oldParameter = oldParameter;
-                _newParameter = newParameter;
-            }
-
-            protected override Expression VisitParameter(ParameterExpression node)
-            {
-                return ReferenceEquals(node, _oldParameter) ? _newParameter : base.VisitParameter(node);
-            }
         }
     }
 }

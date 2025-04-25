@@ -23,7 +23,6 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Audit
                 var changeSet = (IList)value;
                 changeSet.Add(change.ToTyped(type));
             }
-
             return typedChangeSets;
         }
     }

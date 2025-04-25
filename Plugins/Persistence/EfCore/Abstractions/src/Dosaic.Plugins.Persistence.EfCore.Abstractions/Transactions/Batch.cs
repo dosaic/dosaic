@@ -17,4 +17,5 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Transactions
         public IList<TUpdate> Update { get; init; } = [];
         public IList<NanoId> Delete { get; init; } = [];
     }
+
 }

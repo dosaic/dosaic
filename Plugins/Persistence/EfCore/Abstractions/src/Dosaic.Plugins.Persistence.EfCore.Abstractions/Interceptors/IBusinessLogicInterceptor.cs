@@ -8,4 +8,5 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Interceptors
         Task InterceptBeforeAsync(IModel model, ChangeState entityState, CancellationToken cancellationToken);
         Task InterceptAfterAsync(IModel model, ChangeState entityState, CancellationToken cancellationToken);
     }
+
 }

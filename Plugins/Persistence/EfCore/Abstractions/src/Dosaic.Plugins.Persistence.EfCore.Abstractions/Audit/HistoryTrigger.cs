@@ -11,9 +11,7 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Audit
         where T : class, IModel, IHistory
     {
         private readonly string[] _excludedProperties = typeof(T).GetProperties()
-            .Where(x => CustomAttributeExtensions.GetCustomAttribute((MemberInfo)x, typeof(ExcludeFromHistoryAttribute)) != null)
-            .Select(x => x.Name.ToLowerInvariant()).ToArray();
-
+            .Where(x => x.GetCustomAttribute<ExcludeFromHistoryAttribute>() != null).Select(x => x.Name.ToLowerInvariant()).ToArray();
         private History<T> GetHistoryEntry(ModelChange<T> context)
         {
             var changes = context.GetChanges().FilterKeys(x => !_excludedProperties.Contains(x.ToLowerInvariant()));

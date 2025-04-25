@@ -16,12 +16,14 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Database
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
         Task<ITransaction> BeginTransactionAsync(CancellationToken cancellationToken = default);
+
         /// <summary>
         /// Gets a queryable for a specific entity with it needed domain logic
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <returns></returns>
         IQueryable<T> Get<T>() where T : class, IModel;
+
         /// <summary>
         /// Gets a queryable for the history of a specific entity
         /// </summary>
@@ -35,6 +37,7 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Database
         /// <typeparam name="T"></typeparam>
         /// <returns></returns>
         IQueryable<History<T>> GetHistory<T>() where T : class, IModel, IHistory;
+
         /// <summary>
         /// Creates a new entity
         /// </summary>
@@ -43,6 +46,7 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Database
         /// <typeparam name="T"></typeparam>
         /// <returns></returns>
         Task<T> CreateAsync<T>(T entity, CancellationToken cancellationToken = default) where T : class, IModel;
+
         /// <summary>
         /// Updates an existing entity
         /// </summary>
@@ -60,7 +64,9 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Database
         /// <param name="cancellationToken"></param>
         /// <typeparam name="T"></typeparam>
         /// <returns></returns>
-        Task<T> PatchAsync<T>(NanoId id, Action<T> patchCommand, CancellationToken cancellationToken = default) where T : class, IModel;
+        Task<T> PatchAsync<T>(NanoId id, Action<T> patchCommand, CancellationToken cancellationToken = default)
+            where T : class, IModel;
+
         /// <summary>
         /// Deletes an existing entity
         /// </summary>
@@ -79,6 +85,4 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Database
         /// <returns></returns>
         Task BatchAsync<T>(Batch<T> batch, CancellationToken cancellationToken = default) where T : class, IModel;
     }
-
-
 }

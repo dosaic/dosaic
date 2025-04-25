@@ -13,8 +13,9 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Eventsourcing
         public NanoId ModifiedBy { get; set; }
     }
 
-    public abstract class AggregateEvent<TModel> : AggregateEvent where TModel : Enum
+    public abstract class AggregateEvent<TModel> : AggregateEvent where TModel : System.Enum
     {
         public required TModel EventType { get; set; }
+
     }
 }

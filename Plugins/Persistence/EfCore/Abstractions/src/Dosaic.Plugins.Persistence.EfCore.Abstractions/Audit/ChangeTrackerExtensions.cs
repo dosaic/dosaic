@@ -32,12 +32,16 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Audit
             return changeSet;
         }
 
-        public static ChangeSet MergeChangeSet(this ChangeTracker changeTracker, ChangeSet changeSet)
+        public static ChangeSet UpdateChangeSet(this ChangeTracker changeTracker, ChangeSet changeSet)
         {
             foreach (var entry in changeTracker.GetEntities())
             {
                 var model = entry.Entity as IModel;
-                var existing = changeSet.Single(x => x.Entity?.Id == model!.Id);
+                var existing = changeSet.SingleOrDefault(x => x.Entity?.Id == model!.Id);
+                if (existing is null)
+                {
+                    continue;
+                }
                 var change = ModelChange.Create(existing.State, model, existing.PreviousEntity);
                 changeSet.Remove(existing);
                 changeSet.Add(change);

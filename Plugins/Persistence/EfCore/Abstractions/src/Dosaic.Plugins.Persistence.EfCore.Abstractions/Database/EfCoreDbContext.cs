@@ -39,9 +39,12 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Database
             var interceptor = new SaveInterceptor(sp, this);
             var changeSet = ChangeTracker.GetChangeSet();
             await interceptor.BeforeSaveAsync(changeSet, cancellationToken);
+            changeSet = ChangeTracker.GetChangeSet();
             var result = await base.SaveChangesAsync(cancellationToken);
-            changeSet = ChangeTracker.MergeChangeSet(changeSet);
+            changeSet = ChangeTracker.UpdateChangeSet(changeSet);
             await interceptor.AfterSaveAsync(changeSet, cancellationToken);
+            if (ChangeTracker.HasChanges())
+                await base.SaveChangesAsync(cancellationToken);
             return result;
         }
 

@@ -18,10 +18,8 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Models
 
         public object ToTyped(Type type)
         {
-            return Activator.CreateInstance(typeof(ModelChange<>).MakeGenericType(type), State, Entity,
-                PreviousEntity)!;
+            return Activator.CreateInstance(typeof(ModelChange<>).MakeGenericType(type), State, Entity, PreviousEntity)!;
         }
-
         public static ModelChange Create(ChangeState state, object current, object old)
         {
             return new ModelChange(state, current as IModel, old as IModel);

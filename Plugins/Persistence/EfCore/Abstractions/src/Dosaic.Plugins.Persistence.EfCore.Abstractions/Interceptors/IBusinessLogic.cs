@@ -29,4 +29,5 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Interceptors
             _ => Task.CompletedTask
         };
     }
+
 }

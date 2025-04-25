@@ -20,4 +20,5 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Audit
     {
         public virtual TModel Model { get; set; }
     }
+
 }
