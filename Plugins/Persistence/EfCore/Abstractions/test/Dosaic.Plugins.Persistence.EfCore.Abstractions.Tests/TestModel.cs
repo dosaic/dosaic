@@ -58,6 +58,9 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests
     public class TestHistoryModel : Model, IHistory
     {
         public string HistoryProperty { get; set; }
+
+        [ExcludeFromHistory]
+        public string Ignored { get; set; }
     }
 
     public class TestModelConfiguration : IEntityTypeConfiguration<TestModel>
