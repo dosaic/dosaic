@@ -14,7 +14,8 @@ namespace Dosaic.Plugins.Persistence.EfCore.NpgSql
             serviceCollection.AddHostedService<NpgsqlDbMigratorService<TDbContext>>();
         }
 
-        public static void ConfigureNpgSqlDatabase<TDbContext>(IServiceProvider provider, DbContextOptionsBuilder builder, EfCoreNpgSqlConfiguration configuration,
+        public static void ConfigureNpgSqlDatabase<TDbContext>(IServiceProvider provider,
+            DbContextOptionsBuilder builder, EfCoreNpgSqlConfiguration configuration,
             Microsoft.EntityFrameworkCore.Metadata.IModel compiledModel = null) where TDbContext : DbContext
         {
             var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
@@ -26,13 +27,13 @@ namespace Dosaic.Plugins.Persistence.EfCore.NpgSql
                 Username = configuration.Username,
                 Password = configuration.Password,
                 Database = configuration.Database,
-                ConnectionLifetime = 60,
-                KeepAlive = 15,
-                MaxPoolSize = 100,
+                ConnectionLifetime = configuration.ConnectionLifetime,
+                KeepAlive = configuration.KeepAlive,
+                MaxPoolSize = configuration.MaxPoolSize,
                 ArrayNullabilityMode = ArrayNullabilityMode.PerInstance
 #if DEBUG
                 ,
-                IncludeErrorDetail = true
+                IncludeErrorDetail = configuration.IncludeErrorDetail
 #endif
             };
             builder

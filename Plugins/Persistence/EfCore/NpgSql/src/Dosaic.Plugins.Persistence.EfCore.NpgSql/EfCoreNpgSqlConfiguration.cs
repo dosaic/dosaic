@@ -34,4 +34,24 @@ public class EfCoreNpgSqlConfiguration
     /// </summary>
     public string Password { get; set; }
 
+    /// <summary>
+    /// The total maximum lifetime of connections (in seconds). Connections which have exceeded this value will be destroyed instead of returned from the pool. This is useful in clustered configurations to force load balancing between a running server and a server just brought online. It can also be useful to prevent runaway memory growth of connections at the PostgreSQL server side, because in some cases very long lived connections slowly consume more and more memory over time. Defaults to 3600 seconds (1 hour).
+    /// <value>The time (in seconds) to wait, or 0 to to make connections last indefinitely.</value>
+    /// </summary>
+    public int ConnectionLifetime { get; set; } = 60;
+
+    /// <summary>
+    /// The number of seconds of connection inactivity before Npgsql sends a keepalive query. Set to 0 (the default) to disable.
+    /// </summary>
+    public int KeepAlive { get; set; } = 15;
+
+    /// <summary>
+    /// The maximum connection pool size.
+    /// </summary>
+    public int MaxPoolSize { get; set; } = 100;
+
+    /// <summary>
+    /// When enabled, PostgreSQL error details are included on Detail and Detail. These can contain sensitive data.
+    /// </summary>
+    public bool IncludeErrorDetail { get; set; }
 }
