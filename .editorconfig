@@ -127,6 +127,8 @@ dotnet_diagnostic.CA1825.severity = warning
 
 # CA1826: Do not use Enumerable methods on indexable collections. Instead use the collection directly
 dotnet_diagnostic.CA1826.severity = warning
+# CA1008: Enums should have zero value
+dotnet_diagnostic.CA1008.severity = warning
 
 # CA1827: Do not use Count() or LongCount() when Any() can be used
 dotnet_diagnostic.CA1827.severity = warning

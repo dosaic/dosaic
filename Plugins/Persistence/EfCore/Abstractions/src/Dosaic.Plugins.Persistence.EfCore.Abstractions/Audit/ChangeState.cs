@@ -9,21 +9,23 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Audit
     public enum ChangeState
     {
         /// <summary>
+        /// Undefined state
+        /// </summary>
+        None = 0,
+
+        /// <summary>
         /// The model was added
         /// </summary>
-        Added = 0,
+        Added = 1,
 
         /// <summary>
         /// The model was modified
         /// </summary>
-        Modified = 1,
+        Modified = 2,
 
         /// <summary>
         /// The model was deleted
         /// </summary>
-        Deleted = 2
+        Deleted = 3
     }
-
-
-
 }

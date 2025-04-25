@@ -1,5 +1,4 @@
 using Dosaic.Plugins.Persistence.EfCore.Abstractions.Database;
-using Dosaic.Plugins.Persistence.EfCore.Abstractions.Models;
 using Dosaic.Plugins.Persistence.EfCore.Abstractions.Triggers;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;

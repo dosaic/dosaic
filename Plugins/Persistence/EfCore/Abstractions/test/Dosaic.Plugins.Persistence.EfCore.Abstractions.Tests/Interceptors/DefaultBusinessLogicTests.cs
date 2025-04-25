@@ -29,6 +29,10 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests.Interceptors
             await _businessLogic.BeforeAsync(ChangeState.Deleted, model, CancellationToken.None);
             model.Name.Should().Be(model.Name);
 
+            Enum.TryParse<ChangeState>("Z", out var value);
+            await _businessLogic.BeforeAsync(value, model, CancellationToken.None);
+            model.Name.Should().Be(model.Name);
+
             await _businessLogic.BeforeCreateAsync(model, CancellationToken.None);
             model.Name.Should().Be(model.Name);
 
@@ -37,6 +41,7 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests.Interceptors
 
             await _businessLogic.BeforeDeleteAsync(model, CancellationToken.None);
             model.Name.Should().Be(model.Name);
+
         }
 
         [Test]
@@ -51,6 +56,11 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests.Interceptors
             model.Name.Should().Be(model.Name);
 
             await _businessLogic.AfterAsync(ChangeState.Deleted, model, CancellationToken.None);
+            model.Name.Should().Be(model.Name);
+
+
+            Enum.TryParse<ChangeState>("Z", out var value);
+            await _businessLogic.AfterAsync(value, model, CancellationToken.None);
             model.Name.Should().Be(model.Name);
 
             await _businessLogic.AfterCreateAsync(model, CancellationToken.None);

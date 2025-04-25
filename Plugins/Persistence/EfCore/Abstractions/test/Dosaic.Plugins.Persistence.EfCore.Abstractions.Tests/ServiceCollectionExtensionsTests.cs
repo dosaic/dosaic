@@ -1,11 +1,10 @@
-using Dosaic.Hosting.Abstractions;
 using Dosaic.Plugins.Persistence.EfCore.Abstractions.Database;
+using Dosaic.Testing.NUnit;
 using Dosaic.Testing.NUnit.Assertions;
 using FluentAssertions;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using NUnit.Framework;
@@ -14,14 +13,23 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests
 {
     public class ServiceCollectionExtensionsTests
     {
-        // [Test]
-        // public void CanAddDbContextHealthCheck()
-        // {
-        //     var hc = Substitute.For<IHealthChecksBuilder>();
-        //     hc.AddEfContext<TestEfCoreDb>();
-        //     hc.Received().Add(Arg.Is<HealthCheckRegistration>(h =>
-        //         h.Name == nameof(TestEfCoreDb) && h.Tags.Contains(HealthCheckTag.Readiness.Value)));
-        // }
+
+        [Test]
+        public void AddDbMigratorService_ShouldRegisterDbMigratorService()
+        {
+
+            var services = TestingDefaults.ServiceCollection();
+
+            services.AddDbMigratorService<TestEfCoreDb>();
+
+            // Assert
+            var serviceDescriptor = services.FirstOrDefault(sd =>
+                sd.ServiceType == typeof(Microsoft.Extensions.Hosting.IHostedService) &&
+                sd.ImplementationType == typeof(DbMigratorService<TestEfCoreDb>));
+
+            serviceDescriptor.Should().NotBeNull();
+            serviceDescriptor?.Lifetime.Should().Be(ServiceLifetime.Singleton);
+        }
 
         [Test]
         public void MigratesRelationalDatabases()

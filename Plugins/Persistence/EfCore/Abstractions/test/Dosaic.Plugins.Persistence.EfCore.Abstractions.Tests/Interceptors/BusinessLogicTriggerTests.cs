@@ -2,7 +2,6 @@ using AutoBogus;
 using Dosaic.Plugins.Persistence.EfCore.Abstractions.Audit;
 using Dosaic.Plugins.Persistence.EfCore.Abstractions.Interceptors;
 using Dosaic.Plugins.Persistence.EfCore.Abstractions.Triggers;
-using Microsoft.VisualStudio.TestPlatform.Common.ExtensionFramework.Utilities;
 using NSubstitute;
 using NUnit.Framework;
 
