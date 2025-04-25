@@ -32,6 +32,7 @@ public class BusinessLogicInterceptorTests
     public async Task InterceptorHandlesUnknownEntityState()
     {
         var model = TestModel.GetModel();
+
         await _iBusinessLogicInterceptor.InterceptBeforeAsync(model, (ChangeState)999, CancellationToken.None);
         await _iBusinessLogicInterceptor.InterceptAfterAsync(model, (ChangeState)999, CancellationToken.None);
         await _iBusinessLogicInterceptor.Received(1)

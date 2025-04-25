@@ -157,7 +157,6 @@
 
 using Chronos.Abstractions;
 using Dosaic.Plugins.Persistence.EfCore.Abstractions.Database;
-using Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests.Eventsourcing;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using NSubstitute;

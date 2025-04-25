@@ -6,7 +6,6 @@ using Dosaic.Hosting.Abstractions.Extensions;
 using Dosaic.Hosting.Abstractions.Services;
 using Dosaic.Plugins.Persistence.EfCore.Abstractions.Interceptors;
 using Dosaic.Plugins.Persistence.EfCore.Abstractions.Monitoring;
-using Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests.Interceptors;
 using Dosaic.Testing.NUnit;
 using Dosaic.Testing.NUnit.Extensions;
 using FluentAssertions;

@@ -1,5 +1,4 @@
 using Dosaic.Plugins.Persistence.EfCore.Abstractions.Identifiers;
-using Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests.Interceptors;
 using FluentAssertions;
 using NSubstitute;
 using NUnit.Framework;

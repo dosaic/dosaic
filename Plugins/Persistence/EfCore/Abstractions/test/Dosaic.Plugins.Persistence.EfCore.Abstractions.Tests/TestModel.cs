@@ -1,3 +1,5 @@
+using Dosaic.Plugins.Persistence.EfCore.Abstractions.Audit;
+using Dosaic.Plugins.Persistence.EfCore.Abstractions.Database;
 using Dosaic.Plugins.Persistence.EfCore.Abstractions.Identifiers;
 using Dosaic.Plugins.Persistence.EfCore.Abstractions.Models;
 using Microsoft.EntityFrameworkCore;
@@ -5,14 +7,36 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests
 {
+    public class TestOwnedModel
+    {
+        // ReSharper disable once EntityFramework.ModelValidation.UnlimitedStringLength
+        public string OwnedProperty { get; set; }
+    }
+
     [DbNanoIdPrimaryKey(NanoIds.Lengths.NoLookAlikeDigitsAndLetters.L2)]
     public class TestModel : IModel
     {
         public required string Name { get; set; }
         public NanoId Id { get; set; }
 
+        public TestOwnedModel OwnedModel { get; set; }
+
+        public string _PropertyWithUnderscore { get; set; }
+        public string PropertyName { get; set; }
+
+        public TestEnumType EnumProperty { get; set; }
+        public TestEnumType? NullableEnumProperty { get; set; }
+
         public static TestModel GetModel(string name = "Group 1") =>
             new() { Id = NanoId.NewId<TestModel>(), Name = name };
+    }
+
+
+    [DbEnum("test_enum", "custom")]
+    public enum TestEnumType
+    {
+        Value1,
+        Value2
     }
 
     [DbNanoIdPrimaryKey(2, "prefix_")]
@@ -21,13 +45,52 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests
         public required NanoId Id { get; set; }
     }
 
+    [DbNanoIdPrimaryKey(NanoIds.Lengths.NoLookAlikeDigitsAndLetters.L2)]
+    public class TestAuditModel : Model, IAuditableModel
+    {
+        public NanoId CreatedBy { get; set; }
+        public DateTime CreatedUtc { get; set; }
+        public NanoId ModifiedBy { get; set; }
+        public DateTime? ModifiedUtc { get; set; }
+    }
+
+    [DbNanoIdPrimaryKey(NanoIds.Lengths.NoLookAlikeDigitsAndLetters.L2)]
+    public class TestHistoryModel : Model, IHistory
+    {
+        public string HistoryProperty { get; set; }
+    }
+
     public class TestModelConfiguration : IEntityTypeConfiguration<TestModel>
     {
         public void Configure(EntityTypeBuilder<TestModel> builder)
         {
-            builder.ToTable("testmodel", "test");
-            builder.HasKey(x => x.Id);
+            builder.ToTable(nameof(TestModel), "test");
             builder.Property(x => x.Name).HasMaxLength(64);
+            builder.Property(x => x._PropertyWithUnderscore).HasMaxLength(64);
+            builder.Property(x => x.PropertyName).HasMaxLength(64);
+            builder.Property(x => x.NullableEnumProperty);
+            builder.Property(x => x.EnumProperty);
+
+            builder.OwnsOne(x => x.OwnedModel).Property(x => x.OwnedProperty);
+        }
+    }
+
+    public class TestAuditModelConfiguration : IEntityTypeConfiguration<TestAuditModel>
+    {
+        public void Configure(EntityTypeBuilder<TestAuditModel> builder)
+        {
+            builder.ToTable(nameof(TestAuditModel), "test");
+            builder.HasKey(x => x.Id);
+        }
+    }
+
+    public class TestHistoryModelConfiguration : IEntityTypeConfiguration<TestHistoryModel>
+    {
+        public void Configure(EntityTypeBuilder<TestHistoryModel> builder)
+        {
+            builder.ToTable(nameof(TestHistoryModel), "test");
+            builder.HasKey(x => x.Id);
+            builder.Property(x => x.HistoryProperty).HasMaxLength(64);
         }
     }
 }
