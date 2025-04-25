@@ -7,7 +7,7 @@ using Dosaic.Plugins.Persistence.EfCore.Abstractions.Models;
 using Dosaic.Plugins.Persistence.EfCore.Abstractions.Triggers;
 using NSubstitute;
 
-namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests.Interceptors
+namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests
 {
     internal static class TestExtensions
     {
@@ -23,6 +23,14 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests.Interceptors
             var result = new AutoFaker<T>().Configure(c => c.WithRecursiveDepth(0)).Generate();
             configure?.Invoke(result);
             return result;
+        }
+
+        internal static T GetModel<T>(Action<T> configure = null) where T : IModel
+        {
+            var m = Activator.CreateInstance<T>();
+            m.Id = "123";
+            configure?.Invoke(m);
+            return m;
         }
 
         internal static ITriggerContext<T> GetTriggerContext<T>(T entity, ChangeState changeState, T unmodified = null, IDb db = null) where T : class, IModel

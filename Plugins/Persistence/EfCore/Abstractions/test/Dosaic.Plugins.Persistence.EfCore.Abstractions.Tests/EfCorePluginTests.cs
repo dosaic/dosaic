@@ -2,8 +2,11 @@ using System.Data;
 using System.Diagnostics;
 using Chronos;
 using Chronos.Abstractions;
+using Dosaic.Hosting.Abstractions.Extensions;
 using Dosaic.Hosting.Abstractions.Services;
+using Dosaic.Plugins.Persistence.EfCore.Abstractions.Interceptors;
 using Dosaic.Plugins.Persistence.EfCore.Abstractions.Monitoring;
+using Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests.Interceptors;
 using Dosaic.Testing.NUnit;
 using Dosaic.Testing.NUnit.Extensions;
 using FluentAssertions;
@@ -82,6 +85,25 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests
             dbNameTag.Should().NotBeNull();
             dbNameTag.Value.Should().Be(command.CommandType + " main");
             activity.DisplayName.Should().Be(command.CommandType + " main");
+        }
+
+        public class SomeBusinessLogic : IBusinessLogic<TestModel>;
+
+        [Test]
+        public void RegistersEfInterceptor()
+        {
+            var sc = new ServiceCollection();
+            sc.AddSingleton(Substitute.For<IUserProvider>());
+            sc.AddSingleton(Substitute.For<IDateTimeProvider>());
+
+            var implementationResolver = Substitute.For<IImplementationResolver>();
+            implementationResolver.FindTypes().Returns([
+                .. typeof(EfCorePlugin).GetAssemblyTypes(), .. typeof(EfCorePluginTests).GetAssemblyTypes()
+            ]);
+            new EfCorePlugin(implementationResolver, [Substitute.For<IEfCoreConfigurator>()]).ConfigureServices(sc);
+            var sp = sc.BuildServiceProvider();
+            sp.GetService<IBusinessLogic<TestModel>>().Should().NotBeNull();
+            sp.GetService<IBusinessLogicInterceptor>().Should().NotBeNull();
         }
     }
 }
