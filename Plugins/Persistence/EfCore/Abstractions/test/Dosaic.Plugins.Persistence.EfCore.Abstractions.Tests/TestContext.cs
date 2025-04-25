@@ -1,5 +1,6 @@
 using Dosaic.Plugins.Persistence.EfCore.Abstractions.Database;
 using Dosaic.Plugins.Persistence.EfCore.Abstractions.Models;
+using Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests
@@ -14,7 +15,7 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests
             modelBuilder.ApplyConfigurationsFromAssembly(typeof(TestEfCoreDb).Assembly);
             modelBuilder.ApplyHistories();
             modelBuilder.ApplyEventSourcing();
-            // modelBuilder.ApplyAuditFields();
+            modelBuilder.ApplyAuditFields(typeof(TestUserModel), typeof(TestUserModel));
             modelBuilder.ApplyKeys();
             modelBuilder.ApplySnakeCaseNamingConventions();
             // modelBuilder.ApplyEnumFields();

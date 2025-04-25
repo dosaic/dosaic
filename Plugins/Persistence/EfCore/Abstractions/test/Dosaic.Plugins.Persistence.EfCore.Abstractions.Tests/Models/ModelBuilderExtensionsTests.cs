@@ -138,6 +138,24 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests.Models
             property.IsPrimaryKey().Should().BeTrue();
         }
 
+        [Test]
+        public void ApplyAuditFieldsConfiguresModelCorrectly()
+        {
+            var dbOpts = new DbContextOptionsBuilder<EfCoreDbContext>()
+                .UseInMemoryDatabase(Guid.NewGuid().ToString("N"));
+            var model = new TestEfCoreDb(dbOpts.Options).Model;
+            // _modelBuilder.ApplyAuditFields(typeof(TestUserModel), typeof(TestUserModel));
+
+            var entity = model.FindEntityType(typeof(TestAuditModel));
+
+            entity.FindProperty(nameof(IAuditableModel.CreatedUtc))!.IsNullable.Should().BeFalse();
+            entity.FindProperty(nameof(IAuditableModel.CreatedBy))!.IsNullable.Should().BeFalse();
+            entity.FindProperty(nameof(IAuditableModel.ModifiedBy))!.IsNullable.Should().BeTrue();
+            entity.FindProperty(nameof(IAuditableModel.ModifiedUtc))!.IsNullable.Should().BeTrue();
+            entity.FindProperty(nameof(IAuditableModel.CreatedBy))!.IsForeignKey().Should().BeTrue();
+            entity.FindProperty(nameof(IAuditableModel.ModifiedBy))!.IsForeignKey().Should().BeTrue();
+        }
+
 
         public class TestModelWithMissingDbEnumAttribute : Model
         {
@@ -149,6 +167,7 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests.Models
             Value1,
             Value2
         }
+
 
 
     }

@@ -7,6 +7,10 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests
 {
+    [DbNanoIdPrimaryKey(NanoIds.Lengths.NoLookAlikeDigitsAndLetters.L2)]
+
+    public class TestUserModel : Model;
+
     public class TestOwnedModel
     {
         // ReSharper disable once EntityFramework.ModelValidation.UnlimitedStringLength
