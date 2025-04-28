@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using Dosaic.Plugins.Persistence.EfCore.Abstractions.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
@@ -10,6 +11,7 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Audit
             changeTracker.Entries()
                 .Where(x => x.Entity is IModel);
 
+        [ExcludeFromCodeCoverage(Justification = "This is a simple mapping function. Hard to fake wrong enum values")]
         private static ChangeState? ToChangeState(this EntityState state) => state switch
         {
             EntityState.Added => ChangeState.Added,

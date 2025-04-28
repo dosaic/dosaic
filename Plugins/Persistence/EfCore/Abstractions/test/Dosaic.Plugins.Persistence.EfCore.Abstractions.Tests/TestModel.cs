@@ -8,7 +8,6 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests
 {
     [DbNanoIdPrimaryKey(NanoIds.Lengths.NoLookAlikeDigitsAndLetters.L2)]
-
     public class TestUserModel : Model;
 
     public class TestOwnedModel
@@ -50,12 +49,16 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests
     }
 
     [DbNanoIdPrimaryKey(NanoIds.Lengths.NoLookAlikeDigitsAndLetters.L2)]
-    public class TestAuditModel : Model, IAuditableModel
+    public class TestAuditModel : AuditableModel
     {
-        public NanoId CreatedBy { get; set; }
-        public DateTime CreatedUtc { get; set; }
-        public NanoId ModifiedBy { get; set; }
-        public DateTime? ModifiedUtc { get; set; }
+        public required string Name { get; set; }
+        public virtual ICollection<SubTestModel> Subs { get; set; } = null!;
+    }
+
+    [DbNanoIdPrimaryKey(NanoIds.Lengths.NoLookAlikeDigitsAndLetters.L2)]
+    public class SubTestModel : Model
+    {
+        public required string DeepName { get; set; }
     }
 
     [DbNanoIdPrimaryKey(NanoIds.Lengths.NoLookAlikeDigitsAndLetters.L2)]
@@ -63,8 +66,10 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests
     {
         public string HistoryProperty { get; set; }
 
-        [ExcludeFromHistory]
-        public string Ignored { get; set; }
+        [ExcludeFromHistory] public string Ignored { get; set; }
+
+        public static TestHistoryModel GetModel(string historyProperty = "Group 1") =>
+            new() { Id = NanoId.NewId<TestHistoryModel>(), HistoryProperty = historyProperty };
     }
 
     public class TestModelConfiguration : IEntityTypeConfiguration<TestModel>
@@ -88,6 +93,17 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests
         {
             builder.ToTable(nameof(TestAuditModel), "test");
             builder.HasKey(x => x.Id);
+            builder.Property(x => x.Name);
+        }
+    }
+
+    public class SubTestModelModelConfiguration : IEntityTypeConfiguration<SubTestModel>
+    {
+        public void Configure(EntityTypeBuilder<SubTestModel> builder)
+        {
+            builder.ToTable(nameof(SubTestModel), "test");
+            builder.HasKey(x => x.Id);
+            builder.Property(x => x.DeepName);
         }
     }
 
@@ -98,6 +114,7 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests
             builder.ToTable(nameof(TestHistoryModel), "test");
             builder.HasKey(x => x.Id);
             builder.Property(x => x.HistoryProperty).HasMaxLength(64);
+            builder.Property(x => x.Ignored).HasMaxLength(64);
         }
     }
 }

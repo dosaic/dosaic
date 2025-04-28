@@ -36,7 +36,7 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests.Audit
             _trigger = new HistoryTrigger<TestHistoryModel>(_userProvider, _dateTimeProvider);
         }
 
-        private ITriggerContext<TestHistoryModel> GetContext(TestHistoryModel entity, ChangeState changeState, TestHistoryModel? unmodified = null)
+        private ITriggerContext<TestHistoryModel> GetContext(TestHistoryModel entity, ChangeState changeState, TestHistoryModel unmodified = null)
         {
             var context = Substitute.For<ITriggerContext<TestHistoryModel>>();
             var changeSet = new ChangeSet<TestHistoryModel> { new ModelChange<TestHistoryModel>(changeState, entity, unmodified) };
@@ -56,6 +56,8 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests.Audit
             var history = _db.ChangeTracker.Entries<History<TestHistoryModel>>().ToArray();
             history.Should().HaveCount(1);
             var entry = history.Single().Entity;
+
+
             return entry;
         }
 
@@ -71,6 +73,7 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests.Audit
             entry.ModifiedBy.Should().Be("system");
             entry.ModifiedUtc.Should().Be(_now);
             entry.State.Should().Be(ChangeState.Added);
+
             var changeSet = entry.GetChanges();
             changeSet.Should().NotBeNullOrEmpty();
             changeSet.Should().HaveCount(1);

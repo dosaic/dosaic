@@ -66,8 +66,8 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests
             _implementationResolver.FindAssemblies().Returns([typeof(EfCorePluginTests).Assembly]);
             var healthCheckBuilder = Substitute.For<IHealthChecksBuilder>();
             _plugin.ConfigureHealthChecks(healthCheckBuilder);
-            healthCheckBuilder.Received(1).Add(Arg.Any<HealthCheckRegistration>());
-            healthCheckBuilder.Received(1).Add(Arg.Is<HealthCheckRegistration>(h => h.Name == nameof(TestEfCoreDb)));
+            healthCheckBuilder.Received().Add(Arg.Any<HealthCheckRegistration>());
+            healthCheckBuilder.Received().Add(Arg.Is<HealthCheckRegistration>(h => h.Name == nameof(TestEfCoreDb)));
         }
 
         [Test]

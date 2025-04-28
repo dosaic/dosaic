@@ -244,8 +244,9 @@ public class NanoIdTests
     {
         var nanoId = new NanoId("testvalue");
         // ReSharper disable once EqualExpressionComparison
+#pragma warning disable CS1718
         var result = nanoId == nanoId;
-
+#pragma warning restore CS1718
         result.Should().BeTrue();
     }
 

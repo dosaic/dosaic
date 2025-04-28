@@ -127,7 +127,7 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Models
         public static void ApplyAuditFields(this ModelBuilder builder, Type createdByForeignKeyModel,
             Type modifiedByForeignKeyModel, string defaultValueCreatedBy = "System")
         {
-            foreach (var entity in builder.Model.GetEntityTypes()
+            foreach (var entity in builder.Model.GetEntityTypes().ToList() // prevent modifying collection while iterating
                          .Where(x => x.ClrType.IsAssignableTo(typeof(IAuditableModel))))
             {
                 builder.Entity(entity.ClrType).Property(nameof(IAuditableModel.CreatedBy))
