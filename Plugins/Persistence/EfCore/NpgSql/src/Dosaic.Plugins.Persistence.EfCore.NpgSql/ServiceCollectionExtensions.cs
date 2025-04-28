@@ -38,9 +38,9 @@ namespace Dosaic.Plugins.Persistence.EfCore.NpgSql
             };
             builder
                 .UseNpgsql(new NpgsqlDataSourceBuilder(connectionStringBuilder.ConnectionString)
-                        .MapDbEnums().Build(),
+                        .MapDbEnums<TDbContext>().Build(),
                     o => o.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery)
-                        .UseDbEnums())
+                        .UseDbEnums<TDbContext>())
 #if DEBUG
                 .EnableSensitiveDataLogging();
 #endif

@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Dosaic.Plugins.Persistence.EfCore.NpgSql
 {
+    [ExcludeFromCodeCoverage(Justification = "Only wrapper for BeginTransactionAsync IsNpgsql logic")]
     public abstract class NpgEfCoreDbContext(DbContextOptions<EfCoreDbContext> opts) : EfCoreDbContext(opts)
     {
         [ExcludeFromCodeCoverage(Justification = "Only shorthand for interface")]

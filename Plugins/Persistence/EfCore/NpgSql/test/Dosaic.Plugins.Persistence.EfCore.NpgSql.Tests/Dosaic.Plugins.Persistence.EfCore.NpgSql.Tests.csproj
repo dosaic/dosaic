@@ -6,6 +6,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\..\..\..\..\Testing\NUnit\src\Dosaic.Testing.NUnit\Dosaic.Testing.NUnit.csproj"/>
+    <ProjectReference Include="..\..\..\Abstractions\test\Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests\Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests.csproj" />
+    <ProjectReference Include="..\..\src\Dosaic.Plugins.Persistence.EfCore.NpgSql\Dosaic.Plugins.Persistence.EfCore.NpgSql.csproj" />
   </ItemGroup>
   
 </Project>

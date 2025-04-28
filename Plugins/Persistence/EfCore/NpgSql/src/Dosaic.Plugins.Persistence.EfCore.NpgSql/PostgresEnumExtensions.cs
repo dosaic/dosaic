@@ -11,10 +11,10 @@ namespace Dosaic.Plugins.Persistence.EfCore.NpgSql
     {
         private static readonly NpgsqlSnakeCaseNameTranslator _translator = new();
 
-        private static readonly HashSet<Type> _enumTypes =
-            typeof(EfCoreDbContext).GetAssemblyTypes(x => x.IsEnum && x.HasAttribute<DbEnumAttribute>()).ToHashSet();
+        private static HashSet<Type> GetEnumTypes(Type modelType) =>
+            modelType.GetAssemblyTypes(x => x.IsEnum && x.HasAttribute<DbEnumAttribute>()).ToHashSet();
 
-        public static void MapDbEnums(this ModelBuilder builder)
+        public static void MapDbEnums<TDbContext>(this ModelBuilder builder)
         {
             var register = typeof(NpgsqlModelBuilderExtensions).GetMethods()
                 .Single(x =>
@@ -31,7 +31,7 @@ namespace Dosaic.Plugins.Persistence.EfCore.NpgSql
                            && parameters[2].ParameterType == typeof(string)
                            && parameters[3].ParameterType == typeof(string[]);
                 });
-            foreach (var e in _enumTypes)
+            foreach (var e in GetEnumTypes(typeof(TDbContext)))
             {
                 var dbEnum = e.GetAttribute<DbEnumAttribute>();
                 var labels = Enum.GetNames(e).Select(_translator.TranslateMemberName).Order().ToArray();
@@ -39,10 +39,10 @@ namespace Dosaic.Plugins.Persistence.EfCore.NpgSql
             }
         }
 
-        public static NpgsqlDataSourceBuilder MapDbEnums(this NpgsqlDataSourceBuilder dataSourceBuilder)
+        public static NpgsqlDataSourceBuilder MapDbEnums<TDbContext>(this NpgsqlDataSourceBuilder dataSourceBuilder)
         {
             dataSourceBuilder.EnableUnmappedTypes();
-            foreach (var e in _enumTypes)
+            foreach (var e in GetEnumTypes(typeof(TDbContext)))
             {
                 var dbName = e.GetAttribute<DbEnumAttribute>()!.DbName;
                 dataSourceBuilder.MapEnum(e, dbName);
@@ -51,9 +51,9 @@ namespace Dosaic.Plugins.Persistence.EfCore.NpgSql
             return dataSourceBuilder;
         }
 
-        public static NpgsqlDbContextOptionsBuilder UseDbEnums(this NpgsqlDbContextOptionsBuilder builder)
+        public static NpgsqlDbContextOptionsBuilder UseDbEnums<TDbContext>(this NpgsqlDbContextOptionsBuilder builder)
         {
-            foreach (var e in _enumTypes)
+            foreach (var e in GetEnumTypes(typeof(TDbContext)))
             {
                 var dbEnum = e.GetAttribute<DbEnumAttribute>();
                 builder.MapEnum(e, dbEnum.Name, dbEnum.Schema, _translator);
