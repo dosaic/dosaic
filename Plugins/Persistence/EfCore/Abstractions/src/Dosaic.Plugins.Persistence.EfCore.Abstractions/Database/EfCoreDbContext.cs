@@ -11,9 +11,11 @@ using LinqKit;
 
 namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Database
 {
-    public abstract class EfCoreDbContext(DbContextOptions<EfCoreDbContext> opts) : DbContext(opts), IDb
+    public abstract class EfCoreDbContext(DbContextOptions opts) : DbContext(opts), IDb
     {
-        private IServiceScope GetServiceScope() => opts.GetExtension<CoreOptionsExtension>().ApplicationServiceProvider?.GetRequiredService<IServiceScopeFactory>()?.CreateScope();
+        private IServiceScope GetServiceScope() => opts.GetExtension<CoreOptionsExtension>().ApplicationServiceProvider
+            ?.GetRequiredService<IServiceScopeFactory>()?.CreateScope();
+
         protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
         {
             configurationBuilder.Properties(typeof(NanoId)).HaveConversion(typeof(NanoIdConverter));
@@ -49,9 +51,45 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Database
         }
 
         [ExcludeFromCodeCoverage(Justification = "Only shorthand for interface")]
-        public virtual Task<IDbContextTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default)
+        public async Task<IDbContextTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default)
         {
-            return Database.BeginTransactionAsync(cancellationToken);
+            try
+            {
+                return await Database.BeginTransactionAsync(cancellationToken);
+            }
+            catch (InvalidOperationException e)
+            {
+                if (e.Message.Contains("Microsoft.EntityFrameworkCore.Database.Transaction.TransactionIgnoredWarning"))
+                {
+                    return new NullTransaction();
+                }
+            }
+
+            return await Database.BeginTransactionAsync(cancellationToken);
+        }
+
+        [ExcludeFromCodeCoverage(Justification = "Only for testing with in memory provider")]
+        private class NullTransaction : IDbContextTransaction
+        {
+            public void Dispose()
+            {
+            }
+
+            public ValueTask DisposeAsync() => ValueTask.CompletedTask;
+
+            public void Commit()
+            {
+            }
+
+            public Task CommitAsync(CancellationToken cancellationToken = new()) => Task.CompletedTask;
+
+            public void Rollback()
+            {
+            }
+
+            public Task RollbackAsync(CancellationToken cancellationToken = new()) => Task.CompletedTask;
+
+            public Guid TransactionId { get; } = Guid.NewGuid();
         }
     }
 }

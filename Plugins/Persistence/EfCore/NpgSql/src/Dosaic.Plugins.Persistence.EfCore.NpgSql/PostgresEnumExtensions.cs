@@ -7,7 +7,7 @@ using Npgsql.NameTranslation;
 
 namespace Dosaic.Plugins.Persistence.EfCore.NpgSql
 {
-    internal static class PostgresEnumExtensions
+    public static class PostgresEnumExtensions
     {
         private static readonly NpgsqlSnakeCaseNameTranslator _translator = new();
 

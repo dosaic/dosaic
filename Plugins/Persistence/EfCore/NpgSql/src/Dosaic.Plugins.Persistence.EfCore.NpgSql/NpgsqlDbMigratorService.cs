@@ -9,7 +9,7 @@ using Npgsql;
 namespace Dosaic.Plugins.Persistence.EfCore.NpgSql
 {
     [ExcludeFromCodeCoverage(Justification = "Needs an actual postgres database")]
-    internal class NpgsqlDbMigratorService<TDbContext>(IServiceScopeFactory scopeFactory, ILogger logger)
+    public class NpgsqlDbMigratorService<TDbContext>(IServiceScopeFactory scopeFactory, ILogger logger)
         : BackgroundService where TDbContext : DbContext
     {
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)

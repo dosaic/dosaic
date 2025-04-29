@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Models
 {
-    internal static partial class ModelBuilderExtensions
+    public static partial class ModelBuilderExtensions
     {
         public static void ApplyKeys(this ModelBuilder builder)
         {

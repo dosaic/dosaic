@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore.ChangeTracking;
 
 namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Audit
 {
-    internal static class ChangeTrackerExtensions
+    public static class ChangeTrackerExtensions
     {
         private static IEnumerable<EntityEntry> GetEntities(this ChangeTracker changeTracker) =>
             changeTracker.Entries()

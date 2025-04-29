@@ -5,8 +5,8 @@ using Dosaic.Plugins.Persistence.EfCore.Abstractions.Models;
 
 namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Database
 {
-    internal record ModelProperty(string Name, PropertyInfo Property, PropertyInfo ParentProperty);
-    internal static class DbModel
+    public record ModelProperty(string Name, PropertyInfo Property, PropertyInfo ParentProperty);
+    public static class DbModel
     {
         public static IList<ModelProperty> GetNestedProperties(Type model) => GetNestedModelProperties(model)[model];
         public static IList<ModelProperty> GetNestedProperties<T>() => GetNestedProperties(typeof(T));

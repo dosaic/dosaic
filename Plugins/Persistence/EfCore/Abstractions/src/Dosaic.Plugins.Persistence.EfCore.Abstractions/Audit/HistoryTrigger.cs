@@ -7,7 +7,7 @@ using Dosaic.Plugins.Persistence.EfCore.Abstractions.Triggers;
 namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Audit
 {
     [TriggerOrder(Order = int.MaxValue)]
-    public class HistoryTrigger<T>(IUserProvider userProvider, IDateTimeProvider dateTimeProvider) : IAfterTrigger<T>
+    public class HistoryTrigger<T>(IUserIdProvider userIdProvider, IDateTimeProvider dateTimeProvider) : IAfterTrigger<T>
         where T : class, IModel, IHistory
     {
         private readonly string[] _excludedProperties = typeof(T).GetProperties()
@@ -21,7 +21,7 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Audit
                 Id = NanoId.NewId<History<T>>(),
                 ForeignId = (context.Entity?.Id ?? context.PreviousEntity?.Id)!,
                 ChangeSet = changes.ToJson(),
-                ModifiedBy = userProvider.IsUserInteraction ? userProvider.UserId : userProvider.FallbackUserId,
+                ModifiedBy = userIdProvider.IsUserInteraction ? userIdProvider.UserId : userIdProvider.FallbackUserId,
                 ModifiedUtc = dateTimeProvider.UtcNow,
                 State = context.State
             };

@@ -15,7 +15,7 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests.Audit
     public class HistoryTriggerTests
     {
         private TestEfCoreDb _db;
-        private IUserProvider _userProvider;
+        private IUserIdProvider _userIdProvider;
         private static readonly NanoId _userId = "User-Id";
         private IDateTimeProvider _dateTimeProvider;
         private HistoryTrigger<TestHistoryModel> _trigger;
@@ -29,11 +29,11 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests.Audit
             _db = Create.MockedDbContextFor<TestEfCoreDb>(dbOpts.Options);
             _dateTimeProvider = Substitute.For<IDateTimeProvider>();
             _dateTimeProvider.UtcNow.Returns(_now);
-            _userProvider = Substitute.For<IUserProvider>();
-            _userProvider.IsUserInteraction.Returns(true);
-            _userProvider.UserId.Returns(_userId.Value);
-            _userProvider.FallbackUserId.Returns("system");
-            _trigger = new HistoryTrigger<TestHistoryModel>(_userProvider, _dateTimeProvider);
+            _userIdProvider = Substitute.For<IUserIdProvider>();
+            _userIdProvider.IsUserInteraction.Returns(true);
+            _userIdProvider.UserId.Returns(_userId.Value);
+            _userIdProvider.FallbackUserId.Returns("system");
+            _trigger = new HistoryTrigger<TestHistoryModel>(_userIdProvider, _dateTimeProvider);
         }
 
         private ITriggerContext<TestHistoryModel> GetContext(TestHistoryModel entity, ChangeState changeState, TestHistoryModel unmodified = null)
@@ -66,7 +66,7 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests.Audit
         {
             var entity = new TestHistoryModel { Id = "Id", HistoryProperty = "Name" };
             var context = GetContext(entity, ChangeState.Added);
-            _userProvider.IsUserInteraction.Returns(false);
+            _userIdProvider.IsUserInteraction.Returns(false);
             await _trigger.HandleAfterAsync(context, CancellationToken.None);
             var entry = GetHistoryEntry();
             entry.ForeignId.Should().Be(entity.Id);

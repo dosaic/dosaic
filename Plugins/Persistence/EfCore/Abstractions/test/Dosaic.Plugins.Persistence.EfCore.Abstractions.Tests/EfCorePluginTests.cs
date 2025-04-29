@@ -92,7 +92,7 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests
         public void RegistersEfInterceptor()
         {
             var sc = new ServiceCollection();
-            sc.AddSingleton(Substitute.For<IUserProvider>());
+            sc.AddSingleton(Substitute.For<IUserIdProvider>());
             sc.AddSingleton(Substitute.For<IDateTimeProvider>());
 
             var implementationResolver = Substitute.For<IImplementationResolver>();

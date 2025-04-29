@@ -1,5 +1,9 @@
 using Dosaic.Hosting.Abstractions;
+using Dosaic.Hosting.Abstractions.Extensions;
+using Dosaic.Hosting.Abstractions.Services;
 using Dosaic.Plugins.Persistence.EfCore.Abstractions.Database;
+using Dosaic.Plugins.Persistence.EfCore.Abstractions.Eventsourcing;
+using Dosaic.Plugins.Persistence.EfCore.Abstractions.Triggers;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -35,6 +39,44 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions
                     dbContext.Database.Migrate();
                     logger.LogDebug("Migrated '{DbContextName}'", dbContextName);
                 });
+        }
+
+        public static void RegisterTriggers(this IServiceCollection serviceCollection,
+            IImplementationResolver implementationResolver, Type triggerType)
+        {
+            var triggers = implementationResolver.FindAssemblies().SelectMany(x => x.GetTypes()).Where(x =>
+                x is { IsAbstract: false, IsClass: true } && x.Implements(triggerType));
+            foreach (var trigger in triggers)
+            {
+                if (trigger.IsGenericType)
+                    serviceCollection.AddTransient(triggerType, trigger);
+                else
+                {
+                    var modelType = trigger.GetInterfaces()
+                        .Single(x => x.IsGenericType && x.GetGenericTypeDefinition() == triggerType)
+                        .GenericTypeArguments[0];
+                    var implementedTriggerType = triggerType.MakeGenericType(modelType);
+                    serviceCollection.AddTransient(implementedTriggerType, trigger);
+                }
+            }
+        }
+
+        public static void RegistersEventProcessors(this IServiceCollection serviceCollection,
+            IImplementationResolver implementationResolver, ILogger logger)
+        {
+            var eventProcessors = implementationResolver.FindTypes(type =>
+                type is { IsClass: true, IsAbstract: false } && type.Implements(typeof(IEventProcessor<>)));
+
+            foreach (var processor in eventProcessors)
+            {
+                foreach (var serviceType in processor.GetInterfaces().Where(x =>
+                             x.IsGenericType && x.GetGenericTypeDefinition() == typeof(IEventProcessor<>)))
+                {
+                    logger.LogDebug(
+                        $"Registering interceptor {serviceType.Name} {serviceType.GetGenericTypeDefinition()}");
+                    serviceCollection.AddTransient(serviceType, processor);
+                }
+            }
         }
     }
 }

@@ -5,7 +5,7 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Audit
 {
     public class ChangeSet<T> : List<ModelChange<T>> where T : class, IModel;
 
-    internal class ChangeSet : List<ModelChange>
+    public class ChangeSet : List<ModelChange>
     {
         public Dictionary<Type, object> GetTypedChangeSets()
         {

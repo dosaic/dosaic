@@ -3,7 +3,7 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions
     /// <summary>
     /// Provides user information for auditing purposes
     /// </summary>
-    public interface IUserProvider
+    public interface IUserIdProvider
     {
         /// <summary>
         /// Gets the current authenticated user

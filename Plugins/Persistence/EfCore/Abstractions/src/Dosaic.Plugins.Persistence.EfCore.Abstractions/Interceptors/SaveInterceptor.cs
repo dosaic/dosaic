@@ -7,7 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Interceptors
 {
-    internal class SaveInterceptor(IServiceProvider serviceProvider, IDb db)
+    public class SaveInterceptor(IServiceProvider serviceProvider, IDb db)
     {
         private List<TTrigger> GetTriggers<TTrigger>()
         {

@@ -10,7 +10,7 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Models
         public ObjectChanges GetChanges() => ObjectChanges.Calculate(State, PreviousEntity, Entity);
     }
 
-    internal class ModelChange(ChangeState state, IModel entity, IModel previousEntity)
+    public class ModelChange(ChangeState state, IModel entity, IModel previousEntity)
     {
         public ChangeState State { get; } = state;
         public IModel Entity { get; } = entity;
