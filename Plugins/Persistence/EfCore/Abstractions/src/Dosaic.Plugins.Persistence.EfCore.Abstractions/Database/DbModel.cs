@@ -12,17 +12,17 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Database
         public static IList<ModelProperty> GetNestedProperties<T>() => GetNestedProperties(typeof(T));
         public static PropertyInfo[] GetProperties(Type model) => GetModelProperties(model)[model];
         public static PropertyInfo[] GetProperties<T>() => GetProperties(typeof(T));
-        public static Type GetModelByName(Type assemblyModelType, string name) => GetModels(assemblyModelType)[name.ToLowerInvariant()];
+        public static Type GetModelByName(Type dbContextType, string modelName) => GetModels(dbContextType)[modelName.ToLowerInvariant()];
 
-        private static IDictionary<string, Type> GetModels (Type model) => model.GetAssemblyTypes()
+        public static IDictionary<string, Type> GetModels (Type dbContextType) => dbContextType.GetAssemblyTypes()
             .Where(x => x is { IsClass: true, IsAbstract: false, IsGenericType: false } && x.Implements<IModel>())
             .ToDictionary(x => x.Name.ToLowerInvariant(), x => x);
 
-        private static IDictionary<Type, IList<ModelProperty>> GetNestedModelProperties (Type assemblyModelType) =>
-            GetModels(assemblyModelType).ToDictionary(x => x.Value, x => GetModelPropertiesForType(x.Value));
+        private static IDictionary<Type, IList<ModelProperty>> GetNestedModelProperties (Type dbContextType) =>
+            GetModels(dbContextType).ToDictionary(x => x.Value, x => GetModelPropertiesForType(x.Value));
 
-        private static IDictionary<Type, PropertyInfo[]> GetModelProperties(Type assemblyModelType) =>
-            GetModels(assemblyModelType).ToDictionary(x => x.Value,
+        private static IDictionary<Type, PropertyInfo[]> GetModelProperties(Type dbContextType) =>
+            GetModels(dbContextType).ToDictionary(x => x.Value,
                 x => x.Value.GetProperties().Where(b => b is { CanWrite: true, CanRead: true }).ToArray());
 
         private static IList<ModelProperty> GetModelPropertiesForType(Type t)

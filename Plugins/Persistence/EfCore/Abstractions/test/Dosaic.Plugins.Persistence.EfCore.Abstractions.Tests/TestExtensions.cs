@@ -9,7 +9,7 @@ using NSubstitute;
 
 namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests
 {
-    internal static class TestExtensions
+    public static class TestExtensions
     {
         private static readonly Type[] _types = AppDomain.CurrentDomain.GetAssemblies().GetTypes().ToArray();
 

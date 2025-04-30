@@ -42,14 +42,18 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions
         }
 
         public static void RegisterTriggers(this IServiceCollection serviceCollection,
-            IImplementationResolver implementationResolver, Type triggerType)
+            IImplementationResolver implementationResolver, Type triggerType, ILogger logger)
         {
             var triggers = implementationResolver.FindAssemblies().SelectMany(x => x.GetTypes()).Where(x =>
                 x is { IsAbstract: false, IsClass: true } && x.Implements(triggerType));
             foreach (var trigger in triggers)
             {
                 if (trigger.IsGenericType)
+                {
                     serviceCollection.AddTransient(triggerType, trigger);
+                    logger.LogDebug(
+                        $"Registering trigger {trigger.Name}");
+                }
                 else
                 {
                     var modelType = trigger.GetInterfaces()
@@ -57,11 +61,13 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions
                         .GenericTypeArguments[0];
                     var implementedTriggerType = triggerType.MakeGenericType(modelType);
                     serviceCollection.AddTransient(implementedTriggerType, trigger);
+                    logger.LogDebug(
+                        $"Registering trigger {implementedTriggerType.Name} {modelType.Name}");
                 }
             }
         }
 
-        public static void RegistersEventProcessors(this IServiceCollection serviceCollection,
+        public static void RegisterEventProcessors(this IServiceCollection serviceCollection,
             IImplementationResolver implementationResolver, ILogger logger)
         {
             var eventProcessors = implementationResolver.FindTypes(type =>
@@ -73,7 +79,7 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions
                              x.IsGenericType && x.GetGenericTypeDefinition() == typeof(IEventProcessor<>)))
                 {
                     logger.LogDebug(
-                        $"Registering interceptor {serviceType.Name} {serviceType.GetGenericTypeDefinition()}");
+                        $"Registering event processor {serviceType.Name} {serviceType.GetGenericTypeDefinition()}");
                     serviceCollection.AddTransient(serviceType, processor);
                 }
             }

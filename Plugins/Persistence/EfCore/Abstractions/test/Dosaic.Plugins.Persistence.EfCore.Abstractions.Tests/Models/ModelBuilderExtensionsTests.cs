@@ -107,7 +107,7 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests.Models
         [Test]
         public void ApplyHistoriesCreatesHistoryTableWithCorrectName()
         {
-            _modelBuilder.ApplyHistories();
+            _modelBuilder.ApplyHistories(typeof(TestUserModel));
 
             var historyEntity = _modelBuilder.Model.FindEntityType(typeof(History<TestHistoryModel>));
 
@@ -118,7 +118,7 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests.Models
         [Test]
         public void ApplyEventSourcingConfiguresAggregateEventProperties()
         {
-            _modelBuilder.ApplyEventSourcing();
+            _modelBuilder.ApplyEventSourcing(typeof(TestUserModel));
 
             var entity = _modelBuilder.Model.FindEntityType(typeof(TestAggregate));
             var eventDataProperty = entity!.FindProperty(nameof(AggregateEvent.EventData));

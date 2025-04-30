@@ -13,8 +13,8 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests
             modelBuilder.HasDefaultSchema("public");
             // modelBuilder.MapDbEnums();
             modelBuilder.ApplyConfigurationsFromAssembly(typeof(TestEfCoreDb).Assembly);
-            modelBuilder.ApplyHistories();
-            modelBuilder.ApplyEventSourcing();
+            modelBuilder.ApplyHistories(typeof(TestUserModel));
+            modelBuilder.ApplyEventSourcing(typeof(TestUserModel));
             modelBuilder.ApplyAuditFields(typeof(TestUserModel), typeof(TestUserModel));
             modelBuilder.ApplyKeys();
             modelBuilder.ApplySnakeCaseNamingConventions();

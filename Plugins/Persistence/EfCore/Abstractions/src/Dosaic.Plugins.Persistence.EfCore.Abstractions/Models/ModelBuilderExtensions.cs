@@ -74,7 +74,7 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Models
             }
         }
 
-        public static void ApplyHistories(this ModelBuilder builder)
+        public static void ApplyHistories(this ModelBuilder builder, Type modifiedByForeignKeyModel)
         {
             var historicModels = builder.Model.GetEntityTypes()
                 .Where(x => x.ClrType.GetInterfaces().Contains(typeof(IHistory)))
@@ -95,13 +95,13 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Models
                     .WithMany()
                     .HasForeignKey(nameof(History.ForeignId));
 
-                // entityTypeBuilder.HasOne(typeof(UserModel))
-                //     .WithMany()
-                //     .HasForeignKey(nameof(History.ModifiedBy));
+                entityTypeBuilder.HasOne(modifiedByForeignKeyModel)
+                    .WithMany()
+                    .HasForeignKey(nameof(History.ModifiedBy));
             }
         }
 
-        public static void ApplyEventSourcing(this ModelBuilder builder)
+        public static void ApplyEventSourcing(this ModelBuilder builder, Type modifiedByForeignKeyModel)
         {
             var models = builder.Model.GetEntityTypes()
                 .Where(x => x.ClrType.Implements(typeof(AggregateEvent<>)) &&
@@ -118,16 +118,17 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Models
                 entityTypeBuilder.Property<DateTime>(nameof(AggregateEvent.ModifiedUtc)).IsRequired();
                 entityTypeBuilder.Property<NanoId>(nameof(AggregateEvent.ModifiedBy)).IsRequired(false);
 
-                // entityTypeBuilder.HasOne(typeof(UserModel))
-                //     .WithMany()
-                //     .HasForeignKey(nameof(AggregateEvent.ModifiedBy));
+                entityTypeBuilder.HasOne(modifiedByForeignKeyModel)
+                    .WithMany()
+                    .HasForeignKey(nameof(AggregateEvent.ModifiedBy));
             }
         }
 
         public static void ApplyAuditFields(this ModelBuilder builder, Type createdByForeignKeyModel,
             Type modifiedByForeignKeyModel, string defaultValueCreatedBy = "System")
         {
-            foreach (var entity in builder.Model.GetEntityTypes().ToList() // prevent modifying collection while iterating
+            foreach (var entity in builder.Model.GetEntityTypes()
+                         .ToList() // prevent modifying collection while iterating
                          .Where(x => x.ClrType.IsAssignableTo(typeof(IAuditableModel))))
             {
                 builder.Entity(entity.ClrType).Property(nameof(IAuditableModel.CreatedBy))
