@@ -18,14 +18,14 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests
             return _types.FirstOrDefault(x => x.FullName == cls.FullName);
         }
 
-        internal static T Fake<T>(Action<T> configure = null) where T : class
+        public static T Fake<T>(Action<T> configure = null) where T : class
         {
             var result = new AutoFaker<T>().Configure(c => c.WithRecursiveDepth(0)).Generate();
             configure?.Invoke(result);
             return result;
         }
 
-        internal static T GetModel<T>(Action<T> configure = null) where T : IModel
+        public static T GetModel<T>(Action<T> configure = null) where T : IModel
         {
             var m = Activator.CreateInstance<T>();
             m.Id = "123";
@@ -33,7 +33,7 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests
             return m;
         }
 
-        internal static ITriggerContext<T> GetTriggerContext<T>(T entity, ChangeState changeState, T unmodified = null, IDb db = null) where T : class, IModel
+        public static ITriggerContext<T> GetTriggerContext<T>(T entity, ChangeState changeState, T unmodified = null, IDb db = null) where T : class, IModel
         {
             var context = Substitute.For<ITriggerContext<T>>();
             var changeSet = new ChangeSet<T> { new ModelChange<T>(changeState, entity, unmodified) };
