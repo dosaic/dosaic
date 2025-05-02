@@ -5,22 +5,24 @@ using Dosaic.Hosting.Abstractions.Plugins;
 using Dosaic.Hosting.Abstractions.Services;
 using Dosaic.Plugins.Persistence.EfCore.Abstractions.Interceptors;
 using Dosaic.Plugins.Persistence.EfCore.Abstractions.Monitoring;
+using Dosaic.Plugins.Persistence.EfCore.Abstractions.Triggers;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using OpenTelemetry.Instrumentation.EntityFrameworkCore;
 using OpenTelemetry.Trace;
 
 namespace Dosaic.Plugins.Persistence.EfCore.Abstractions
 {
-    public class EfCorePlugin(IImplementationResolver implementationResolver, IEfCoreConfigurator[] configurators) : IPluginServiceConfiguration,
+    public class EfCorePlugin(
+        IImplementationResolver implementationResolver,
+        IEfCoreConfigurator[] configurators,
+        ILogger<EfCorePlugin> logger) : IPluginServiceConfiguration,
         IPluginApplicationConfiguration, IPluginHealthChecksConfiguration
     {
         public void ConfigureServices(IServiceCollection serviceCollection)
         {
-            RegisterBusinessLogicInterceptors(serviceCollection);
-            serviceCollection.AddSingleton<IBusinessLogicInterceptor, BusinessLogicInterceptor>();
-
             serviceCollection.AddOpenTelemetry().WithTracing(builder =>
             {
                 var enrichEfCoreWithActivity = EnrichEfCoreWithActivity;
@@ -29,6 +31,13 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions
                     .AddEntityFrameworkCoreInstrumentation(enrichEfCoreWithActivity);
                 configurators.ForEach(x => x.ConfigureOtelWithTracing(builder));
             });
+
+            RegisterBusinessLogicInterceptors(serviceCollection);
+            serviceCollection.AddSingleton<IBusinessLogicInterceptor, BusinessLogicInterceptor>();
+
+            serviceCollection.RegisterEventProcessors(implementationResolver, logger);
+            serviceCollection.RegisterTriggers(implementationResolver, typeof(IBeforeTrigger<>), logger);
+            serviceCollection.RegisterTriggers(implementationResolver, typeof(IAfterTrigger<>), logger);
         }
 
         private void RegisterBusinessLogicInterceptors(IServiceCollection serviceCollection)
@@ -71,7 +80,8 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions
             var dbContexts = implementationResolver.FindAssemblies().SelectMany(x => x.GetTypes())
                 .Where(x => x.IsClass && !x.IsAbstract && x.IsAssignableTo(typeof(DbContext)))
                 .ToList();
-            var registerHealthCheck = typeof(ServiceCollectionExtensions).GetMethods(BindingFlags.Static | BindingFlags.Public)
+            var registerHealthCheck = typeof(ServiceCollectionExtensions)
+                .GetMethods(BindingFlags.Static | BindingFlags.Public)
                 .Single(x =>
                     x.GetParameters().Length == 1 &&
                     x.GetParameters()[0].ParameterType == typeof(IHealthChecksBuilder));

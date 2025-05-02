@@ -1,3 +1,5 @@
+using System.Collections.Immutable;
+using Dosaic.Plugins.Persistence.EfCore.Abstractions.Database;
 using Dosaic.Plugins.Persistence.EfCore.Abstractions.Eventsourcing;
 using Dosaic.Plugins.Persistence.EfCore.Abstractions.Identifiers;
 using Microsoft.EntityFrameworkCore;
@@ -16,6 +18,16 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests
     public class NoMatcherAggregateEvent : AggregateEvent
     {
         public string GroupId { get; set; }
+    }
+
+    public class TestAggregateEventEventProcessor
+        : IEventProcessor<TestAggregate>
+    {
+        public Task ProcessEventsAsync(IDb db, ImmutableArray<TestAggregate> events,
+            CancellationToken cancellationToken)
+        {
+            return Task.CompletedTask;
+        }
     }
 
     [DbNanoIdPrimaryKey(NanoIds.Lengths.NoLookAlikeDigitsAndLetters.L2)]

@@ -4,9 +4,13 @@ using Chronos;
 using Chronos.Abstractions;
 using Dosaic.Hosting.Abstractions.Extensions;
 using Dosaic.Hosting.Abstractions.Services;
+using Dosaic.Plugins.Persistence.EfCore.Abstractions.Audit;
+using Dosaic.Plugins.Persistence.EfCore.Abstractions.Eventsourcing;
 using Dosaic.Plugins.Persistence.EfCore.Abstractions.Interceptors;
 using Dosaic.Plugins.Persistence.EfCore.Abstractions.Monitoring;
+using Dosaic.Plugins.Persistence.EfCore.Abstractions.Triggers;
 using Dosaic.Testing.NUnit;
+using Dosaic.Testing.NUnit.Assertions;
 using Dosaic.Testing.NUnit.Extensions;
 using FluentAssertions;
 using Microsoft.AspNetCore.Builder;
@@ -22,19 +26,23 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests
     {
         private IImplementationResolver _implementationResolver;
         private EfCorePlugin _plugin;
+        private FakeLogger<EfCorePlugin> _fakeLogger;
 
         [SetUp]
         public void Up()
         {
             _implementationResolver = Substitute.For<IImplementationResolver>();
-            _implementationResolver.FindTypes().Returns(
-            [
-                typeof(EfCorePlugin)
+            _implementationResolver.FindTypes().Returns([
+                .. typeof(EfCorePlugin).GetAssemblyTypes(), .. typeof(EfCorePluginTests).GetAssemblyTypes()
             ]);
+            _implementationResolver.FindAssemblies()
+                .Returns([typeof(EfCorePlugin).Assembly, typeof(TestAggregate).Assembly]);
+            _fakeLogger = new FakeLogger<EfCorePlugin>();
             _implementationResolver.ResolveInstance(Arg.Is<Type>(t => t == typeof(EfCorePlugin)))
-                .Returns(new EfCorePlugin(_implementationResolver, [Substitute.For<IEfCoreConfigurator>()]));
+                .Returns(
+                    new EfCorePlugin(_implementationResolver, [Substitute.For<IEfCoreConfigurator>()], _fakeLogger));
 
-            _plugin = new EfCorePlugin(_implementationResolver, [Substitute.For<IEfCoreConfigurator>()]);
+            _plugin = new EfCorePlugin(_implementationResolver, [Substitute.For<IEfCoreConfigurator>()], _fakeLogger);
         }
 
         [Test]
@@ -89,20 +97,61 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests
         public class SomeBusinessLogic : IBusinessLogic<TestModel>;
 
         [Test]
-        public void RegistersEfInterceptor()
+        public void RegistersEfInterceptors()
         {
             var sc = new ServiceCollection();
             sc.AddSingleton(Substitute.For<IUserIdProvider>());
             sc.AddSingleton(Substitute.For<IDateTimeProvider>());
 
-            var implementationResolver = Substitute.For<IImplementationResolver>();
-            implementationResolver.FindTypes().Returns([
-                .. typeof(EfCorePlugin).GetAssemblyTypes(), .. typeof(EfCorePluginTests).GetAssemblyTypes()
-            ]);
-            new EfCorePlugin(implementationResolver, [Substitute.For<IEfCoreConfigurator>()]).ConfigureServices(sc);
+            new EfCorePlugin(_implementationResolver, [Substitute.For<IEfCoreConfigurator>()], _fakeLogger)
+                .ConfigureServices(sc);
             var sp = sc.BuildServiceProvider();
             sp.GetService<IBusinessLogic<TestModel>>().Should().NotBeNull();
             sp.GetService<IBusinessLogicInterceptor>().Should().NotBeNull();
+        }
+
+        public class TestTrigger : IBeforeTrigger<TestModel>
+        {
+            public Task HandleBeforeAsync(ITriggerContext<TestModel> context, CancellationToken cancellationToken)
+            {
+                return Task.CompletedTask;
+            }
+        }
+
+        public class TestGenericTrigger<T> : IAfterTrigger<T> where T : AuditableModel
+        {
+            public Task HandleAfterAsync(ITriggerContext<T> context, CancellationToken cancellationToken)
+            {
+                return Task.CompletedTask;
+            }
+        }
+
+        [Test]
+        public void RegistersEfTriggers()
+        {
+            var sc = new ServiceCollection();
+            sc.AddSingleton(Substitute.For<IUserIdProvider>());
+            sc.AddSingleton(Substitute.For<IDateTimeProvider>());
+
+            new EfCorePlugin(_implementationResolver, [Substitute.For<IEfCoreConfigurator>()], _fakeLogger)
+                .ConfigureServices(sc);
+            var sp = sc.BuildServiceProvider();
+            sp.GetService<IBeforeTrigger<TestModel>>().Should().NotBeNull();
+            sp.GetService<IAfterTrigger<TestAuditModel>>().Should().NotBeNull();
+        }
+
+        [Test]
+        public void RegistersEventProcessors()
+        {
+            var sc = TestingDefaults.ServiceCollection();
+            sc.AddSingleton(Substitute.For<IUserIdProvider>());
+            sc.AddSingleton(Substitute.For<IDateTimeProvider>());
+
+            new EfCorePlugin(_implementationResolver, [Substitute.For<IEfCoreConfigurator>()], _fakeLogger)
+                .ConfigureServices(sc);
+            var sp = sc.BuildServiceProvider();
+
+            sp.GetRequiredService<IEventProcessor<TestAggregate>>().Should().NotBeNull();
         }
     }
 }
