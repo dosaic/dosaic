@@ -1,7 +1,7 @@
+using Dosaic.Extensions.NanoIds;
 using Dosaic.Plugins.Persistence.EfCore.Abstractions.Audit;
 using Dosaic.Plugins.Persistence.EfCore.Abstractions.Database;
 using Dosaic.Plugins.Persistence.EfCore.Abstractions.Eventsourcing;
-using Dosaic.Plugins.Persistence.EfCore.Abstractions.Identifiers;
 using Dosaic.Plugins.Persistence.EfCore.Abstractions.Models;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;

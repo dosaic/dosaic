@@ -12,7 +12,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\..\..\..\Extensions\Sqids\src\Dosaic.Extensions.Sqids\Dosaic.Extensions.Sqids.csproj" />
-    <ProjectReference Include="..\..\..\Abstractions\src\Dosaic.Plugins.Persistence.Abstractions\Dosaic.Plugins.Persistence.Abstractions.csproj" />
+    <ProjectReference Include="..\..\..\..\..\Hosting\Abstractions\src\Dosaic.Hosting.Abstractions\Dosaic.Hosting.Abstractions.csproj" />
   </ItemGroup>
 
 </Project>

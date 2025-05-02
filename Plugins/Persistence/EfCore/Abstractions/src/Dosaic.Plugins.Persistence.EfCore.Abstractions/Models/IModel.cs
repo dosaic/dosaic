@@ -1,9 +1,6 @@
-using Dosaic.Plugins.Persistence.EfCore.Abstractions.Identifiers;
+using Dosaic.Extensions.NanoIds;
 
 namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Models
 {
-    public interface IModel
-    {
-        NanoId Id { get; set; }
-    }
+    public interface IModel : INanoId;
 }

@@ -1,5 +1,5 @@
 using Chronos.Abstractions;
-using Dosaic.Plugins.Persistence.EfCore.Abstractions.Identifiers;
+using Dosaic.Extensions.NanoIds;
 using FluentAssertions;
 using NSubstitute;
 using NUnit.Framework;

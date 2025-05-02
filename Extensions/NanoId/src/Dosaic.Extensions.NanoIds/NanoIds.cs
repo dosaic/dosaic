@@ -1,8 +1,8 @@
 using static NanoidDotNet.Nanoid.Alphabets.SubAlphabets;
 
-namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Identifiers
+namespace Dosaic.Extensions.NanoIds
 {
-    public static class NanoIds
+    public static class NanoIdConfig
     {
         public const string Alphabet = NoLookAlikeDigits + NoLookAlikeLetters;
 

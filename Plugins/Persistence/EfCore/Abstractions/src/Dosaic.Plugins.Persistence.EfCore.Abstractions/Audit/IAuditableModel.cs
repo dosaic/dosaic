@@ -1,4 +1,4 @@
-using Dosaic.Plugins.Persistence.EfCore.Abstractions.Identifiers;
+using Dosaic.Extensions.NanoIds;
 using Dosaic.Plugins.Persistence.EfCore.Abstractions.Models;
 
 namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Audit

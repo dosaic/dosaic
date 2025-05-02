@@ -15,7 +15,7 @@
     <PackageReference Include="GracefulExpandoObject" />
     <PackageReference Include="Linq.Expression.Optimizer" />
     <PackageReference Include="LinqKit.Microsoft.EntityFrameworkCore" />
-    <PackageReference Include="Nanoid" />
+
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
@@ -29,8 +29,8 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\..\..\..\..\Extensions\NanoId\src\Dosaic.Extensions.NanoIds\Dosaic.Extensions.NanoIds.csproj" />
     <ProjectReference Include="..\..\..\..\..\..\Hosting\Abstractions\src\Dosaic.Hosting.Abstractions\Dosaic.Hosting.Abstractions.csproj"/>
-    <ProjectReference Include="..\..\..\..\Abstractions\src\Dosaic.Plugins.Persistence.Abstractions\Dosaic.Plugins.Persistence.Abstractions.csproj" />
   </ItemGroup>
 
 </Project>

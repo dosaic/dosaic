@@ -1,9 +1,9 @@
-# Dosaic.Plugins.Persistence.Abstractions
+# Dosaic.Extensions.NanoIds
 
 
 
 
-Dosaic.Plugins.Persistence.Abstractions is a `lib` that allows other `dosaic components` to `interact with persistence plugins to store and retrieve their data`.
+Dosaic.Extensions.NanoIds is a `lib` that allows other `dosaic components` to `interact with persistence plugins to store and retrieve their data`.
 
 
 ## Installation
@@ -11,12 +11,12 @@ Dosaic.Plugins.Persistence.Abstractions is a `lib` that allows other `dosaic com
 To install the nuget package follow these steps:
 
 ```shell
-dotnet add package Dosaic.Plugins.Persistence.Abstractions
+dotnet add package Dosaic.Extensions.NanoIds
 ```
 or add as package reference to your .csproj
 
 ```xml
-<PackageReference Include="Dosaic.Plugins.Persistence.Abstractions" Version="" />
+<PackageReference Include="Dosaic.Extensions.NanoIds" Version="" />
 ```
 
 ## Appsettings.yml
@@ -32,4 +32,4 @@ abstract types included in this lib.
 ## Usage
 
 There are no stand alone usages for this lib, please take a look at one of the persistence plugins which implements the
-abstract types included in this lib.
+abstract and interface types included in this lib.

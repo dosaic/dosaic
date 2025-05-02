@@ -1,29 +1,33 @@
-using Dosaic.Plugins.Persistence.EfCore.Abstractions.Identifiers;
+using System.Reflection;
 using FluentAssertions;
 using NSubstitute;
 using NUnit.Framework;
 
-namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests.Identifiers;
+namespace Dosaic.Extensions.NanoIds.Tests;
 
-[TestFixture]
+[NanoId(NanoIdConfig.Lengths.NoLookAlikeDigitsAndLetters.L2)]
+public class TestModel : INanoId
+{
+    public NanoId Id { get; set; }
+    public string Name { get; set; }
+
+    public static TestModel GetModel(string name = "Group 1") =>
+        new() { Id = NanoId.NewId<TestModel>(), Name = name };
+}
+
+[NanoId(NanoIdConfig.Lengths.NoLookAlikeDigitsAndLetters.L2, "prefix_")]
+public class PrefixedTestModel : INanoId
+{
+    public required NanoId Id { get; set; }
+}
+
 public class NanoIdTests
 {
     [Test]
     [Explicit]
-    public void GenerateStaticIdsForDatabaseSeedDataByModels()
-    {
-        // change the line accordingly NanoId.NewId<TYPE-THAT-YOU-WANT-TO-GENERATE-IDS-FOR>()
-        var testModels = new[] { TestModel.GetModel(), TestModel.GetModel("Group 2") };
-        foreach (var roleModel in testModels)
-        {
-            TestContext.Out.WriteLine($"{roleModel.Name} {NanoId.NewId<TestModel>()}");
-        }
-    }
-
-    [Test]
-    [Explicit]
     public void GenerateStaticIdsForDatabaseSeedData()
     {
+        // change the line accordingly NanoId.NewId<TYPE-THAT-YOU-WANT-TO-GENERATE-IDS-FOR>()
         var modelType = typeof(TestModel);
         for (var i = 0; i < 10; i++)
         {
@@ -38,6 +42,18 @@ public class NanoIdTests
         var nanoId = new NanoId(value);
 
         nanoId.Value.Should().Be(value);
+    }
+
+    [Test]
+    public void LengthWithPrefixShouldBeCorrect()
+    {
+
+        var nanoIdAttribute = typeof(PrefixedTestModel).GetCustomAttribute<NanoIdAttribute>();
+
+        nanoIdAttribute!.Prefix.Should().StartWith("prefix_");
+        nanoIdAttribute.Length.Should().Be(2);
+        nanoIdAttribute.LengthWithPrefix.Should().Be(9);
+
     }
 
     [Test]

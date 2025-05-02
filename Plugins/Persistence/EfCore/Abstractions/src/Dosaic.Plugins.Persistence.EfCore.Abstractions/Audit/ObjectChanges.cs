@@ -1,8 +1,8 @@
 using System.Collections.Concurrent;
 using System.Reflection;
 using System.Text.Json;
+using Dosaic.Extensions.NanoIds;
 using Dosaic.Hosting.Abstractions.Extensions;
-using Dosaic.Plugins.Persistence.EfCore.Abstractions.Identifiers;
 using Dosaic.Plugins.Persistence.EfCore.Abstractions.Models;
 
 namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Audit

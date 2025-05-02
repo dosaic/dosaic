@@ -1,3 +1,4 @@
+using Dosaic.Extensions.NanoIds;
 using Dosaic.Plugins.Persistence.EfCore.Abstractions.Identifiers;
 using Dosaic.Plugins.Persistence.EfCore.Abstractions.Models;
 
@@ -15,7 +16,7 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Audit
         public ObjectChanges GetChanges() => ObjectChanges.FromJson(ChangeSet);
     }
 
-    [DbNanoIdPrimaryKey(NanoIds.Lengths.NoLookAlikeDigitsAndLetters.L12)]
+    [DbNanoIdPrimaryKey(NanoIdConfig.Lengths.NoLookAlikeDigitsAndLetters.L12)]
     public class History<TModel> : History where TModel : class, IModel, IHistory
     {
         public virtual TModel Model { get; set; }

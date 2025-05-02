@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using Dosaic.Extensions.NanoIds;
 using Dosaic.Hosting.Abstractions.Extensions;
 using Dosaic.Plugins.Persistence.EfCore.Abstractions.Audit;
 using Dosaic.Plugins.Persistence.EfCore.Abstractions.Database;
@@ -30,7 +31,7 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Models
                 foreach (var foreignKey in entity.GetForeignKeys())
                 {
                     var fkProp = foreignKey.Properties.Single().Name;
-                    var attr = foreignKey.PrincipalEntityType.ClrType.GetAttribute<DbNanoIdPrimaryKeyAttribute>();
+                    var attr = foreignKey.PrincipalEntityType.ClrType.GetAttribute<NanoIdAttribute>();
                     builder.Entity(entity.ClrType).Property(fkProp).HasMaxLength(attr.LengthWithPrefix);
                 }
             }
@@ -44,7 +45,7 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Models
                     else
                     {
                         var fkProp = foreignKey.Properties.Single().Name;
-                        var attr = foreignKey.PrincipalEntityType.ClrType.GetAttribute<DbNanoIdPrimaryKeyAttribute>();
+                        var attr = foreignKey.PrincipalEntityType.ClrType.GetAttribute<NanoIdAttribute>();
                         entity.GetProperty(fkProp).SetMaxLength(attr.LengthWithPrefix);
                     }
                 }

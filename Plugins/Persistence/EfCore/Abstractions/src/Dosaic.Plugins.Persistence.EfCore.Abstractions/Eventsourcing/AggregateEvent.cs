@@ -1,4 +1,4 @@
-using Dosaic.Plugins.Persistence.EfCore.Abstractions.Identifiers;
+using Dosaic.Extensions.NanoIds;
 using Dosaic.Plugins.Persistence.EfCore.Abstractions.Models;
 
 namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Eventsourcing
@@ -16,6 +16,5 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Eventsourcing
     public abstract class AggregateEvent<TModel> : AggregateEvent where TModel : System.Enum
     {
         public required TModel EventType { get; set; }
-
     }
 }

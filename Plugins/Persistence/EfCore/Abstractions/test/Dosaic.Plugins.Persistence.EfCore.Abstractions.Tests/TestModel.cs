@@ -1,3 +1,4 @@
+using Dosaic.Extensions.NanoIds;
 using Dosaic.Plugins.Persistence.EfCore.Abstractions.Audit;
 using Dosaic.Plugins.Persistence.EfCore.Abstractions.Database;
 using Dosaic.Plugins.Persistence.EfCore.Abstractions.Identifiers;
@@ -7,7 +8,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests
 {
-    [DbNanoIdPrimaryKey(NanoIds.Lengths.NoLookAlikeDigitsAndLetters.L2)]
+    [DbNanoIdPrimaryKey(NanoIdConfig.Lengths.NoLookAlikeDigitsAndLetters.L2)]
     public class TestUserModel : Model;
 
     public class TestOwnedModel
@@ -16,7 +17,7 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests
         public string OwnedProperty { get; set; }
     }
 
-    [DbNanoIdPrimaryKey(NanoIds.Lengths.NoLookAlikeDigitsAndLetters.L2)]
+    [DbNanoIdPrimaryKey(NanoIdConfig.Lengths.NoLookAlikeDigitsAndLetters.L2)]
     public class TestModel : IModel
     {
         public required string Name { get; set; }
@@ -47,20 +48,20 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests
         public required NanoId Id { get; set; }
     }
 
-    [DbNanoIdPrimaryKey(NanoIds.Lengths.NoLookAlikeDigitsAndLetters.L2)]
+    [DbNanoIdPrimaryKey(NanoIdConfig.Lengths.NoLookAlikeDigitsAndLetters.L2)]
     public class TestAuditModel : AuditableModel
     {
         public required string Name { get; set; }
         public virtual ICollection<SubTestModel> Subs { get; set; } = null!;
     }
 
-    [DbNanoIdPrimaryKey(NanoIds.Lengths.NoLookAlikeDigitsAndLetters.L2)]
+    [DbNanoIdPrimaryKey(NanoIdConfig.Lengths.NoLookAlikeDigitsAndLetters.L2)]
     public class SubTestModel : Model
     {
         public required string DeepName { get; set; }
     }
 
-    [DbNanoIdPrimaryKey(NanoIds.Lengths.NoLookAlikeDigitsAndLetters.L2)]
+    [DbNanoIdPrimaryKey(NanoIdConfig.Lengths.NoLookAlikeDigitsAndLetters.L2)]
     public class TestHistoryModel : Model, IHistory
     {
         public string HistoryProperty { get; set; }

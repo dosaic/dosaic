@@ -1,10 +1,8 @@
-using Dosaic.Hosting.Abstractions.Extensions;
-using Dosaic.Plugins.Persistence.EfCore.Abstractions.Models;
+using System.Reflection;
 using NanoidDotNet;
 
-namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Identifiers
+namespace Dosaic.Extensions.NanoIds
 {
-
     [Serializable]
     public class NanoId :
         IComparable,
@@ -40,15 +38,18 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Identifiers
             return Value == other.Value;
         }
 
-        public static NanoId NewId<T>() where T : IModel
+        public static NanoId NewId<T>() where T : INanoId
         {
             return NewId(typeof(T));
         }
 
         public static NanoId NewId(Type type)
         {
-            var nanoIdAttribute = type.GetAttribute<DbNanoIdPrimaryKeyAttribute>();
-            return new NanoId($"{nanoIdAttribute.Prefix}{Nanoid.Generate(NanoIds.Alphabet, nanoIdAttribute.Length)}");
+            var nanoIdAttribute = type.GetCustomAttribute<NanoIdAttribute>();
+            if (nanoIdAttribute == null)
+                throw new ArgumentException($"Type {type.Name} does not have a NanoIdAttribute.");
+            return new NanoId(
+                $"{nanoIdAttribute.Prefix}{Nanoid.Generate(NanoIdConfig.Alphabet, nanoIdAttribute.Length)}");
         }
 
         public override bool Equals(object obj)
@@ -111,4 +112,8 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Identifiers
         }
     }
 
+    public interface INanoId
+    {
+        NanoId Id { get; set; }
+    }
 }

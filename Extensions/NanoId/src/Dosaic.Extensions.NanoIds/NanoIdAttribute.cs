@@ -1,7 +1,7 @@
-namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Identifiers
+namespace Dosaic.Extensions.NanoIds
 {
     [AttributeUsage(AttributeTargets.Class)]
-    public class DbNanoIdPrimaryKeyAttribute(byte length, string prefix = "") : Attribute
+    public class NanoIdAttribute(byte length, string prefix = "") : Attribute
     {
         public string Prefix { get; } = prefix;
         public byte Length { get; } = length;

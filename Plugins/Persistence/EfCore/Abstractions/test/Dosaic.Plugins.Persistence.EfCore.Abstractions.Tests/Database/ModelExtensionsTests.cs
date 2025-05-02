@@ -1,6 +1,6 @@
 using System.Reflection;
+using Dosaic.Extensions.NanoIds;
 using Dosaic.Plugins.Persistence.EfCore.Abstractions.Database;
-using Dosaic.Plugins.Persistence.EfCore.Abstractions.Identifiers;
 using Dosaic.Plugins.Persistence.EfCore.Abstractions.Models;
 using FluentAssertions;
 using NUnit.Framework;

@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using Dosaic.Extensions.NanoIds;
 using Dosaic.Plugins.Persistence.EfCore.Abstractions.Database;
 using Dosaic.Plugins.Persistence.EfCore.Abstractions.Eventsourcing;
 using Dosaic.Plugins.Persistence.EfCore.Abstractions.Identifiers;
@@ -14,7 +15,7 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests
         Delete
     }
 
-    [DbNanoIdPrimaryKey(NanoIds.Lengths.NoLookAlikeDigitsAndLetters.L2)]
+    [DbNanoIdPrimaryKey(NanoIdConfig.Lengths.NoLookAlikeDigitsAndLetters.L2)]
     public class NoMatcherAggregateEvent : AggregateEvent
     {
         public string GroupId { get; set; }
@@ -30,7 +31,7 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests
         }
     }
 
-    [DbNanoIdPrimaryKey(NanoIds.Lengths.NoLookAlikeDigitsAndLetters.L2)]
+    [DbNanoIdPrimaryKey(NanoIdConfig.Lengths.NoLookAlikeDigitsAndLetters.L2)]
     public class TestAggregate : AggregateEvent<TestEventType>
     {
         [EventMatcher] public string GroupId { get; set; }
