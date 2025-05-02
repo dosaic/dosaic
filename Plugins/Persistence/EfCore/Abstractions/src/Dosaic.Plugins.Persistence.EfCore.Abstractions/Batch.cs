@@ -1,6 +1,6 @@
 using Dosaic.Plugins.Persistence.EfCore.Abstractions.Identifiers;
 
-namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Transactions
+namespace Dosaic.Plugins.Persistence.EfCore.Abstractions
 {
     public class Batch<T> where T : class
     {

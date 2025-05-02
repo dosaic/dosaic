@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests
 {
 
-    public class TestEfCoreDb(DbContextOptions<EfCoreDbContext> opts) : EfCoreDbContext(opts)
+    public class TestEfCoreDb(DbContextOptions<EfCoreDbContext> options) : EfCoreDbContext(options)
     {
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

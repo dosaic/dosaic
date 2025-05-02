@@ -16,13 +16,6 @@ namespace Dosaic.Extensions.Abstractions
             Size = size ?? int.MaxValue;
         }
 
-        [Obsolete("Use Current instead of number. Number is deprecated.")]
-        public int? Number
-        {
-            get => _pageNumber;
-            set => _pageNumber = value ?? 0;
-        }
-
         public int? Current
         {
             get => _pageNumber;

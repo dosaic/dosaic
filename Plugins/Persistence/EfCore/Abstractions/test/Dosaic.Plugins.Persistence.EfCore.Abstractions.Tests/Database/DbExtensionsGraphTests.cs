@@ -16,7 +16,7 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests.Database
     public class DbExtensionsGraphTests
     {
 
-        public class TestEfDb(DbContextOptions<EfCoreDbContext> opts) : TestEfCoreDb(opts)
+        public class TestEfDb(DbContextOptions<EfCoreDbContext> options) : TestEfCoreDb(options)
         {
             protected override void OnModelCreating(ModelBuilder modelBuilder)
             {

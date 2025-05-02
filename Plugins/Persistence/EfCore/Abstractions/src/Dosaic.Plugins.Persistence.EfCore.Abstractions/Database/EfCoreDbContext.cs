@@ -11,9 +11,11 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Database
 {
-    public abstract class EfCoreDbContext(DbContextOptions opts) : DbContext(opts), IDb
+    public abstract class EfCoreDbContext(DbContextOptions options) : DbContext(options), IDb
     {
-        private IServiceScope GetServiceScope() => opts.GetExtension<CoreOptionsExtension>().ApplicationServiceProvider
+        protected readonly DbContextOptions Options = options;
+
+        private IServiceScope GetServiceScope() => Options.GetExtension<CoreOptionsExtension>().ApplicationServiceProvider
             ?.GetRequiredService<IServiceScopeFactory>()?.CreateScope();
 
         protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)

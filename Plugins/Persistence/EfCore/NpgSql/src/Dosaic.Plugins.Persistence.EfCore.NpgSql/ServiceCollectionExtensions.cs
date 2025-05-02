@@ -43,6 +43,8 @@ namespace Dosaic.Plugins.Persistence.EfCore.NpgSql
                         .UseDbEnums<TDbContext>())
 #if DEBUG
                 .EnableSensitiveDataLogging();
+#else
+            ;
 #endif
             if (compiledModel != null)
             {

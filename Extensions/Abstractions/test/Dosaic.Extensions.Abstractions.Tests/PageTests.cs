@@ -49,14 +49,14 @@ namespace Dosaic.Extensions.Abstractions.Tests
         {
             var page = new Page { Current = 5 };
 
-            page.Number.Should().Be(5);
+            page.Current.Should().Be(5);
         }
 
         [Test]
         public void SettingNumberPropertyUpdatesCurrent()
         {
             var page = new Page();
-            page.Number = 5;
+            page.Current = 5;
 
             page.Current.Should().Be(5);
         }
@@ -65,9 +65,9 @@ namespace Dosaic.Extensions.Abstractions.Tests
         public void SettingNullNumberDefaultsToZero()
         {
             var page = new Page();
-            page.Number = null;
+            page.Current = null;
 
-            page.Number.Should().Be(0);
+            page.Current.Should().Be(0);
         }
 
         [Test]

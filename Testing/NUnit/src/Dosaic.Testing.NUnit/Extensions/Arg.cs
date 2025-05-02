@@ -7,7 +7,7 @@ namespace Dosaic.Testing.NUnit.Extensions;
 
 public static class ArgExt
 {
-    public static T That<T>(Action<T> action)
+    public static T Is<T>(Action<T> action)
     {
         return ArgumentMatcher.Enqueue<T>(new AssertionMatcher<T>(action));
     }
