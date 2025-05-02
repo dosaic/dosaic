@@ -7,7 +7,6 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Eventsourcing
     [AttributeUsage(AttributeTargets.Property)]
     public class EventMatcherAttribute : Attribute;
 
-
     public interface IEventProcessor<TAggregate> where TAggregate : AggregateEvent
     {
         Task ProcessEventsAsync(IDb db, ImmutableArray<TAggregate> events, CancellationToken cancellationToken);
@@ -36,8 +35,5 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Eventsourcing
             return (T)serviceProvider.GetRequiredService(mapper);
         }
     }
-
-
-
 
 }

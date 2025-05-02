@@ -18,7 +18,6 @@ public class ChangeSetTests
         public required NanoId Id { get; set; }
     }
 
-
     [Test]
     public void ChangeSetCanBeConvertedToTyped()
     {

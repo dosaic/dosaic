@@ -14,11 +14,11 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Database
         public static PropertyInfo[] GetProperties<T>() => GetProperties(typeof(T));
         public static Type GetModelByName(Type dbContextType, string modelName) => GetModels(dbContextType)[modelName.ToLowerInvariant()];
 
-        public static IDictionary<string, Type> GetModels (Type dbContextType) => dbContextType.GetAssemblyTypes()
+        public static IDictionary<string, Type> GetModels(Type dbContextType) => dbContextType.GetAssemblyTypes()
             .Where(x => x is { IsClass: true, IsAbstract: false, IsGenericType: false } && x.Implements<IModel>())
             .ToDictionary(x => x.Name.ToLowerInvariant(), x => x);
 
-        private static IDictionary<Type, IList<ModelProperty>> GetNestedModelProperties (Type dbContextType) =>
+        private static IDictionary<Type, IList<ModelProperty>> GetNestedModelProperties(Type dbContextType) =>
             GetModels(dbContextType).ToDictionary(x => x.Value, x => GetModelPropertiesForType(x.Value));
 
         private static IDictionary<Type, PropertyInfo[]> GetModelProperties(Type dbContextType) =>

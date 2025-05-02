@@ -58,7 +58,6 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests.Interceptors
             await _businessLogic.AfterAsync(ChangeState.Deleted, model, CancellationToken.None);
             model.Name.Should().Be(model.Name);
 
-
             Enum.TryParse<ChangeState>("Z", out var value);
             await _businessLogic.AfterAsync(value, model, CancellationToken.None);
             model.Name.Should().Be(model.Name);

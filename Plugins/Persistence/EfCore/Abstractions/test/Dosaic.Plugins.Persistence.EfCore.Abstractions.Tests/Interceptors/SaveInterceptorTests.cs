@@ -37,8 +37,6 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests.Interceptors
             _db?.Dispose();
         }
 
-
-
         [Test]
         public async Task SaveChangesAsyncWorksWithoutTriggers()
         {
@@ -85,6 +83,5 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests.Interceptors
                     Arg.Any<CancellationToken>());
         }
     }
-
 
 }

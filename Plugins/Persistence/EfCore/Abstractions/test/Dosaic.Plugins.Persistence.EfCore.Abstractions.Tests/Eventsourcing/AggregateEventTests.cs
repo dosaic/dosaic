@@ -10,7 +10,6 @@ public class AggregateEventTests
 {
     private IDateTimeProvider _dateTimeProvider;
 
-
     [SetUp]
     public void SetUp()
     {

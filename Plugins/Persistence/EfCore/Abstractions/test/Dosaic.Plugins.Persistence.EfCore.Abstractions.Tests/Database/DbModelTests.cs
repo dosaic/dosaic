@@ -31,8 +31,6 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests.Database
             props.Should().Contain(p => p.Name == "Id");
         }
 
-
-
         [Test]
         public void GetModelByNameReturnsCorrectType()
         {

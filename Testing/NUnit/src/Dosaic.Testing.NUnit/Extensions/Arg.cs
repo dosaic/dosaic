@@ -36,10 +36,8 @@ public static class ArgExt
             failures.ForEach(x => TestContext.Error.WriteLine("error " + x));
             failures.ForEach(x => Console.WriteLine(x));
 
-
             return false;
         }
-
 
         public string DescribeFor(object argument)
         {

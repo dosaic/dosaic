@@ -44,7 +44,7 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests
             sc.AddSingleton<IDateTimeProvider, DateTimeProvider>();
 
             _plugin.ConfigureServices(sc);
-            var sp = sc.BuildServiceProvider();
+            _ = sc.BuildServiceProvider();
         }
 
         [Test]

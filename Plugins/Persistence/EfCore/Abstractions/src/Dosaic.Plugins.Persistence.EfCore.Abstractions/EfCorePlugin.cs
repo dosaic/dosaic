@@ -13,7 +13,7 @@ using OpenTelemetry.Trace;
 
 namespace Dosaic.Plugins.Persistence.EfCore.Abstractions
 {
-    public class EfCorePlugin(IImplementationResolver implementationResolver,  IEfCoreConfigurator[] configurators) : IPluginServiceConfiguration,
+    public class EfCorePlugin(IImplementationResolver implementationResolver, IEfCoreConfigurator[] configurators) : IPluginServiceConfiguration,
         IPluginApplicationConfiguration, IPluginHealthChecksConfiguration
     {
         public void ConfigureServices(IServiceCollection serviceCollection)

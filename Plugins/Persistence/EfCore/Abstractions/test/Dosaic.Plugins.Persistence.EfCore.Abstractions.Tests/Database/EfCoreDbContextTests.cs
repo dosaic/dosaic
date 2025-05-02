@@ -76,7 +76,8 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests.Database
             var afterTrigger = Substitute.For<IAfterTrigger<TestModel>>();
             afterTrigger.HandleAfterAsync(Arg.Any<ITriggerContext<TestModel>>(), Arg.Any<CancellationToken>())
                 .Returns(Task.CompletedTask)
-                .AndDoes(x => {
+                .AndDoes(x =>
+                {
                     var context = x.Arg<ITriggerContext<TestModel>>();
                     var newEntity = TestModel.GetModel();
                     context.Database.Get<TestModel>().Add(newEntity);

@@ -34,7 +34,6 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests
             new() { Id = NanoId.NewId<TestModel>(), Name = name };
     }
 
-
     [DbEnum("test_enum", "custom")]
     public enum TestEnumType
     {

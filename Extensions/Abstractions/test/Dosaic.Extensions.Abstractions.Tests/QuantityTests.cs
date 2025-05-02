@@ -92,8 +92,7 @@ namespace Dosaic.Extensions.Abstractions.Tests
         private record CustomQuantity() : Quantity<string>("test", "test");
     }
 
-
-namespace Dosaic.Extensions.Abstractions.Tests
-{
-}
+    namespace Dosaic.Extensions.Abstractions.Tests
+    {
+    }
 }

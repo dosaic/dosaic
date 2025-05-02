@@ -45,7 +45,6 @@ namespace Dosaic.Plugins.Persistence.MongoDb
             var mongoDbInstance = sp.GetRequiredService<IMongoDbInstance>();
             mongoDbInstance.Should().BeOfType<MongoDbInstance>();
 
-
         }
 
         [Test]

@@ -98,6 +98,4 @@ public class BusinessLogicInterceptorTests
         await _businessLogic.Received(0).BeforeDeleteAsync(model, CancellationToken.None);
     }
 
-
-
 }

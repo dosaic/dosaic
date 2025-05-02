@@ -154,7 +154,6 @@
 //
 //
 
-
 using Chronos.Abstractions;
 using Dosaic.Plugins.Persistence.EfCore.Abstractions.Database;
 using FluentAssertions;
@@ -297,7 +296,10 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests.Database
         {
             var aggregate = new NoMatcherAggregateEvent
             {
-                Id = "1", EventData = "test", ValidFrom = _dateTimeProvider.UtcNow, GroupId = "X"
+                Id = "1",
+                EventData = "test",
+                ValidFrom = _dateTimeProvider.UtcNow,
+                GroupId = "X"
             };
 
             var result = await _db.GetEvents(aggregate, _dateTimeProvider);

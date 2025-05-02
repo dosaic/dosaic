@@ -1,11 +1,10 @@
+using System.Reflection;
 using Dosaic.Plugins.Persistence.EfCore.Abstractions.Database;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Infrastructure;
-
 using NUnit.Framework;
-using System.Reflection;
 
 namespace Dosaic.Plugins.Persistence.EfCore.NpgSql.Tests
 {

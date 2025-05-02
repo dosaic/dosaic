@@ -31,6 +31,4 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Monitoring
         }
     }
 
-
-
 }

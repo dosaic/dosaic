@@ -3,11 +3,11 @@ using Dosaic.Plugins.Persistence.EfCore.Abstractions.Audit;
 using Dosaic.Plugins.Persistence.EfCore.Abstractions.Identifiers;
 using Dosaic.Plugins.Persistence.EfCore.Abstractions.Interceptors;
 using Dosaic.Plugins.Persistence.EfCore.Abstractions.Models;
+using LinqKit;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.DependencyInjection;
-using LinqKit;
 
 namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Database
 {

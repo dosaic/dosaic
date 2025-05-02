@@ -1,5 +1,4 @@
 using Dosaic.Hosting.Abstractions.Metrics;
-using Dosaic.Hosting.WebHost.Logging;
 using FluentAssertions;
 using NUnit.Framework;
 using OpenTelemetry;
@@ -63,7 +62,6 @@ namespace Dosaic.Hosting.WebHost.Tests
                 .AddMeter(Metrics.Meter.Name)
                 .AddInMemoryExporter(exportedItems)
                 .Build();
-
 
             var logEntry = CreateLogEntry(LogEventLevel.Error, "Test", new ApplicationException("test"));
             _sink.Emit(logEntry);

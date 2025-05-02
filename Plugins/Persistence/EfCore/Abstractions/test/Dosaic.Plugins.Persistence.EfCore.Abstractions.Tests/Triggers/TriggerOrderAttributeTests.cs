@@ -1,6 +1,6 @@
+using Dosaic.Plugins.Persistence.EfCore.Abstractions.Triggers;
 using FluentAssertions;
 using NUnit.Framework;
-using Dosaic.Plugins.Persistence.EfCore.Abstractions.Triggers;
 
 namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests.Triggers
 {

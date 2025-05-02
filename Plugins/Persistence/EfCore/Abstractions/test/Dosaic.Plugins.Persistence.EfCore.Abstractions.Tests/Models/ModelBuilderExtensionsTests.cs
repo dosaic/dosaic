@@ -73,7 +73,6 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests.Models
         {
             _modelBuilder.ApplySnakeCaseNamingConventions();
 
-
             var entity = _modelBuilder.Model.FindEntityType(typeof(TestModel));
             var property = entity!.FindProperty(nameof(TestModel.PropertyName));
 
@@ -154,7 +153,6 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests.Models
             entity.FindProperty(nameof(IAuditableModel.CreatedBy))!.IsForeignKey().Should().BeTrue();
             entity.FindProperty(nameof(IAuditableModel.ModifiedBy))!.IsForeignKey().Should().BeTrue();
         }
-
 
         public class TestModelWithMissingDbEnumAttribute : Model
         {

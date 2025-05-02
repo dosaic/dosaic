@@ -73,7 +73,6 @@ namespace Dosaic.Plugins.Persistence.EfCore.NpgSql.Tests
             act.Should().Throw<Exception>();
         }
 
-
         [Test]
         public void AddNpgsqlDbMigratorService_ShouldRegisterNpgsqlDbMigratorService()
         {

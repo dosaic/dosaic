@@ -1,6 +1,5 @@
 using Dosaic.Plugins.Persistence.EfCore.Abstractions.Database;
 using Dosaic.Plugins.Persistence.EfCore.Abstractions.Models;
-using Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests

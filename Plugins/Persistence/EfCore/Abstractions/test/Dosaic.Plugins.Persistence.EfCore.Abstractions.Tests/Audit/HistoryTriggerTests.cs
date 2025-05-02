@@ -4,8 +4,8 @@ using Dosaic.Plugins.Persistence.EfCore.Abstractions.Database;
 using Dosaic.Plugins.Persistence.EfCore.Abstractions.Identifiers;
 using Dosaic.Plugins.Persistence.EfCore.Abstractions.Models;
 using Dosaic.Plugins.Persistence.EfCore.Abstractions.Triggers;
-using FluentAssertions;
 using EntityFrameworkCore.Testing.NSubstitute;
+using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using NSubstitute;
 using NUnit.Framework;
@@ -56,7 +56,6 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests.Audit
             var history = _db.ChangeTracker.Entries<History<TestHistoryModel>>().ToArray();
             history.Should().HaveCount(1);
             var entry = history.Single().Entity;
-
 
             return entry;
         }

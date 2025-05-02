@@ -47,7 +47,6 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Database
             return Expression.Lambda<Func<TAggregate, bool>>(body, parameter);
         }
 
-
         private static IQueryable<T> IncludeProperties<T>(this DbSet<T> dbSet, string[] properties)
             where T : class, IModel
         {

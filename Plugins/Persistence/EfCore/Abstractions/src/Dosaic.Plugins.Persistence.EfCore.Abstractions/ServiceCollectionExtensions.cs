@@ -3,7 +3,6 @@ using Dosaic.Hosting.Abstractions.Extensions;
 using Dosaic.Hosting.Abstractions.Services;
 using Dosaic.Plugins.Persistence.EfCore.Abstractions.Database;
 using Dosaic.Plugins.Persistence.EfCore.Abstractions.Eventsourcing;
-using Dosaic.Plugins.Persistence.EfCore.Abstractions.Triggers;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;

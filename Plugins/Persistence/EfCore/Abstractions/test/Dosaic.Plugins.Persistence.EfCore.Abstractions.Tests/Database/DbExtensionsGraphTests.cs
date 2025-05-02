@@ -1,25 +1,20 @@
 using Dosaic.Plugins.Persistence.EfCore.Abstractions.Database;
-using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
-using NUnit.Framework;
 
 namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests.Database
 {
 
     using System;
     using System.Linq;
-using System.Reflection;
-using FluentAssertions;
-using NUnit.Framework;
+    using FluentAssertions;
+    using NUnit.Framework;
 
-
-namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests.Database
-{
-}
+    namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests.Database
+    {
+    }
 
     public class DbExtensionsGraphTests
     {
-
 
         public class TestEfDb(DbContextOptions<EfCoreDbContext> opts) : TestEfCoreDb(opts)
         {

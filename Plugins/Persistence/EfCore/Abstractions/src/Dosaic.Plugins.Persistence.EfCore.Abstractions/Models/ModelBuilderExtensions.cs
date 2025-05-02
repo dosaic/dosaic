@@ -177,7 +177,6 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Models
             }
         }
 
-
         private static string ToSnakeCase(this string input)
         {
             var startUnderscores = RegexUnderscores().Match(input);

@@ -4,7 +4,6 @@ using Dosaic.Hosting.Abstractions.Configuration;
 using Dosaic.Hosting.Abstractions.Extensions;
 using Dosaic.Hosting.Abstractions.Middlewares.Models;
 using Dosaic.Hosting.WebHost.Configurators;
-using Dosaic.Hosting.WebHost.Logging;
 using Dosaic.Testing.NUnit;
 using FluentAssertions;
 using Microsoft.AspNetCore.Builder;
