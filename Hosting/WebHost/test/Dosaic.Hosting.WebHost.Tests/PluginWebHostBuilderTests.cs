@@ -4,7 +4,6 @@ using Dosaic.Hosting.Abstractions.Configuration;
 using Dosaic.Hosting.Abstractions.Extensions;
 using Dosaic.Hosting.Abstractions.Middlewares.Models;
 using Dosaic.Hosting.WebHost.Configurators;
-using Dosaic.Hosting.WebHost.Logging;
 using Dosaic.Testing.NUnit;
 using FluentAssertions;
 using Microsoft.AspNetCore.Builder;
@@ -102,7 +101,7 @@ namespace Dosaic.Hosting.WebHost.Tests
             var logger = host.Services.GetRequiredService<ILogger>();
             logger.Should().BeOfType<Logger<ILogger>>();
             var logEventSink = host.Services.GetService<ILogEventSink>();
-            logEventSink.Should().BeOfType<LoggingMetricSink>();
+            logEventSink.Should().BeOfType<WebHost.Logging.LoggingMetricSink>();
 
             var corsPolicy = webApplication.Configuration.BindToSection<CorsPolicy>(DosaicWebHostDefaults.CorsConfigSectionName);
             AssertCorsPolicy(corsPolicy, false);

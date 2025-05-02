@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+
+
+    <IsPackable>true</IsPackable>
+
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.EntityFrameworkCore"/>
+    <PackageReference Include="OpenTelemetry.Extensions.Hosting"/>
+    <PackageReference Include="EntityFrameworkCore.Projectables" />
+    <PackageReference Include="GracefulExpandoObject" />
+    <PackageReference Include="Linq.Expression.Optimizer" />
+    <PackageReference Include="LinqKit.Microsoft.EntityFrameworkCore" />
+
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.AspNetCore.Diagnostics.EntityFrameworkCore" />
+    <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\..\..\..\Extensions\NanoId\src\Dosaic.Extensions.NanoIds\Dosaic.Extensions.NanoIds.csproj" />
+    <ProjectReference Include="..\..\..\..\..\..\Hosting\Abstractions\src\Dosaic.Hosting.Abstractions\Dosaic.Hosting.Abstractions.csproj"/>
+  </ItemGroup>
+
+</Project>

@@ -20,7 +20,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\Abstractions\src\Dosaic.Plugins.Persistence.Abstractions\Dosaic.Plugins.Persistence.Abstractions.csproj" />
+    <ProjectReference Include="..\..\..\..\..\Hosting\Abstractions\src\Dosaic.Hosting.Abstractions\Dosaic.Hosting.Abstractions.csproj" />
   </ItemGroup>
 
 </Project>

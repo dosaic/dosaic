@@ -1,7 +1,6 @@
 using Chronos;
 using Chronos.Abstractions;
 using Dosaic.Hosting.Abstractions;
-using Dosaic.Plugins.Persistence.Abstractions;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
@@ -46,13 +45,6 @@ namespace Dosaic.Plugins.Persistence.MongoDb
             var mongoDbInstance = sp.GetRequiredService<IMongoDbInstance>();
             mongoDbInstance.Should().BeOfType<MongoDbInstance>();
 
-            var readRepo = sp.GetRequiredService<IReadRepository<TestEntity>>();
-            readRepo.Should().NotBeNull();
-            readRepo.Should().BeOfType<MongoRepository<TestEntity>>();
-
-            var repo = sp.GetRequiredService<IRepository<TestEntity>>();
-            repo.Should().NotBeNull();
-            repo.Should().BeOfType<MongoRepository<TestEntity>>();
         }
 
         [Test]

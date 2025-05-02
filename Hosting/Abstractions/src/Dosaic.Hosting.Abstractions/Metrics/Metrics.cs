@@ -21,7 +21,7 @@ namespace Dosaic.Hosting.Abstractions.Metrics
             return instance;
         }
 
-        private static Meter Meter { get; set; } = new(Assembly.GetEntryAssembly()?.GetName().Name ?? "unknown", Assembly.GetEntryAssembly()?.GetName().Version?.ToString() ?? "0.0.0");
+        public static Meter Meter { get; private set; } = new(Assembly.GetEntryAssembly()?.GetName().Name ?? "unknown", Assembly.GetEntryAssembly()?.GetName().Version?.ToString() ?? "0.0.0");
 
         public static void OverrideMeter(Meter meter) => Meter = meter;
 

@@ -30,6 +30,5 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\..\..\Hosting\Abstractions\src\Dosaic.Hosting.Abstractions\Dosaic.Hosting.Abstractions.csproj" />
-    <ProjectReference Include="..\..\..\..\Plugins\Persistence\Abstractions\src\Dosaic.Plugins.Persistence.Abstractions\Dosaic.Plugins.Persistence.Abstractions.csproj" />
   </ItemGroup>
 </Project>

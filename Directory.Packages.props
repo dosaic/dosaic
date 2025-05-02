@@ -36,6 +36,7 @@
     <PackageVersion Include="Hangfire.MemoryStorage" Version="1.8.1.1" />
     <PackageVersion Include="Hangfire.PostgreSql" Version="1.20.12" />
     <PackageVersion Include="NetEscapades.Configuration.Yaml" Version="3.1.0" />
+    <PackageVersion Include="OpenTelemetry.Exporter.InMemory" Version="1.11.2" />
     <PackageVersion Include="OpenTelemetry.Exporter.Prometheus.AspNetCore" Version="1.7.0-rc.1" />
     <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.11.2" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.EntityFrameworkCore" Version="1.0.0-beta.10" />
@@ -81,7 +82,6 @@
     <PackageVersion Include="Swashbuckle.AspNetCore.SwaggerUI" Version="8.1.0" />
     <PackageVersion Include="jose-jwt" Version="5.1.1" />
     <PackageVersion Include="RichardSzalay.MockHttp" Version="7.0.0" />
-    <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="7.0.4" />
     <PackageVersion Include="Restease" Version="1.6.4" />
     <PackageVersion Include="AutoBogus" Version="2.13.1" />
     <PackageVersion Include="NaughtyStrings.Bogus" Version="3.0.0" />
@@ -109,5 +109,17 @@
     <PackageVersion Include="Mime-Detective" Version="24.12.2" />
     <PackageVersion Include="Sqids" Version="3.1.0" />
     <PackageVersion Include="VaultSharp" Version="1.17.5.1" />
+    <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.0.4" />
+    <PackageVersion Include="Linq.Expression.Optimizer" Version="1.0.27" />
+    <PackageVersion Include="LinqKit.Microsoft.EntityFrameworkCore" Version="9.0.8" />
+    <PackageVersion Include="GracefulExpandoObject" Version="1.6.0" />
+    <PackageVersion Include="EntityFrameworkCore.Projectables" Version="4.0.0" />
+    <PackageVersion Include="Nanoid" Version="3.1.0" />
+    <PackageVersion Include="EntityFrameworkCore.Testing.NSubstitute" Version="9.0.1" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.3">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageVersion>
+
   </ItemGroup>
 </Project>

@@ -51,24 +51,6 @@ Nothing to configure
 
 ## Usage
 
-### IRepository<>, IReadRepository<>, IWriteRepository<>
-```csharp
-public class ExampleService
-{
-    private readonly IReadRepository<MyPoco> _readRepository;
-
-    public ExampleService(IReadRepository<MyPoco> readRepository)
-    {
-        _readRepository = readRepository;
-    }
-    public async Task DoStuff()
-    {
-        // for example
-        var result = await _readRepository.FindByIdAsync();
-    }
-}
-```
-
 ### IMongoDbInstance
 ```csharp
 public class ExampleService
