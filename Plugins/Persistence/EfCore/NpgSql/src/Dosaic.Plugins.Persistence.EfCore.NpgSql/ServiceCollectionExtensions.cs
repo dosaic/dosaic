@@ -16,10 +16,10 @@ namespace Dosaic.Plugins.Persistence.EfCore.NpgSql
 
         public static void ConfigureNpgSqlDatabase<TDbContext>(IServiceProvider provider,
             DbContextOptionsBuilder builder, EfCoreNpgSqlConfiguration configuration,
+            Action<WarningsConfigurationBuilder> warningsConfigurationBuilderAction = null,
             Microsoft.EntityFrameworkCore.Metadata.IModel compiledModel = null) where TDbContext : DbContext
         {
             var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
-            var logger = loggerFactory.CreateLogger<TDbContext>();
             var connectionStringBuilder = new NpgsqlConnectionStringBuilder
             {
                 Host = configuration.Host,
@@ -30,22 +30,18 @@ namespace Dosaic.Plugins.Persistence.EfCore.NpgSql
                 ConnectionLifetime = configuration.ConnectionLifetime,
                 KeepAlive = configuration.KeepAlive,
                 MaxPoolSize = configuration.MaxPoolSize,
-                ArrayNullabilityMode = ArrayNullabilityMode.PerInstance
-#if DEBUG
-                ,
-                IncludeErrorDetail = configuration.IncludeErrorDetail
-#endif
+                ArrayNullabilityMode = ArrayNullabilityMode.PerInstance,
+                IncludeErrorDetail = configuration.IncludeErrorDetail,
             };
+
             builder
                 .UseNpgsql(new NpgsqlDataSourceBuilder(connectionStringBuilder.ConnectionString)
                         .MapDbEnums<TDbContext>().Build(),
-                    o => o.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery)
-                        .UseDbEnums<TDbContext>())
-#if DEBUG
-                .EnableSensitiveDataLogging();
-#else
-            ;
-#endif
+                    o => o.UseQuerySplittingBehavior(configuration.SplitQuery
+                            ? QuerySplittingBehavior.SplitQuery
+                            : QuerySplittingBehavior.SingleQuery)
+                        .UseDbEnums<TDbContext>());
+
             if (compiledModel != null)
             {
                 builder
@@ -53,12 +49,21 @@ namespace Dosaic.Plugins.Persistence.EfCore.NpgSql
             }
 
             builder.UseProjectables()
-                .UseLoggerFactory(loggerFactory).ConfigureLoggingCacheTime(TimeSpan.FromMinutes(5))
-                .ConfigureWarnings(x => x.Log((CoreEventId.RowLimitingOperationWithoutOrderByWarning, LogLevel.Debug)));
-#if DEBUG
-            builder.EnableDetailedErrors().EnableSensitiveDataLogging();
-            builder.LogTo(s => logger.LogDebug(s));
-#endif
+                .UseLoggerFactory(loggerFactory)
+                .ConfigureLoggingCacheTime(TimeSpan.FromSeconds(configuration.ConfigureLoggingCacheTimeInSeconds));
+            if (warningsConfigurationBuilderAction != null)
+                builder
+                    .ConfigureWarnings(warningsConfigurationBuilderAction);
+
+            if (configuration.EnableDetailedErrors)
+            {
+                builder.EnableDetailedErrors();
+            }
+
+            if (configuration.EnableSensitiveDataLogging)
+            {
+                builder.EnableSensitiveDataLogging();
+            }
         }
     }
 }

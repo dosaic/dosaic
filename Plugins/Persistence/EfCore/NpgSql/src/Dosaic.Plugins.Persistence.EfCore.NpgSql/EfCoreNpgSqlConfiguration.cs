@@ -51,7 +51,27 @@ public class EfCoreNpgSqlConfiguration
     public int MaxPoolSize { get; set; } = 100;
 
     /// <summary>
+    /// The time (in seconds) to cache the logging configuration. This is useful to prevent the logging configuration from being reloaded too often.
+    /// </summary>
+    public int ConfigureLoggingCacheTimeInSeconds { get; set; } = 300;
+
+    /// <summary>
     /// When enabled, PostgreSQL error details are included on Detail and Detail. These can contain sensitive data.
     /// </summary>
     public bool IncludeErrorDetail { get; set; }
+
+    /// <summary>
+    /// When enabled, detailed errors are included in the exception messages. These can contain sensitive data.
+    /// </summary>
+    public bool EnableDetailedErrors { get; set; }
+
+    /// <summary>
+    /// When enabled, sensitive data logging is included in the exception messages. These can contain sensitive data.
+    /// </summary>
+    public bool EnableSensitiveDataLogging { get; set; }
+
+    /// <summary>
+    /// When enabled, the query splitting behavior is set to split query. This is useful for large queries that can be split into multiple queries.
+    /// </summary>
+    public bool SplitQuery { get; set; }
 }
