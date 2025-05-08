@@ -1,5 +1,6 @@
 using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
+using Dosaic.Plugins.Persistence.EfCore.Abstractions.Audit;
 using Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests;
 using Dosaic.Testing.NUnit;
 using Dosaic.Testing.NUnit.Extensions;
@@ -67,8 +68,9 @@ namespace Dosaic.Plugins.Persistence.EfCore.NpgSql.Tests
             var npgsqlOptions = extensions[0]
                 .As<Npgsql.EntityFrameworkCore.PostgreSQL.Infrastructure.Internal.NpgsqlOptionsExtension>();
 
-            npgsqlOptions.EnumDefinitions.Should().HaveCount(1);
+            npgsqlOptions.EnumDefinitions.Should().HaveCount(2);
             npgsqlOptions.EnumDefinitions[0].ClrType.Should().Be(typeof(TestEnumType));
+            npgsqlOptions.EnumDefinitions[1].ClrType.Should().Be(typeof(ChangeState));
             npgsqlOptions.QuerySplittingBehavior.Should().Be(QuerySplittingBehavior.SplitQuery);
             npgsqlOptions.DataSource!.ConnectionString.Should().Be(
                 "Host=localhost;Port=5432;Username=user;Database=testdb;Connection Lifetime=30;Keepalive=60;Maximum Pool Size=100;Array Nullability Mode=PerInstance;Include Error Detail=True");
@@ -119,8 +121,9 @@ namespace Dosaic.Plugins.Persistence.EfCore.NpgSql.Tests
             var npgsqlOptions = extensions[0]
                 .As<Npgsql.EntityFrameworkCore.PostgreSQL.Infrastructure.Internal.NpgsqlOptionsExtension>();
 
-            npgsqlOptions.EnumDefinitions.Should().HaveCount(1);
+            npgsqlOptions.EnumDefinitions.Should().HaveCount(2);
             npgsqlOptions.EnumDefinitions[0].ClrType.Should().Be(typeof(TestEnumType));
+            npgsqlOptions.EnumDefinitions[1].ClrType.Should().Be(typeof(ChangeState));
             npgsqlOptions.QuerySplittingBehavior.Should().Be(QuerySplittingBehavior.SingleQuery);
             npgsqlOptions.DataSource!.ConnectionString.Should().Be(
                 "Host=external;Port=1337;Username=anon;Database=none;Connection Lifetime=3;Keepalive=6;Maximum Pool Size=1;Array Nullability Mode=PerInstance;Include Error Detail=False");
