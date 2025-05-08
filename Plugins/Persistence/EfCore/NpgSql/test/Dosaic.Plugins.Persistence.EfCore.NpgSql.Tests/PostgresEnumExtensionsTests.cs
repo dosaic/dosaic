@@ -1,4 +1,5 @@
 using System.Reflection;
+using Dosaic.Plugins.Persistence.EfCore.Abstractions.Audit;
 using Dosaic.Plugins.Persistence.EfCore.Abstractions.Database;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
@@ -70,8 +71,9 @@ namespace Dosaic.Plugins.Persistence.EfCore.NpgSql.Tests
             var enumTypes = method?.Invoke(null, new object[] { typeof(TestDbContextWithEnum) }) as HashSet<Type>;
 
             enumTypes.Should().NotBeNull();
-            enumTypes.Should().HaveCount(1);
+            enumTypes.Should().HaveCount(2);
             enumTypes.Should().Contain(typeof(TestEnum));
+            enumTypes.Should().Contain(typeof(ChangeState));
         }
 
         private class TestDbContext : DbContext { }
