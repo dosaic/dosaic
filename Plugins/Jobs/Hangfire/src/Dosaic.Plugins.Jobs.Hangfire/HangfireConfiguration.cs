@@ -19,5 +19,6 @@ namespace Dosaic.Plugins.Jobs.Hangfire
         public string[] Queues { get; set; } = [EnqueuedState.DefaultQueue];
         public int InvisibilityTimeoutInMinutes { get; set; } = 30;
         public string ConnectionString => $"Host={Host};Port={Port};Database={Database};Username={User};Password={Password};";
+        public int MaxJobArgumentsSizeToRenderInBytes { get; set; } = 4096;
     }
 }

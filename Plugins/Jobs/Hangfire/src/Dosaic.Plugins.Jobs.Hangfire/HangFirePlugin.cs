@@ -40,6 +40,7 @@ namespace Dosaic.Plugins.Jobs.Hangfire
             serviceCollection.AddHangfire(conf =>
                 {
                     conf.UseSerializerSettings(new JsonSerializerSettings());
+                    conf.UseMaxArgumentSizeToRender(_hangfireConfig.MaxJobArgumentsSizeToRenderInBytes);
                     if (_hangfireConfig.InMemory)
                         conf.UseMemoryStorage();
                     else
