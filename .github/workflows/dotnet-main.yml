@@ -50,7 +50,7 @@ jobs:
         targetdir: './coverage-results'
         title: dotnet code coverage
         reporttypes: 'MarkdownSummary;'
-        assemblyfilters: +Dosaic*
+        assemblyfilters: +Dosaic.*
 
     - name: coverage check
       id: dotnet-coverage-check
