@@ -38,7 +38,4 @@ public static class FileBucketExtensions
 
         return [.. definitions];
     }
-
-    public static ImmutableArray<Definition> GetDefinitions<T>(this T bucket) where T : Enum =>
-        bucket.GetFileType().GetDefinitions();
 }

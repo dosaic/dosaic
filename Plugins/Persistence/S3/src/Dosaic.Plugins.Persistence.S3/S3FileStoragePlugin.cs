@@ -16,6 +16,7 @@ public class S3FileStoragePlugin(S3Configuration configuration)
         serviceCollection.AddSingleton<IContentInspector>(
             new ContentInspectorBuilder { Definitions = MimeDetective.Definitions.DefaultDefinitions.All() }
                 .Build());
+        serviceCollection.AddFileStorage();
     }
 
     public void ConfigureHealthChecks(IHealthChecksBuilder healthChecksBuilder)

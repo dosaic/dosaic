@@ -34,9 +34,9 @@ s3:
 ## Registration and Configuration
 
 
-### File Storage
+### File Storage with pre defined buckets
 
-To use the file storage functionality, first define an enum for your buckets:
+To use the file storage functionality with a pre defined bucket list, define an enum for your buckets:
 
 ```csharp
 public enum MyBucket
@@ -60,7 +60,7 @@ services.AddFileStorage<MyBucket>();
 
 This registers `IFileStorage<MyBucket>` which can be injected into your services.
 
-### Automatic Bucket Migration Service
+#### Automatic Bucket Migration Service
 
 To ensure buckets are created automatically when your application starts, register the migration service:
 The service will automatically create all buckets defined in your enum.
@@ -70,6 +70,23 @@ The service will automatically create all buckets defined in your enum.
 services.AddBlobStorageBucketMigrationService(MyBucket.Logos);
 services.AddBlobStorageBucketMigrationService(MyOtherBucket.Cars);
 ```
+
+ 
+### File Storage without enum based buckets
+
+The plugin automatically registers IFilestorage with the service collection.
+
+**When using `IFilestorage` instead of `IFilestorage<MyBucket>`, there is no bucket migration service since, we don't know what buckets should exist at runtime.**
+
+Therefor you must create your bucket at runtime
+
+```csharp
+public class FileProvider(IFileStorage fileStorage)
+{
+    await fileStorage.CreateBucketAsync("mybucket", cancellationToken);
+}
+```
+
 
 ### Basic setup without a dosaic web host (optional)
 
@@ -94,7 +111,7 @@ services.AddS3BlobStoragePlugin(new S3Configuration
 Example of using the file storage interface:
 
 ```csharp
-public class FileProvider(IFileStorage fileStorage)
+public class FileProvider(IFileStorage<MyBucket> fileStorage)
 {
     private Task CheckPermissionAsync(FileId fileId, CancellationToken cancellationToken)
     {
@@ -102,25 +119,25 @@ public class FileProvider(IFileStorage fileStorage)
         if (permission == null)
             throw Exception("Could not find requested file");
     }
-    public async Task<BlobFile> GetFileAsync(FileId id, CancellationToken cancellationToken = default)
+    public async Task<BlobFile<MyBucket>> GetFileAsync(FileId<MyBucket> id, CancellationToken cancellationToken = default)
     {
         await CheckPermissionAsync(id, cancellationToken);
         return await fileStorage.GetFileAsync(id, cancellationToken);
     }
 
-    public async Task ConsumeStreamAsync(FileId id, Func<Stream, CancellationToken, Task> streamConsumer, CancellationToken cancellationToken = default)
+    public async Task ConsumeStreamAsync(FileId<MyBucket> id, Func<Stream, CancellationToken, Task> streamConsumer, CancellationToken cancellationToken = default)
     {
         await CheckPermissionAsync(id, cancellationToken);
         await fileStorage.ConsumeStreamAsync(id, streamConsumer, cancellationToken);
     }
 
-    public async Task<FileId> SetAsync(BlobFile file, Stream stream, CancellationToken cancellationToken = default)
+    public async Task<FileId<MyBucket>> SetAsync(BlobFile<MyBucket> file, Stream stream, CancellationToken cancellationToken = default)
     {
         await CheckPermissionAsync(id, cancellationToken);
         return fileStorage.SetAsync(file, stream, cancellationToken);
     }
 
-    public async Task DeleteFileAsync(FileId id, CancellationToken cancellationToken = default)
+    public async Task DeleteFileAsync(FileId<MyBucket> id, CancellationToken cancellationToken = default)
     {
         await CheckPermissionAsync(id, cancellationToken);
         await fileStorage.DeleteFileAsync(id, cancellationToken);
@@ -133,7 +150,7 @@ public class FileProvider(IFileStorage fileStorage)
 
 ```csharp
 [[ApiController, Route("/files"), Authorize]
-public class FilesController(IFileStorage fileStorage) : ControllerBase
+public class FilesController(IFileStorage<MyBucket> fileStorage) : ControllerBase
 {
     [HttpGet("{key:required}")]
     public async Task<IResult> GetFileByKeyAsync([FromRoute] string key, CancellationToken cancellationToken)

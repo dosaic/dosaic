@@ -25,7 +25,8 @@ namespace Dosaic.Plugins.Persistence.S3.Tests
     {
         private IMinioClient _minioClient;
         private IContentInspector _contentInspector;
-        private IFileStorage<SampleBucket> _fileStorage;
+        private IFileStorage<SampleBucket> _fileStorageSampleBucket;
+        private IFileStorage _fileStorage;
         private static readonly byte[] _imageSignature = [0xFF, 0xD8, 0xFF, 0x00];
         private static readonly byte[] _pdfSignature = "%PDF"u8.ToArray();
 
@@ -38,8 +39,9 @@ namespace Dosaic.Plugins.Persistence.S3.Tests
                 Definitions =
                     [.. DefaultDefinitions.FileTypes.Images.JPEG(), .. DefaultDefinitions.FileTypes.Documents.PDF()]
             }.Build();
-            _fileStorage = new FileStorage<SampleBucket>(_minioClient, _contentInspector,
-                new FakeLogger<FileStorage<SampleBucket>>());
+            _fileStorage = new FileStorage(_minioClient, _contentInspector,
+                new FakeLogger<FileStorage>());
+            _fileStorageSampleBucket = new FileStorage<SampleBucket>(_fileStorage);
         }
 
         [TearDown]
@@ -86,7 +88,24 @@ namespace Dosaic.Plugins.Persistence.S3.Tests
             _minioClient.StatObjectAsync(Arg.Any<StatObjectArgs>(), Arg.Any<CancellationToken>())
                 .Returns(GetObjectStat("testObj", "etag", lastModified.ToString(CultureInfo.InvariantCulture), null,
                     "OTHER"));
-            var result = await _fileStorage.GetFileAsync(GetId("123"));
+            var result = await _fileStorageSampleBucket.GetFileAsync(GetId("123"));
+            result.MetaData[BlobFileMetaData.Filename].Should().Be("test.pdf");
+            result.MetaData[BlobFileMetaData.ETag].Should().Be("\"etag\"");
+            result.MetaData[BlobFileMetaData.Hash].Should().Be("file-hash");
+            result.MetaData.Should().HaveCount(5);
+            result.LastModified.Should().Be(DateTime.Parse(lastModified.ToString(CultureInfo.InvariantCulture),
+                CultureInfo.InvariantCulture));
+        }
+
+
+        [Test]
+        public async Task GetAsyncThrowsOnDifferentFileIds()
+        {
+            var lastModified = DateTime.UtcNow;
+            _minioClient.StatObjectAsync(Arg.Any<StatObjectArgs>(), Arg.Any<CancellationToken>())
+                .Returns(GetObjectStat("testObj", "etag", lastModified.ToString(CultureInfo.InvariantCulture), null,
+                    "OTHER"));
+            var result = await _fileStorageSampleBucket.GetFileAsync(GetId("123"));
             result.MetaData[BlobFileMetaData.Filename].Should().Be("test.pdf");
             result.MetaData[BlobFileMetaData.ETag].Should().Be("\"etag\"");
             result.MetaData[BlobFileMetaData.Hash].Should().Be("file-hash");
@@ -103,7 +122,7 @@ namespace Dosaic.Plugins.Persistence.S3.Tests
                 .Returns(GetObjectStat("testObj", "etag", lastModified.ToString(CultureInfo.InvariantCulture),
                     "inv.pdf",
                     "OTHER"));
-            var result = await _fileStorage.GetFileAsync(GetId("123"));
+            var result = await _fileStorageSampleBucket.GetFileAsync(GetId("123"));
             result.MetaData[BlobFileMetaData.Filename].Should().Be("inv.pdf");
             result.MetaData[BlobFileMetaData.ETag].Should().Be("\"etag\"");
             result.MetaData[BlobFileMetaData.Hash].Should().Be("file-hash");
@@ -117,14 +136,14 @@ namespace Dosaic.Plugins.Persistence.S3.Tests
         {
             _minioClient.GetObjectAsync(Arg.Any<GetObjectArgs>(), Arg.Any<CancellationToken>())
                 .Throws(new Exception("test"));
-            await _fileStorage.Invoking(async x => await x.GetFileAsync(GetId("123"))).Should().ThrowAsync<Exception>();
+            await _fileStorageSampleBucket.Invoking(async x => await x.GetFileAsync(GetId("123"))).Should().ThrowAsync<Exception>();
         }
 
         [Test]
         public async Task ConsumeAsyncWorks()
         {
             using var stream = new MemoryStream();
-            await _fileStorage.ConsumeStreamAsync(GetId("123"), (stream1, token) => stream1.CopyToAsync(stream, token));
+            await _fileStorageSampleBucket.ConsumeStreamAsync(GetId("123"), (stream1, token) => stream1.CopyToAsync(stream, token));
             var args = _minioClient.ReceivedCalls().First().GetArguments().OfType<GetObjectArgs>().First();
             var cb = args.GetInaccessibleValue<Func<Stream, CancellationToken, Task>>("CallBack");
             cb.Should().NotBeNull();
@@ -142,7 +161,7 @@ namespace Dosaic.Plugins.Persistence.S3.Tests
             _minioClient.PutObjectAsync(Arg.Any<PutObjectArgs>(), Arg.Any<CancellationToken>())
                 .Returns(new PutObjectResponse(HttpStatusCode.OK, "", new Dictionary<string, string>(), 1, ""));
             await using var imageStream = CreateStream("test", _imageSignature);
-            var result = await _fileStorage.SetAsync(
+            var result = await _fileStorageSampleBucket.SetAsync(
                 new BlobFile<SampleBucket>
                 {
                     Id = new FileId<SampleBucket>(SampleBucket.Logos, "test"),
@@ -172,34 +191,34 @@ namespace Dosaic.Plugins.Persistence.S3.Tests
         public async Task SetAsyncThrowsUnhandledOnNoResult()
         {
             await using var imgStream = CreateStream("test", _imageSignature);
-            var ex = (await _fileStorage
+            var ex = (await _fileStorageSampleBucket
                 .Invoking(async x => await x.SetAsync(
                     new BlobFile<SampleBucket> { Id = new FileId<SampleBucket>(SampleBucket.Logos, "test") },
                     // ReSharper disable once AccessToDisposedClosure
                     imgStream)).Should().ThrowAsync<DosaicException>()).Subject.First();
             ex.HttpStatus.Should()
                 .Be(StatusCodes.Status500InternalServerError);
-            ex.Message.Should().Be("Could not save file Logos:test to s3");
+            ex.Message.Should().Be("Could not save file logos:test to s3");
         }
 
         [Test]
         public async Task SetAsyncThrowsValidationOnNoMimeType()
         {
-            var ex = (await _fileStorage
+            var ex = (await _fileStorageSampleBucket
                     .Invoking(async x => await x.SetAsync(
                         new BlobFile<SampleBucket> { Id = new FileId<SampleBucket>(SampleBucket.Logos, "test") },
                         new MemoryStream("test"u8.ToArray()))).Should().ThrowAsync<ValidationDosaicException>()).Subject
                 .First();
             ex.HttpStatus.Should()
                 .Be(StatusCodes.Status400BadRequest);
-            ex.Message.Should().Be("Cannot validate BlobFile`1. Could not determine content type, abort processing.");
+            ex.Message.Should().Be("Cannot validate BlobFile. Could not determine content type, abort processing.");
         }
 
         [Test]
         public async Task SetAsyncThrowsValidationOnInvalidMimeType()
         {
             await using var pdfStream = CreateStream("test", _pdfSignature);
-            var ex = (await _fileStorage
+            var ex = (await _fileStorageSampleBucket
                 .Invoking(async x => await x.SetAsync(
                     new BlobFile<SampleBucket> { Id = new FileId<SampleBucket>(SampleBucket.Logos, "test") },
                     // ReSharper disable once AccessToDisposedClosure
@@ -208,14 +227,32 @@ namespace Dosaic.Plugins.Persistence.S3.Tests
                 .Be(StatusCodes.Status400BadRequest);
             ex.Message.Should()
                 .Be(
-                    "Cannot validate BlobFile`1. Invalid file format. Only image/bmp,image/gif,image/x-icon,image/jpeg,image/png,application/octet-stream,image/tiff,image/tiff,image/tiff,image/tiff,image/webp allowed!");
+                    "Cannot validate BlobFile. Invalid file format. Only image/bmp,image/gif,image/x-icon,image/jpeg,image/png,application/octet-stream,image/tiff,image/tiff,image/tiff,image/tiff,image/webp allowed!");
         }
 
         [Test]
         public async Task DeleteAsyncWorks()
         {
-            var action = async () => await _fileStorage.DeleteFileAsync(GetId("123"));
+            var action = async () => await _fileStorageSampleBucket.DeleteFileAsync(GetId("123"));
             await action.Should().NotThrowAsync();
+        }
+
+        [Test]
+        public async Task CreateBucketAsyncWorks()
+        {
+            var action = async () => await _fileStorage.CreateBucketAsync("test-bucket");
+            await action.Should().NotThrowAsync();
+        }
+
+        [Test]
+        public async Task SampleBucketComputeHashWorks()
+        {
+            var bytes = "test"u8.ToArray();
+            var hash = await _fileStorageSampleBucket.ComputeHash(bytes);
+            hash.Should().Be("9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08");
+            var stream = new MemoryStream(bytes);
+            hash = await _fileStorageSampleBucket.ComputeHash(stream);
+            hash.Should().Be("9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08");
         }
 
         [Test]
@@ -223,6 +260,9 @@ namespace Dosaic.Plugins.Persistence.S3.Tests
         {
             var bytes = "test"u8.ToArray();
             var hash = await _fileStorage.ComputeHash(bytes);
+            hash.Should().Be("9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08");
+            var stream = new MemoryStream(bytes);
+            hash = await _fileStorage.ComputeHash(stream);
             hash.Should().Be("9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08");
         }
     }

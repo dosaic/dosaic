@@ -16,3 +16,18 @@ public class BlobFile<BucketEnum> where BucketEnum : struct, Enum
         return new BlobFile<BucketEnum> { Id = id, MetaData = metadata, LastModified = DateTimeOffset.UtcNow };
     }
 }
+
+public class BlobFile
+{
+    public FileId Id { get; set; }
+    public Dictionary<string, string> MetaData { get; set; } = new();
+    public DateTimeOffset LastModified { get; set; }
+
+    public static BlobFile Create(FileId id, string fileName = null)
+    {
+        var metadata = fileName == null
+            ? new Dictionary<string, string>()
+            : new Dictionary<string, string> { { BlobFileMetaData.Filename, fileName } };
+        return new BlobFile { Id = id, MetaData = metadata, LastModified = DateTimeOffset.UtcNow };
+    }
+}
