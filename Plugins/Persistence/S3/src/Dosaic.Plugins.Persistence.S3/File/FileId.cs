@@ -2,17 +2,34 @@ using Dosaic.Extensions.Sqids;
 
 namespace Dosaic.Plugins.Persistence.S3.File;
 
-public readonly struct FileId<TBucket>(TBucket bucket, string key) where TBucket : struct, Enum
+public interface IFileIdKey
 {
-    public TBucket Bucket { get; } = bucket;
+    string Key { get; }
+}
+
+public static class FileIdExtensions
+{
+    public static string GenerateSqidId(string bucket, string key) => $"{bucket}:{key}".ToSqid();
+
+    public static (string bucket, string key) SplitFromSqid(string fileId)
+    {
+        var parts = fileId.FromSqid().Split(':');
+        return (parts[0], parts[1]);
+    }
+}
+
+public readonly struct FileId<TBucket>(TBucket bucket, string key) : IFileIdKey
+    where TBucket : struct, Enum
+{
     public string Key { get; } = key;
-    public string Id => $"{Bucket.GetName()}:{Key}".ToSqid();
+    public TBucket Bucket { get; } = bucket;
+    public string Id => FileIdExtensions.GenerateSqidId(Bucket.GetName(), Key);
 
     public static FileId<TBucket> FromSqid(string fileId)
     {
-        var parts = fileId.FromSqid().Split(':');
-        var bucket = Enum.Parse<TBucket>(parts[0], true);
-        return new(bucket, parts[1]);
+        var (bucketName, key) = FileIdExtensions.SplitFromSqid(fileId);
+        var bucket = Enum.Parse<TBucket>(bucketName, true);
+        return new FileId<TBucket>(bucket, key);
     }
 
     public static bool TryParse(string inputFileId, out FileId<TBucket> fileId)
@@ -33,16 +50,17 @@ public readonly struct FileId<TBucket>(TBucket bucket, string key) where TBucket
 }
 
 public readonly struct FileId(string bucket, string key, FileType bucketFileType = FileType.All)
+    : IFileIdKey
 {
+    public string Key { get; } = key;
     public string Bucket { get; } = bucket;
     public FileType BucketFileType { get; } = bucketFileType;
-    public string Key { get; } = key;
-    public string Id => $"{Bucket}:{Key}".ToSqid();
+    public string Id => FileIdExtensions.GenerateSqidId(Bucket, Key);
 
     public static FileId FromSqid(string fileId)
     {
-        var parts = fileId.FromSqid().Split(':');
-        return new(parts[0], parts[1]);
+        var (bucket, key) = FileIdExtensions.SplitFromSqid(fileId);
+        return new FileId(bucket, key);
     }
 
     public static bool TryParse(string inputFileId, out FileId fileId)

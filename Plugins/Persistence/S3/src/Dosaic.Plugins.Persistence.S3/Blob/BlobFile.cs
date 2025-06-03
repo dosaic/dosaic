@@ -23,7 +23,9 @@ public class BlobFile<BucketEnum> : BaseBlobFile where BucketEnum : struct, Enum
     {
         return new BlobFile<BucketEnum>
         {
-            Id = id, MetaData = GetMetaData(fileName), LastModified = DateTimeOffset.UtcNow
+            Id = id,
+            MetaData = GetMetaData(fileName),
+            LastModified = DateTimeOffset.UtcNow
         };
     }
 }
