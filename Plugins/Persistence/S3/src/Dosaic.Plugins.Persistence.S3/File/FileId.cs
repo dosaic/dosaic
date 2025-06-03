@@ -32,6 +32,8 @@ public readonly struct FileId<TBucket>(TBucket bucket, string key) : IFileIdKey
         return new FileId<TBucket>(bucket, key);
     }
 
+    public FileId ToFileId() => new(Bucket.GetName(), Key, Bucket.GetFileType());
+
     public static bool TryParse(string inputFileId, out FileId<TBucket> fileId)
     {
         try

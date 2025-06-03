@@ -21,8 +21,7 @@ public class FileStorage<BucketEnum>(
     public async Task<BlobFile<BucketEnum>> GetFileAsync(FileId<BucketEnum> id,
         CancellationToken cancellationToken = default)
     {
-        var fileId = new FileId(id.Bucket.GetName(), id.Key);
-        var file = await fileStorage.GetFileAsync(fileId, cancellationToken);
+        var file = await fileStorage.GetFileAsync(id.ToFileId(), cancellationToken);
 
         return new BlobFile<BucketEnum>
         {
@@ -34,13 +33,13 @@ public class FileStorage<BucketEnum>(
 
     public Task DeleteFileAsync(FileId<BucketEnum> id, CancellationToken cancellationToken = default)
     {
-        return fileStorage.DeleteFileAsync(new FileId(id.Bucket.GetName(), id.Key), cancellationToken);
+        return fileStorage.DeleteFileAsync(id.ToFileId(), cancellationToken);
     }
 
     public async Task ConsumeStreamAsync(FileId<BucketEnum> id, Func<Stream, CancellationToken, Task> streamConsumer,
         CancellationToken cancellationToken = default)
     {
-        await fileStorage.ConsumeStreamAsync(new FileId(id.Bucket.GetName(), id.Key), streamConsumer,
+        await fileStorage.ConsumeStreamAsync(id.ToFileId(), streamConsumer,
             cancellationToken);
     }
 
@@ -50,7 +49,7 @@ public class FileStorage<BucketEnum>(
         var fileId = await fileStorage.SetAsync(
             new BlobFile()
             {
-                Id = new FileId(file.Id.Bucket.GetName(), file.Id.Key, file.Id.Bucket.GetFileType()),
+                Id = file.Id.ToFileId(),
                 LastModified = file.LastModified,
                 MetaData = file.MetaData
             }, stream, cancellationToken);

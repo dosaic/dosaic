@@ -17,12 +17,12 @@ internal class BlobStorageBucketMigrationService<T>(IMinioClient minioClient, IL
             try
             {
                 var requiredBuckets = Enum.GetValues<T>()
-                    .Select(x => x.GetName())
+                    .Select(x => storage.ResolveBucketName(x.GetName()))
                     .Where(x => !string.IsNullOrEmpty(x))
                     .ToList();
 
                 var existingBuckets =
-                    (await minioClient.ListBucketsAsync(stoppingToken)).Buckets.Select(x => x.Name).ToList();
+                    (await minioClient.ListBucketsAsync(stoppingToken)).Buckets.Select(x => storage.ResolveBucketName(x.Name)).ToList();
 
                 var missingBuckets = requiredBuckets.Except(existingBuckets).ToList();
                 logger.LogInformation("S3 buckets<{bucketType} {@Buckets}", bucketTypeName,
