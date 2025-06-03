@@ -27,6 +27,7 @@ namespace Dosaic.Plugins.Persistence.S3.Tests
         private IContentInspector _contentInspector;
         private IFileStorage<SampleBucket> _fileStorageSampleBucket;
         private IFileStorage _fileStorage;
+        private S3Configuration _configuration;
         private static readonly byte[] _imageSignature = [0xFF, 0xD8, 0xFF, 0x00];
         private static readonly byte[] _pdfSignature = "%PDF"u8.ToArray();
 
@@ -39,8 +40,9 @@ namespace Dosaic.Plugins.Persistence.S3.Tests
                 Definitions =
                     [.. DefaultDefinitions.FileTypes.Images.JPEG(), .. DefaultDefinitions.FileTypes.Documents.PDF()]
             }.Build();
+            _configuration = new S3Configuration { BucketPrefix = "dev-" };
             _fileStorage = new FileStorage(_minioClient, _contentInspector,
-                new FakeLogger<FileStorage>());
+                new FakeLogger<FileStorage>(), _configuration);
             _fileStorageSampleBucket = new FileStorage<SampleBucket>(_fileStorage);
         }
 
@@ -172,7 +174,7 @@ namespace Dosaic.Plugins.Persistence.S3.Tests
 
             var args = _minioClient.ReceivedCalls().First().GetArguments().OfType<PutObjectArgs>().First();
             args.Should().NotBeNull();
-            args.GetInaccessibleValue<string>("BucketName").Should().Be(SampleBucket.Logos.GetName());
+            args.GetInaccessibleValue<string>("BucketName").Should().Be($"{_configuration.BucketPrefix}{SampleBucket.Logos.GetName()}");
             args.GetInaccessibleValue<string>("ContentType").Should().Be("image/jpeg");
             args.GetInaccessibleValue<string>("ObjectName").Should().Be("test");
             const string AmzKey = "x-amz-meta-" + BlobFileMetaData.Filename;
@@ -197,7 +199,7 @@ namespace Dosaic.Plugins.Persistence.S3.Tests
                     imgStream)).Should().ThrowAsync<DosaicException>()).Subject.First();
             ex.HttpStatus.Should()
                 .Be(StatusCodes.Status500InternalServerError);
-            ex.Message.Should().Be("Could not save file logos:test to s3");
+            ex.Message.Should().Be("Could not save file dev-logos:test to s3");
         }
 
         [Test]

@@ -37,6 +37,7 @@ namespace Dosaic.Plugins.Persistence.S3.Tests
             var sc = TestingDefaults.ServiceCollection();
             _plugin.ConfigureServices(sc);
             sc.AddFileStorage<SampleBucket>();
+            sc.AddSingleton<S3Configuration>();
             var sp = sc.BuildServiceProvider();
 
             var client = sp.GetRequiredService<IMinioClient>();

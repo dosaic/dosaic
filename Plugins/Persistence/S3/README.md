@@ -24,6 +24,7 @@ Configure your appsettings.yml with these properties:
 ```yaml
 s3:
   endpoint: ""
+  bucketPrefix: "" # optional, used to prefix all bucket names
   accessKey: ""
   secretKey: ""
   region: ""
@@ -71,7 +72,7 @@ services.AddBlobStorageBucketMigrationService(MyBucket.Logos);
 services.AddBlobStorageBucketMigrationService(MyOtherBucket.Cars);
 ```
 
- 
+
 ### File Storage without enum based buckets
 
 The plugin automatically registers IFilestorage with the service collection.

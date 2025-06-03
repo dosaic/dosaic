@@ -10,7 +10,8 @@ using Minio.DataModel.Args;
 namespace Dosaic.Plugins.Persistence.S3.File;
 
 public class FileStorage<BucketEnum>(
-    IFileStorage fileStorage) : IFileStorage<BucketEnum> where BucketEnum : struct, Enum
+    IFileStorage fileStorage
+) : IFileStorage<BucketEnum> where BucketEnum : struct, Enum
 {
     public async Task<string> ComputeHash(Stream stream, CancellationToken cancellationToken)
     {
@@ -61,7 +62,8 @@ public class FileStorage<BucketEnum>(
 public class FileStorage(
     IMinioClient minioClient,
     IContentInspector contentInspector,
-    ILogger<FileStorage> logger) : IFileStorage
+    ILogger<FileStorage> logger,
+    S3Configuration configuration) : IFileStorage
 {
     private static readonly SHA256 _sha256 = SHA256.Create();
 
@@ -118,8 +120,9 @@ public class FileStorage(
         file.MetaData[BlobFileMetaData.ContentType] = GetMimeType(file.Id, stream);
         file.MetaData[BlobFileMetaData.Hash] = await ComputeHash(stream, cancellationToken);
 
+        var bucketWithPrefix = $"{configuration.BucketPrefix}{file.Id.Bucket}";
         var arguments = new PutObjectArgs()
-            .WithBucket(file.Id.Bucket)
+            .WithBucket(bucketWithPrefix)
             .WithObject(file.Id.Key)
             .WithHeaders(file.MetaData)
             .WithStreamData(stream)
@@ -129,11 +132,11 @@ public class FileStorage(
         var result = await minioClient.PutObjectAsync(arguments, cancellationToken);
         if (result != null)
         {
-            logger.LogDebug("Put {Bucket}:{Object} into S3", file.Id.Key, file.Id.Bucket);
+            logger.LogDebug("Put {Bucket}:{Object} into S3", file.Id.Key, bucketWithPrefix);
             return file.Id;
         }
 
-        var errorMessage = $"Could not save file {file.Id.Bucket}:{file.Id.Key} to s3";
+        var errorMessage = $"Could not save file {bucketWithPrefix}:{file.Id.Key} to s3";
         logger.LogError(errorMessage);
         throw new DosaicException(errorMessage);
     }
