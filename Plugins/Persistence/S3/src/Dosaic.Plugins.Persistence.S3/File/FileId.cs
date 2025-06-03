@@ -12,7 +12,7 @@ public readonly struct FileId<BucketEnum>(BucketEnum bucket, string key) where B
     public static FileId<BucketEnum> FromSqid(string fileId)
     {
         var blobParts = fileId.FromSqid().Split(':');
-        var bucket = Enum.Parse<BucketEnum>(blobParts[0],true);
+        var bucket = Enum.Parse<BucketEnum>(blobParts[0], true);
         return new FileId<BucketEnum>(bucket, blobParts[1]);
     }
 

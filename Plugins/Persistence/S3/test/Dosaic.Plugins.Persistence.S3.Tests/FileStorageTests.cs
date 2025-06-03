@@ -97,7 +97,6 @@ namespace Dosaic.Plugins.Persistence.S3.Tests
                 CultureInfo.InvariantCulture));
         }
 
-
         [Test]
         public async Task GetAsyncThrowsOnDifferentFileIds()
         {

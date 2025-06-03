@@ -22,7 +22,6 @@ public interface IFileStorage<BucketEnum> where BucketEnum : struct, Enum
 
     Task DeleteFileAsync(FileId<BucketEnum> id, CancellationToken cancellationToken = default);
 
-
 }
 
 public interface IFileStorage

@@ -34,7 +34,6 @@ namespace Dosaic.Plugins.Persistence.S3.Tests
             newSecretId.Should().Be(fileId);
         }
 
-
         [Test]
         public void TryParseReturnsTrueForValidFileId()
         {

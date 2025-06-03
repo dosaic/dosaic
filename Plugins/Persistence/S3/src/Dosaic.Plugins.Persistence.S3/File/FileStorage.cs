@@ -6,7 +6,6 @@ using Microsoft.Extensions.Logging;
 using MimeDetective;
 using Minio;
 using Minio.DataModel.Args;
-using Minio.Exceptions;
 
 namespace Dosaic.Plugins.Persistence.S3.File;
 
