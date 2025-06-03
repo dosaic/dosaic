@@ -6,7 +6,7 @@ using Minio.DataModel.Args;
 
 namespace Dosaic.Plugins.Persistence.S3.Blob;
 
-internal class BlobStorageBucketMigrationService<T>(IMinioClient minioClient, ILogger logger)
+internal class BlobStorageBucketMigrationService<T>(IMinioClient minioClient, ILogger logger, IFileStorage storage)
     : BackgroundService where T : struct, Enum
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -36,8 +36,10 @@ internal class BlobStorageBucketMigrationService<T>(IMinioClient minioClient, IL
                 if (missingBuckets.Count == 0) return;
                 foreach (var missingBucket in missingBuckets)
                 {
-                    logger.LogInformation("S3 buckets<{bucketType}>: create missing bucket {missingBucket}", bucketTypeName, missingBucket);
-                    await minioClient.MakeBucketAsync(new MakeBucketArgs().WithBucket(missingBucket), stoppingToken);
+                    logger.LogInformation("S3 buckets<{bucketType}>: create missing bucket {missingBucket}",
+                        bucketTypeName, missingBucket);
+                    await minioClient.MakeBucketAsync(
+                        new MakeBucketArgs().WithBucket(storage.ResolveBucketName(missingBucket)), stoppingToken);
                 }
 
                 return;

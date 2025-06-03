@@ -2,7 +2,7 @@ using Dosaic.Plugins.Persistence.S3.Blob;
 
 namespace Dosaic.Plugins.Persistence.S3.File;
 
-public interface IFileStorage<BucketEnum> where BucketEnum : struct, Enum
+public interface IComputeHash
 {
     Task<string> ComputeHash(Stream stream, CancellationToken cancellationToken = default);
 
@@ -11,7 +11,10 @@ public interface IFileStorage<BucketEnum> where BucketEnum : struct, Enum
         using var memStream = new MemoryStream(bytes);
         return ComputeHash(memStream, cancellationToken);
     }
+}
 
+public interface IFileStorage<BucketEnum> : IComputeHash where BucketEnum : struct, Enum
+{
     Task<BlobFile<BucketEnum>> GetFileAsync(FileId<BucketEnum> id, CancellationToken cancellationToken = default);
 
     Task ConsumeStreamAsync(FileId<BucketEnum> id, Func<Stream, CancellationToken, Task> streamConsumer,
@@ -21,19 +24,10 @@ public interface IFileStorage<BucketEnum> where BucketEnum : struct, Enum
         CancellationToken cancellationToken = default);
 
     Task DeleteFileAsync(FileId<BucketEnum> id, CancellationToken cancellationToken = default);
-
 }
 
-public interface IFileStorage
+public interface IFileStorage : IComputeHash
 {
-    Task<string> ComputeHash(Stream stream, CancellationToken cancellationToken = default);
-
-    Task<string> ComputeHash(byte[] bytes, CancellationToken cancellationToken = default)
-    {
-        using var memStream = new MemoryStream(bytes);
-        return ComputeHash(memStream, cancellationToken);
-    }
-
     Task<BlobFile> GetFileAsync(FileId id, CancellationToken cancellationToken = default);
 
     Task ConsumeStreamAsync(FileId id, Func<Stream, CancellationToken, Task> streamConsumer,
@@ -43,4 +37,5 @@ public interface IFileStorage
     Task DeleteFileAsync(FileId id, CancellationToken cancellationToken = default);
 
     Task CreateBucketAsync(string bucket, CancellationToken cancellationToken = default);
+    string ResolveBucketName(string bucket);
 }

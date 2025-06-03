@@ -78,7 +78,7 @@ public class FileStorage(
     public async Task<BlobFile> GetFileAsync(FileId id,
         CancellationToken cancellationToken = default)
     {
-        var statArgs = new StatObjectArgs().WithBucket(id.Bucket).WithObject(id.Key);
+        var statArgs = new StatObjectArgs().WithBucket(ResolveBucketName(id.Bucket)).WithObject(id.Key);
         var objectStat = await minioClient.StatObjectAsync(statArgs, cancellationToken);
         var metaData = new Dictionary<string, string>
         {
@@ -97,19 +97,21 @@ public class FileStorage(
 
     public Task DeleteFileAsync(FileId id, CancellationToken cancellationToken = default)
     {
-        return minioClient.RemoveObjectAsync(new RemoveObjectArgs().WithBucket(id.Bucket).WithObject(id.Key),
+        return minioClient.RemoveObjectAsync(
+            new RemoveObjectArgs().WithBucket(ResolveBucketName(id.Bucket)).WithObject(id.Key),
             cancellationToken);
     }
 
     public async Task CreateBucketAsync(string bucket, CancellationToken cancellationToken = default)
     {
-        await minioClient.MakeBucketAsync(new MakeBucketArgs().WithBucket(bucket), cancellationToken);
+        await minioClient.MakeBucketAsync(new MakeBucketArgs().WithBucket(ResolveBucketName(bucket)),
+            cancellationToken);
     }
 
     public async Task ConsumeStreamAsync(FileId id, Func<Stream, CancellationToken, Task> streamConsumer,
         CancellationToken cancellationToken = default)
     {
-        var getArgs = new GetObjectArgs().WithBucket(id.Bucket).WithObject(id.Key)
+        var getArgs = new GetObjectArgs().WithBucket(ResolveBucketName(id.Bucket)).WithObject(id.Key)
             .WithCallbackStream(streamConsumer);
         await minioClient.GetObjectAsync(getArgs, cancellationToken);
     }
@@ -120,7 +122,7 @@ public class FileStorage(
         file.MetaData[BlobFileMetaData.ContentType] = GetMimeType(file.Id, stream);
         file.MetaData[BlobFileMetaData.Hash] = await ComputeHash(stream, cancellationToken);
 
-        var bucketWithPrefix = $"{configuration.BucketPrefix}{file.Id.Bucket}";
+        var bucketWithPrefix = ResolveBucketName(file.Id.Bucket);
         var arguments = new PutObjectArgs()
             .WithBucket(bucketWithPrefix)
             .WithObject(file.Id.Key)
@@ -139,6 +141,11 @@ public class FileStorage(
         var errorMessage = $"Could not save file {bucketWithPrefix}:{file.Id.Key} to s3";
         logger.LogError(errorMessage);
         throw new DosaicException(errorMessage);
+    }
+
+    public string ResolveBucketName(string bucket)
+    {
+        return $"{configuration.BucketPrefix}{bucket}";
     }
 
     private string GetMimeType(FileId fileId, Stream stream)
