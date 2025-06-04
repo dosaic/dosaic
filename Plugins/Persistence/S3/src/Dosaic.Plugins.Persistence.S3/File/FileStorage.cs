@@ -47,12 +47,8 @@ public class FileStorage<BucketEnum>(
         CancellationToken cancellationToken = default)
     {
         var fileId = await fileStorage.SetAsync(
-            new BlobFile()
-            {
-                Id = file.Id.ToFileId(),
-                LastModified = file.LastModified,
-                MetaData = file.MetaData
-            }, stream, cancellationToken);
+            new BlobFile { Id = file.Id.ToFileId(), LastModified = file.LastModified, MetaData = file.MetaData },
+            stream, file.Id.Bucket.GetFileType(), cancellationToken);
 
         return new FileId<BucketEnum>(file.Id.Bucket, fileId.Key);
     }
@@ -115,10 +111,10 @@ public class FileStorage(
         await minioClient.GetObjectAsync(getArgs, cancellationToken);
     }
 
-    public async Task<FileId> SetAsync(BlobFile file, Stream stream,
+    public async Task<FileId> SetAsync(BlobFile file, Stream stream, FileType fileType,
         CancellationToken cancellationToken = default)
     {
-        file.MetaData[BlobFileMetaData.ContentType] = GetMimeType(file.Id, stream);
+        file.MetaData[BlobFileMetaData.ContentType] = GetMimeType(fileType, stream);
         file.MetaData[BlobFileMetaData.Hash] = await ComputeHash(stream, cancellationToken);
 
         var bucketWithPrefix = ResolveBucketName(file.Id.Bucket);
@@ -147,13 +143,13 @@ public class FileStorage(
         return $"{configuration.BucketPrefix}{bucket}";
     }
 
-    private string GetMimeType(FileId fileId, Stream stream)
+    private string GetMimeType(FileType fileType, Stream stream)
     {
         var result = contentInspector.Inspect(stream).FirstOrDefault();
         if (result == null)
             throw new ValidationDosaicException(typeof(BlobFile),
                 "Could not determine content type, abort processing.");
-        var allowedDefinitions = fileId.BucketFileType.GetDefinitions();
+        var allowedDefinitions = fileType.GetDefinitions();
         if (!allowedDefinitions.Select(x => x.File.MimeType)
                 .Contains(result.Definition.File.MimeType))
         {

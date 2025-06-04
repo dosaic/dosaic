@@ -33,7 +33,9 @@ public interface IFileStorage : IComputeHash
     Task ConsumeStreamAsync(FileId id, Func<Stream, CancellationToken, Task> streamConsumer,
         CancellationToken cancellationToken = default);
 
-    Task<FileId> SetAsync(BlobFile file, Stream stream, CancellationToken cancellationToken = default);
+    Task<FileId> SetAsync(BlobFile file, Stream stream, FileType fileType,
+        CancellationToken cancellationToken = default);
+
     Task DeleteFileAsync(FileId id, CancellationToken cancellationToken = default);
 
     Task CreateBucketAsync(string bucket, CancellationToken cancellationToken = default);

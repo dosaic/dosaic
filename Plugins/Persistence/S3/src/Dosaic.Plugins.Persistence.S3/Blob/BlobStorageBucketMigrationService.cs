@@ -9,6 +9,7 @@ namespace Dosaic.Plugins.Persistence.S3.Blob;
 internal class BlobStorageBucketMigrationService<T>(IMinioClient minioClient, ILogger logger, IFileStorage storage)
     : BackgroundService where T : struct, Enum
 {
+    private int _retryCount = 1;
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         while (!stoppingToken.IsCancellationRequested)
@@ -17,8 +18,8 @@ internal class BlobStorageBucketMigrationService<T>(IMinioClient minioClient, IL
             try
             {
                 var requiredBuckets = Enum.GetValues<T>()
+                    .Where(x => !string.IsNullOrEmpty(x.GetName()))
                     .Select(x => storage.ResolveBucketName(x.GetName()))
-                    .Where(x => !string.IsNullOrEmpty(x))
                     .ToList();
 
                 var existingBuckets =
@@ -46,8 +47,14 @@ internal class BlobStorageBucketMigrationService<T>(IMinioClient minioClient, IL
             }
             catch (Exception e)
             {
+                if (_retryCount >= 4)
+                {
+                    logger.LogError(e, "Could not migrate s3 buckets<{bucketType}> after 3 attempts -> giving up", bucketTypeName);
+                    return;
+                }
                 logger.LogError(e, "Could not migrate s3 buckets<{bucketType}> -> retrying", bucketTypeName);
-                await Task.Delay(1000, stoppingToken);
+                await Task.Delay(_retryCount * 1000, stoppingToken);
+                _retryCount++;
             }
         }
     }

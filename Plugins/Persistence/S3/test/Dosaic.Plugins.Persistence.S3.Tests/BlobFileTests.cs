@@ -18,7 +18,7 @@ namespace Dosaic.Plugins.Persistence.S3.Tests
             blobFileSambleBucket.MetaData.Should().ContainKey(BlobFileMetaData.Filename);
             blobFileSambleBucket.MetaData[BlobFileMetaData.Filename].Should().Be(fileName);
 
-            var blobFile = BlobFile.Create(new FileId("mybucket", "mykey", FileType.Images), fileName);
+            var blobFile = BlobFile.Create(new FileId("mybucket", "mykey"), fileName);
 
             blobFile.MetaData.Should().ContainKey(BlobFileMetaData.Filename);
             blobFile.MetaData[BlobFileMetaData.Filename].Should().Be(fileName);

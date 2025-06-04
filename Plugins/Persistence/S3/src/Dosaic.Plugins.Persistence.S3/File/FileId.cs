@@ -32,7 +32,7 @@ public readonly struct FileId<TBucket>(TBucket bucket, string key) : IFileIdKey
         return new FileId<TBucket>(bucket, key);
     }
 
-    public FileId ToFileId() => new(Bucket.GetName(), Key, Bucket.GetFileType());
+    public FileId ToFileId() => new(Bucket.GetName(), Key);
 
     public static bool TryParse(string inputFileId, out FileId<TBucket> fileId)
     {
@@ -51,12 +51,12 @@ public readonly struct FileId<TBucket>(TBucket bucket, string key) : IFileIdKey
     public static FileId<TBucket> New(TBucket bucket) => new(bucket, Guid.NewGuid().ToString("N"));
 }
 
-public readonly struct FileId(string bucket, string key, FileType bucketFileType = FileType.All)
+public readonly struct FileId(string bucket, string key)
     : IFileIdKey
 {
     public string Key { get; } = key;
     public string Bucket { get; } = bucket;
-    public FileType BucketFileType { get; } = bucketFileType;
+
     public string Id => FileIdExtensions.GenerateSqidId(Bucket, Key);
 
     public static FileId FromSqid(string fileId)
