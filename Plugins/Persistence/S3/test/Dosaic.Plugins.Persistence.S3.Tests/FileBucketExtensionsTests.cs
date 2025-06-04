@@ -64,10 +64,9 @@ namespace Dosaic.Plugins.Persistence.S3.Tests
         [Test]
         public void GetDefinitionsForBucketReturnsDefinitionsMatchingBucketFileType()
         {
-            var bucketDefs = SampleBucket.Logos.GetDefinitions();
             var fileTypeDefs = SampleBucket.Logos.GetFileType().GetDefinitions();
 
-            bucketDefs.Should().BeEquivalentTo(fileTypeDefs);
+            fileTypeDefs.Should().BeEquivalentTo(DefaultDefinitions.FileTypes.Images.All());
         }
     }
 }

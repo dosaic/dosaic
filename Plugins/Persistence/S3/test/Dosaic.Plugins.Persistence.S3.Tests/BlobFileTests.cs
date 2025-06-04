@@ -13,7 +13,12 @@ namespace Dosaic.Plugins.Persistence.S3.Tests
             var id = new FileId<SampleBucket>(SampleBucket.Logos, Guid.NewGuid().ToString());
             var fileName = "test.jpg";
 
-            var blobFile = BlobFile<SampleBucket>.Create(id, fileName);
+            var blobFileSambleBucket = BlobFile<SampleBucket>.Create(id, fileName);
+
+            blobFileSambleBucket.MetaData.Should().ContainKey(BlobFileMetaData.Filename);
+            blobFileSambleBucket.MetaData[BlobFileMetaData.Filename].Should().Be(fileName);
+
+            var blobFile = BlobFile.Create(new FileId("mybucket", "mykey"), fileName);
 
             blobFile.MetaData.Should().ContainKey(BlobFileMetaData.Filename);
             blobFile.MetaData[BlobFileMetaData.Filename].Should().Be(fileName);

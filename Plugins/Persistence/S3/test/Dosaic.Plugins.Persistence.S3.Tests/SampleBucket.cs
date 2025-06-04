@@ -4,7 +4,8 @@ namespace Dosaic.Plugins.Persistence.S3.Tests;
 
 public enum SampleBucket
 {
-    [FileBucket("logos", FileType.Images)] Logos = 0,
+    [FileBucket("logos", FileType.Images)]
+    Logos = 0,
 
     [FileBucket("docs", FileType.Documents)]
     Documents

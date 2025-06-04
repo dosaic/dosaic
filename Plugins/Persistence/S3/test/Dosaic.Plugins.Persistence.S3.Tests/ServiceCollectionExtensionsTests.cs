@@ -58,4 +58,14 @@ public class ServiceCollectionExtensionsTests
             x.ServiceType == typeof(IHostedService) &&
             x.ImplementationType == typeof(BlobStorageBucketMigrationService<SampleBucket>));
     }
+
+    [Test]
+    public void AddFileStorageBucketMigrationServiceRegistersMigrationService()
+    {
+        _serviceCollection.AddFileStorageWithBucketMigration<SampleBucket>();
+
+        _serviceCollection.Should().Contain(x =>
+            x.ServiceType == typeof(IHostedService) &&
+            x.ImplementationType == typeof(BlobStorageBucketMigrationService<SampleBucket>));
+    }
 }

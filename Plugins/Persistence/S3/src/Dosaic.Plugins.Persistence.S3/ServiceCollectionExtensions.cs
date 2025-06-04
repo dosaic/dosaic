@@ -19,6 +19,11 @@ public static class ServiceCollectionExtensions
         return serviceCollection.AddSingleton<IFileStorage<T>, FileStorage<T>>();
     }
 
+    public static IServiceCollection AddFileStorage(this IServiceCollection serviceCollection)
+    {
+        return serviceCollection.AddSingleton<IFileStorage, FileStorage>();
+    }
+
     public static IServiceCollection AddFileStorageWithBucketMigration<T>(this IServiceCollection serviceCollection)
         where T : struct, Enum
     {

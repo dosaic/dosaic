@@ -6,6 +6,7 @@ namespace Dosaic.Plugins.Persistence.S3;
 public class S3Configuration
 {
     public string Endpoint { get; set; } = "";
+    public string BucketPrefix { get; set; } = "";
     public string AccessKey { get; set; } = "";
     public string SecretKey { get; set; } = "";
     public string Region { get; set; } = "";
