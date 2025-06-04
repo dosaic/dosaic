@@ -1,6 +1,7 @@
 using Dosaic.Plugins.Persistence.S3.Blob;
 using Dosaic.Plugins.Persistence.S3.File;
 using Dosaic.Testing.NUnit.Assertions;
+using Dosaic.Testing.NUnit.Extensions;
 using FluentAssertions;
 using Minio;
 using Minio.DataModel;
@@ -21,7 +22,14 @@ public class BlobStorageBucketMigrationServiceTests
 
         mc.ListBucketsAsync(Arg.Any<CancellationToken>())
             .Returns(_ => throw new Exception("retry"),
-                _ => new ListAllMyBucketsResult { Buckets = [new Bucket { Name = "dev-NOT_REQUIRED_BUCKET" }] });
+                _ => new ListAllMyBucketsResult
+                {
+                    Buckets =
+                    [
+                        new Bucket { Name = "NOT_REQUIRED_BUCKET" },
+                        new Bucket { Name = "logos" }
+                    ]
+                });
 
         var buckets = Enum.GetValues<SampleBucket>().Select(x => x.GetName()).ToList();
         var fakeLogger = new FakeLogger<BlobStorageBucketMigrationService<SampleBucket>>();
@@ -33,7 +41,12 @@ public class BlobStorageBucketMigrationServiceTests
         await svc.ExecuteTask!;
         await svc.StopAsync(CancellationToken.None);
         await mc.Received(2).ListBucketsAsync(Arg.Any<CancellationToken>());
-        await mc.Received(buckets.Count).MakeBucketAsync(Arg.Any<MakeBucketArgs>(), Arg.Any<CancellationToken>());
+        await mc.Received(1)
+            .MakeBucketAsync(ArgExt.Is<MakeBucketArgs>(m => m.GetInaccessibleValue<string>("BucketName").Should().Be("dev-logos")),
+                Arg.Any<CancellationToken>());
+        await mc.Received(1)
+            .MakeBucketAsync(ArgExt.Is<MakeBucketArgs>(m => m.GetInaccessibleValue<string>("BucketName").Should().Be("dev-docs")),
+                Arg.Any<CancellationToken>());
 
         fakeLogger.Entries[0].Message.Should().Be("Could not migrate s3 buckets<SampleBucket> -> retrying");
 
@@ -64,6 +77,7 @@ public class BlobStorageBucketMigrationServiceTests
         fakeLogger.Entries[0].Message.Should().Be("Could not migrate s3 buckets<SampleBucket> -> retrying");
         fakeLogger.Entries[1].Message.Should().Be("Could not migrate s3 buckets<SampleBucket> -> retrying");
         fakeLogger.Entries[2].Message.Should().Be("Could not migrate s3 buckets<SampleBucket> -> retrying");
-        fakeLogger.Entries[3].Message.Should().Be("Could not migrate s3 buckets<SampleBucket> after 3 attempts -> giving up");
+        fakeLogger.Entries[3].Message.Should()
+            .Be("Could not migrate s3 buckets<SampleBucket> after 3 attempts -> giving up");
     }
 }

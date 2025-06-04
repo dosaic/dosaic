@@ -1,7 +1,6 @@
 using FluentAssertions.Execution;
 using NSubstitute.Core;
 using NSubstitute.Core.Arguments;
-using NUnit.Framework;
 
 namespace Dosaic.Testing.NUnit.Extensions;
 
@@ -32,9 +31,6 @@ public static class ArgExt
             {
                 return true;
             }
-
-            failures.ForEach(x => TestContext.Error.WriteLine("error " + x));
-            failures.ForEach(x => Console.WriteLine(x));
 
             return false;
         }
