@@ -12,7 +12,7 @@ public static class FileBucketExtensions
         return typeof(T).GetMember(bucket.ToString())[0].GetCustomAttribute<FileBucketAttribute>()!;
     }
 
-    public static T GetEnumValueFromAttributeName<T>(this string bucket) where T : Enum
+    public static T GetEnumValueFromAttributeName<T>(string bucket) where T : Enum
     {
         var enumValue = typeof(T).GetMembers()
             .FirstOrDefault(x => x.GetCustomAttribute<FileBucketAttribute>()?.Name == bucket);

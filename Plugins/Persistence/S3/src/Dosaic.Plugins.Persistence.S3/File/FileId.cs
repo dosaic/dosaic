@@ -28,7 +28,7 @@ public readonly struct FileId<TBucket>(TBucket bucket, string key) : IFileIdKey
     public static FileId<TBucket> FromSqid(string fileId)
     {
         var (bucketName, key) = FileIdExtensions.SplitFromSqid(fileId);
-        return new FileId<TBucket>(bucketName.GetEnumValueFromAttributeName<TBucket>(), key);
+        return new FileId<TBucket>(FileBucketExtensions.GetEnumValueFromAttributeName<TBucket>(bucketName), key);
     }
 
     public FileId ToFileId() => new(Bucket.GetName(), Key);
