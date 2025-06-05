@@ -46,11 +46,10 @@ namespace Dosaic.Plugins.Jobs.Hangfire.Attributes
 
             candidateState.Queue = Queue;
             var job = context.BackgroundJob;
-            var filteredArguments = job.Job.Args.Where(x => x.GetType() != typeof(CancellationToken)).ToList();
-            var jobArgs = JsonSerializer.Serialize(filteredArguments, _jsonSerializerOptions);
+            var jobArgs = GetJobArgsAsString(job.Job);
             var jobs = GetJobs(context);
             var jobsWithArgs = jobs
-                .Select(x => new { JobEntity = x, ArgAsString = jobArgs }).ToList();
+                .Select(x => new { JobEntity = x, ArgAsString = GetJobArgsAsString(x.Value) }).ToList();
             var alreadyExists = jobsWithArgs.Exists(x =>
                 x.JobEntity.Value.Method == job.Job.Method && x.ArgAsString == jobArgs && x.JobEntity.Id != job.Id);
             if (!alreadyExists)
@@ -58,6 +57,13 @@ namespace Dosaic.Plugins.Jobs.Hangfire.Attributes
 
             context.CandidateState =
                 new DeletedState { Reason = "Instance of the same job is already queued." };
+        }
+
+        private static string GetJobArgsAsString(global::Hangfire.Common.Job job)
+        {
+            var filteredArguments = job.Args.Where(x => x.GetType() != typeof(CancellationToken)).ToList();
+            var jobArgs = JsonSerializer.Serialize(filteredArguments, _jsonSerializerOptions);
+            return jobArgs;
         }
 
         private sealed record JobEntity(string Id, global::Hangfire.Common.Job Value)

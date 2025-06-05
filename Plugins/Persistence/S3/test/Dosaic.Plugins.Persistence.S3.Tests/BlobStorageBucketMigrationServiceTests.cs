@@ -42,10 +42,10 @@ public class BlobStorageBucketMigrationServiceTests
         await svc.StopAsync(CancellationToken.None);
         await mc.Received(2).ListBucketsAsync(Arg.Any<CancellationToken>());
         await mc.Received(1)
-            .MakeBucketAsync(ArgExt.Is<MakeBucketArgs>(m => m.GetInaccessibleValue<string>("BucketName").Should().Be("dev-logos")),
+            .MakeBucketAsync(ArgExt.Is<MakeBucketArgs>(m => m.GetInaccessibleValue<string>("BucketName").Should().Be("dev-test-logos")),
                 Arg.Any<CancellationToken>());
         await mc.Received(1)
-            .MakeBucketAsync(ArgExt.Is<MakeBucketArgs>(m => m.GetInaccessibleValue<string>("BucketName").Should().Be("dev-docs")),
+            .MakeBucketAsync(ArgExt.Is<MakeBucketArgs>(m => m.GetInaccessibleValue<string>("BucketName").Should().Be("dev-test.docs")),
                 Arg.Any<CancellationToken>());
 
         fakeLogger.Entries[0].Message.Should().Be("Could not migrate s3 buckets<SampleBucket> -> retrying");
@@ -53,8 +53,8 @@ public class BlobStorageBucketMigrationServiceTests
         // fakelogger does not resolve nested lists and objects but serilog does
         fakeLogger.Entries[1].Message.Should().Be(
             "S3 buckets<SampleBucket { MissingBuckets = System.Collections.Generic.List`1[System.String], RequiredBuckets = System.Collections.Generic.List`1[System.String], ExistingBuckets = System.Collections.Generic.List`1[System.String] }");
-        fakeLogger.Entries[2].Message.Should().Be("S3 buckets<SampleBucket>: create missing bucket dev-logos");
-        fakeLogger.Entries[3].Message.Should().Be("S3 buckets<SampleBucket>: create missing bucket dev-docs");
+        fakeLogger.Entries[2].Message.Should().Be("S3 buckets<SampleBucket>: create missing bucket dev-test-logos");
+        fakeLogger.Entries[3].Message.Should().Be("S3 buckets<SampleBucket>: create missing bucket dev-test.docs");
     }
 
     [Test]

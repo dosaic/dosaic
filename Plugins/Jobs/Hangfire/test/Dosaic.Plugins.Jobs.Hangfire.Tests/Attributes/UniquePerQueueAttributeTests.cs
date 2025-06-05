@@ -123,7 +123,7 @@ namespace Dosaic.Plugins.Jobs.Hangfire.Tests.Attributes
         [Test]
         public void ParameterizedJobDoesNotRemoveItself()
         {
-            var job = CreateParameterizedJob();
+            var job = CreateParameterizedJob("test");
             var backgroundJob = new BackgroundJob("1", job, DateTime.Now);
             var enqueuedJob = new EnqueuedJobDto { Job = job };
             Setup(backgroundJob);
@@ -138,7 +138,7 @@ namespace Dosaic.Plugins.Jobs.Hangfire.Tests.Attributes
         [Test]
         public void ParameterizedJobRemovesTheDuplicateFromEnqueuedOnes()
         {
-            var job = CreateParameterizedJob();
+            var job = CreateParameterizedJob("testPayload");
             var backgroundJob = new BackgroundJob("1", job, DateTime.Now);
             var enqueuedJob = new EnqueuedJobDto { Job = job };
             Setup(backgroundJob);
@@ -151,9 +151,26 @@ namespace Dosaic.Plugins.Jobs.Hangfire.Tests.Attributes
         }
 
         [Test]
+        public void ParameterizedJobRemovesTheDuplicateFromEnqueuedOnesTwo()
+        {
+            var job = CreateParameterizedJob("testPayload");
+            var job2 = CreateParameterizedJob("testPayload1");
+            var backgroundJob = new BackgroundJob("1", job, DateTime.Now);
+            var enqueuedJob = new EnqueuedJobDto { Job = job2 };
+            Setup(backgroundJob);
+            _monitoringApi.EnqueuedJobs(Queue, Arg.Any<int>(), Arg.Any<int>())
+                .Returns(GetJobList(("2", enqueuedJob)));
+            _attribute.OnStateElection(_context);
+            _context.CandidateState.Should().BeOfType<EnqueuedState>();
+            var state = _context.CandidateState as EnqueuedState;
+            state!.Reason.Should().BeNull();
+            state.EnqueuedAt.Should().NotBe(null);
+        }
+
+        [Test]
         public void ParameterizedJobRemovesTheDuplicateFromProcessingOnes()
         {
-            var job = CreateParameterizedJob();
+            var job = CreateParameterizedJob("testPayload");
             var backgroundJob = new BackgroundJob("1", job, DateTime.Now);
             var processingJob = new ProcessingJobDto { Job = job };
             Setup(backgroundJob, true);
@@ -170,7 +187,7 @@ namespace Dosaic.Plugins.Jobs.Hangfire.Tests.Attributes
         [Test]
         public void ParameterizedJobRemovesTheDuplicateFromScheduledOnes()
         {
-            var job = CreateParameterizedJob();
+            var job = CreateParameterizedJob("testPayload");
             var backgroundJob = new BackgroundJob("1", job, DateTime.Now);
             var scheduledJob = new ScheduledJobDto { Job = job };
             Setup(backgroundJob, false, true);
@@ -187,7 +204,7 @@ namespace Dosaic.Plugins.Jobs.Hangfire.Tests.Attributes
         [Test]
         public void ParameterizedJobDoesNothingOnWrongState()
         {
-            var job = CreateParameterizedJob();
+            var job = CreateParameterizedJob("testPayload");
             var backgroundJob = new BackgroundJob("1", job, DateTime.Now);
             Setup(backgroundJob, false, true);
             var state = new ScheduledState(TimeSpan.FromMilliseconds(100));
@@ -210,10 +227,10 @@ namespace Dosaic.Plugins.Jobs.Hangfire.Tests.Attributes
             return job;
         }
 
-        private static global::Hangfire.Common.Job CreateParameterizedJob()
+        private static global::Hangfire.Common.Job CreateParameterizedJob(string payloadName)
         {
             var job = new global::Hangfire.Common.Job(typeof(ParameterizedTestJob),
-                typeof(ParameterizedTestJob).GetMethod(nameof(ParameterizedTestJob.ExecuteAsync)), new TestJobPayload(), CancellationToken.None);
+                typeof(ParameterizedTestJob).GetMethod(nameof(ParameterizedTestJob.ExecuteAsync)), new TestJobPayload { Name = payloadName }, CancellationToken.None);
             return job;
         }
 
@@ -264,6 +281,7 @@ namespace Dosaic.Plugins.Jobs.Hangfire.Tests.Attributes
         private class TestJobPayload
         {
 
+            public string Name { get; set; }
         }
     }
 }
