@@ -199,7 +199,7 @@ namespace Dosaic.Plugins.Persistence.S3.Tests
                     imgStream)).Should().ThrowAsync<DosaicException>()).Subject.First();
             ex.HttpStatus.Should()
                 .Be(StatusCodes.Status500InternalServerError);
-            ex.Message.Should().Be("Could not save file dev-logos:test to s3");
+            ex.Message.Should().Be("Could not save file dev-test-logos:test to s3");
         }
 
         [Test]
