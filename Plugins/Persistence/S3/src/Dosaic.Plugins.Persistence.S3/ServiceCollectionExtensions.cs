@@ -24,6 +24,11 @@ public static class ServiceCollectionExtensions
         return serviceCollection.AddSingleton<IFileStorage, FileStorage>();
     }
 
+    public static IServiceCollection AddDefaultFileTypeDefinitionResolver(this IServiceCollection serviceCollection)
+    {
+        return serviceCollection.AddSingleton<IFileTypeDefinitionResolver, DefaultFileTypeDefinitionResolver>();
+    }
+
     public static IServiceCollection AddFileStorageWithBucketMigration<T>(this IServiceCollection serviceCollection)
         where T : struct, Enum
     {

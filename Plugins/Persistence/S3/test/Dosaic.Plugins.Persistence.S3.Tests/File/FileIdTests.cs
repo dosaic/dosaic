@@ -3,7 +3,7 @@ using Dosaic.Plugins.Persistence.S3.File;
 using FluentAssertions;
 using NUnit.Framework;
 
-namespace Dosaic.Plugins.Persistence.S3.Tests
+namespace Dosaic.Plugins.Persistence.S3.Tests.File
 {
     public class FileIdTests
     {

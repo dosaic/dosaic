@@ -13,10 +13,11 @@ public class S3FileStoragePlugin(S3Configuration configuration)
     public void ConfigureServices(IServiceCollection serviceCollection)
     {
         serviceCollection.AddSingleton(GetMinioClient());
+        serviceCollection.AddDefaultFileTypeDefinitionResolver();
+        serviceCollection.AddFileStorage();
         serviceCollection.AddSingleton<IContentInspector>(
             new ContentInspectorBuilder { Definitions = MimeDetective.Definitions.DefaultDefinitions.All() }
                 .Build());
-        serviceCollection.AddFileStorage();
     }
 
     public void ConfigureHealthChecks(IHealthChecksBuilder healthChecksBuilder)

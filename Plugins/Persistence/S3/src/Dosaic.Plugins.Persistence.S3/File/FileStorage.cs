@@ -1,9 +1,11 @@
+using System.Collections.Immutable;
 using System.Globalization;
 using System.Security.Cryptography;
 using Dosaic.Hosting.Abstractions.Exceptions;
 using Dosaic.Plugins.Persistence.S3.Blob;
 using Microsoft.Extensions.Logging;
 using MimeDetective;
+using MimeDetective.Storage;
 using Minio;
 using Minio.DataModel.Args;
 
@@ -23,9 +25,8 @@ public class FileStorage<BucketEnum>(
     {
         var file = await fileStorage.GetFileAsync(id.ToFileId(), cancellationToken);
 
-        return new BlobFile<BucketEnum>
+        return new BlobFile<BucketEnum>(id.Bucket, file.Id.Key)
         {
-            Id = new FileId<BucketEnum>(id.Bucket, file.Id.Key),
             MetaData = file.MetaData,
             LastModified = file.LastModified
         };
@@ -47,7 +48,7 @@ public class FileStorage<BucketEnum>(
         CancellationToken cancellationToken = default)
     {
         var fileId = await fileStorage.SetAsync(
-            new BlobFile { Id = file.Id.ToFileId(), LastModified = file.LastModified, MetaData = file.MetaData },
+            new BlobFile(file.Id.ToFileId()) { LastModified = file.LastModified, MetaData = file.MetaData },
             stream, file.Id.Bucket.GetFileType(), cancellationToken);
 
         return new FileId<BucketEnum>(file.Id.Bucket, fileId.Key);
@@ -58,9 +59,11 @@ public class FileStorage(
     IMinioClient minioClient,
     IContentInspector contentInspector,
     ILogger<FileStorage> logger,
-    S3Configuration configuration) : IFileStorage
+    S3Configuration configuration,
+    IFileTypeDefinitionResolver fileTypeDefinitionResolver) : IFileStorage
 {
     private static readonly SHA256 _sha256 = SHA256.Create();
+    private const string ApplicationOctetStream = "application/octet-stream";
 
     public async Task<string> ComputeHash(Stream stream, CancellationToken cancellationToken)
     {
@@ -87,7 +90,7 @@ public class FileStorage(
         };
         if (objectStat.MetaData.TryGetValue(BlobFileMetaData.Hash, out var hashValue))
             metaData.Add(BlobFileMetaData.Hash, hashValue);
-        return new BlobFile { Id = id, LastModified = objectStat.LastModified, MetaData = metaData };
+        return new BlobFile(id) { LastModified = objectStat.LastModified, MetaData = metaData };
     }
 
     public Task DeleteFileAsync(FileId id, CancellationToken cancellationToken = default)
@@ -114,7 +117,16 @@ public class FileStorage(
     public async Task<FileId> SetAsync(BlobFile file, Stream stream, FileType fileType,
         CancellationToken cancellationToken = default)
     {
-        file.MetaData[BlobFileMetaData.ContentType] = GetMimeType(fileType, stream);
+        if (!file.MetaData.ContainsKey(BlobFileMetaData.ContentType))
+        {
+            file.MetaData.TryGetValue(BlobFileMetaData.FileExtension, out var fileExtension);
+            file.MetaData[BlobFileMetaData.ContentType] = string.IsNullOrEmpty(fileExtension)
+                ? GetMimeTypeFromContent(stream)
+                : GetMimeTypeFromFileExtension(fileExtension) ?? ApplicationOctetStream;
+        }
+
+        ValidateContentType(fileType, file.MetaData[BlobFileMetaData.ContentType]);
+
         file.MetaData[BlobFileMetaData.Hash] = await ComputeHash(stream, cancellationToken);
 
         var bucketWithPrefix = ResolveBucketName(file.Id.Bucket);
@@ -138,26 +150,49 @@ public class FileStorage(
         throw new DosaicException(errorMessage);
     }
 
+    private string GetMimeTypeFromFileExtension(string filename)
+    {
+        var fileExtension = Path.GetExtension(filename);
+        return GetDefinitions(FileType.All)
+            .FirstOrDefault(x => x.File.Extensions.Any(e => e == fileExtension.Trim('.')))?.File
+            .MimeType;
+    }
+
+    internal ImmutableArray<Definition> GetDefinitions(FileType fileType)
+    {
+        var definitions = new List<Definition>();
+
+        foreach (FileType type in Enum.GetValues(typeof(FileType)))
+        {
+            if (!fileType.HasFlag(type) || type == FileType.Any)
+                continue;
+            definitions.AddRange(fileTypeDefinitionResolver.GetDefinitions(type));
+        }
+
+        return [.. definitions];
+    }
+
+    private string GetMimeTypeFromContent(Stream stream)
+    {
+        var result = contentInspector.Inspect(stream).FirstOrDefault();
+        stream.Seek(0, SeekOrigin.Begin);
+        return result?.Definition.File.MimeType;
+    }
+
     public string ResolveBucketName(string bucket)
     {
         return $"{configuration.BucketPrefix}{bucket}";
     }
 
-    private string GetMimeType(FileType fileType, Stream stream)
+    private void ValidateContentType(FileType fileType, string contentType)
     {
-        var result = contentInspector.Inspect(stream).FirstOrDefault();
-        if (result == null)
-            throw new ValidationDosaicException(typeof(BlobFile),
-                "Could not determine content type, abort processing.");
-        var allowedDefinitions = fileType.GetDefinitions();
+        if (fileType == FileType.Any) return;
+        var allowedDefinitions = GetDefinitions(fileType);
         if (!allowedDefinitions.Select(x => x.File.MimeType)
-                .Contains(result.Definition.File.MimeType))
+                .Contains(contentType))
         {
             throw new ValidationDosaicException(typeof(BlobFile),
                 $"Invalid file format. Only {string.Join(",", allowedDefinitions.Select(x => x.File.MimeType))} allowed!");
         }
-
-        stream.Seek(0, SeekOrigin.Begin);
-        return result.Definition.File.MimeType!;
     }
 }

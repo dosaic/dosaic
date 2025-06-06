@@ -7,26 +7,38 @@ public abstract class BaseBlobFile
     public Dictionary<string, string> MetaData { get; set; } = new();
     public DateTimeOffset LastModified { get; set; }
 
-    protected static Dictionary<string, string> GetMetaData(string fileName)
+    protected void ApplyFilename(string filename)
     {
-        return fileName == null
-            ? new Dictionary<string, string>()
-            : new Dictionary<string, string> { { BlobFileMetaData.Filename, fileName } };
+        MetaData[BlobFileMetaData.Filename] = filename;
+        ApplyFileExtension(filename);
+    }
+
+    protected void ApplyFileExtension(string fileExtension)
+    {
+        MetaData[BlobFileMetaData.FileExtension] = Path.GetExtension(fileExtension);
     }
 }
 
 public class BlobFile<BucketEnum> : BaseBlobFile where BucketEnum : struct, Enum
 {
+    public BlobFile(BucketEnum bucket, string key = null)
+    {
+        Id = new FileId<BucketEnum>(bucket, key ?? Guid.NewGuid().ToString());
+        LastModified = DateTimeOffset.UtcNow;
+    }
+
     public FileId<BucketEnum> Id { get; set; }
 
-    public static BlobFile<BucketEnum> Create(FileId<BucketEnum> id, string fileName = null)
+    public BlobFile<BucketEnum> WithFilename(string filename)
     {
-        return new BlobFile<BucketEnum>
-        {
-            Id = id,
-            MetaData = GetMetaData(fileName),
-            LastModified = DateTimeOffset.UtcNow
-        };
+        ApplyFilename(filename);
+        return this;
+    }
+
+    public BlobFile<BucketEnum> WithFileExtension(string fileExtension)
+    {
+        ApplyFileExtension(fileExtension);
+        return this;
     }
 }
 
@@ -34,8 +46,27 @@ public class BlobFile : BaseBlobFile
 {
     public FileId Id { get; set; }
 
-    public static BlobFile Create(FileId id, string fileName = null)
+    public BlobFile(string bucket, string key = null)
     {
-        return new BlobFile { Id = id, MetaData = GetMetaData(fileName), LastModified = DateTimeOffset.UtcNow };
+        Id = new FileId(bucket, key ?? Guid.NewGuid().ToString());
+        LastModified = DateTimeOffset.UtcNow;
+    }
+
+    public BlobFile(FileId id)
+    {
+        Id = new FileId(id.Bucket, id.Key ?? Guid.NewGuid().ToString());
+        LastModified = DateTimeOffset.UtcNow;
+    }
+
+    public BlobFile WithFilename(string filename)
+    {
+        ApplyFilename(filename);
+        return this;
+    }
+
+    public BlobFile WithFileExtension(string fileExtension)
+    {
+        ApplyFileExtension(fileExtension);
+        return this;
     }
 }
