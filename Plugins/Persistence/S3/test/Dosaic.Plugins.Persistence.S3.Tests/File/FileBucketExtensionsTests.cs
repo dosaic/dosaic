@@ -10,7 +10,7 @@ namespace Dosaic.Plugins.Persistence.S3.Tests.File
         [Test]
         public void GetNameReturnsCorrectNameFromAttribute()
         {
-            SampleBucket.Logos.GetName().Should().Be("logos");
+            SampleBucket.Logos.GetName().Should().Be("test-logos");
         }
 
         [Test]
