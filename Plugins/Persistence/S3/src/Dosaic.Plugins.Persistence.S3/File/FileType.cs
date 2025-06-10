@@ -7,7 +7,9 @@ namespace Dosaic.Plugins.Persistence.S3.File;
 [Flags]
 public enum FileType
 {
+#pragma warning disable CA1008
     Any = 0,
+#pragma warning restore CA1008
     All = 1 << 0,
     Archives = 1 << 1,
     Documents = 1 << 2,
