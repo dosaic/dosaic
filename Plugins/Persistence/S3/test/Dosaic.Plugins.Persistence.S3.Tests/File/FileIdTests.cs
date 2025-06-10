@@ -28,7 +28,7 @@ namespace Dosaic.Plugins.Persistence.S3.Tests.File
         [Test]
         public void TryParseReturnsTrueForValidFileIdGeneric()
         {
-            FileId<SampleBucket>.TryParse("eGcaFP58ojhMILeDDblrzRd", out var fileId).Should().BeTrue();
+            FileId<SampleBucket>.TryParse("PC56XSF10dCDJaiuc4VWu6Se9bQNoyHpj68a2", out var fileId).Should().BeTrue();
             var stringId = fileId.Id;
             var newSecretId = FileId<SampleBucket>.FromSqid(stringId);
             newSecretId.Should().Be(fileId);
