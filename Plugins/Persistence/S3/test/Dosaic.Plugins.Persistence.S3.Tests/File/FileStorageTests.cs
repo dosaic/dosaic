@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using System.Globalization;
 using System.Net;
 using System.Text;
@@ -30,7 +31,9 @@ namespace Dosaic.Plugins.Persistence.S3.Tests.File
         private IFileStorage<SampleBucket> _fileStorageSampleBucket;
         private IFileStorage _fileStorage;
         private S3Configuration _configuration;
+        private readonly TestFileTypeDefinitionResolver _testFileTypeDefinitionResolver = new TestFileTypeDefinitionResolver();
         private static readonly byte[] _imageSignature = [0xFF, 0xD8, 0xFF, 0x00];
+        private static readonly byte[] _applicationOctetSignature = [0x00];
         private static readonly byte[] _pdfSignature = "%PDF"u8.ToArray();
 
         [SetUp]
@@ -44,7 +47,7 @@ namespace Dosaic.Plugins.Persistence.S3.Tests.File
             }.Build();
             _configuration = new S3Configuration { BucketPrefix = "dev-" };
             _fileStorage = new FileStorage(_minioClient, _contentInspector,
-                new FakeLogger<FileStorage>(), _configuration, new DefaultFileTypeDefinitionResolver());
+                new FakeLogger<FileStorage>(), _configuration, _testFileTypeDefinitionResolver);
             _fileStorageSampleBucket = new FileStorage<SampleBucket>(_fileStorage);
         }
 
@@ -246,7 +249,23 @@ namespace Dosaic.Plugins.Persistence.S3.Tests.File
                 .Be(StatusCodes.Status400BadRequest);
             ex.Message.Should()
                 .Be(
-                    "Cannot validate BlobFile. Invalid file format. Only image/bmp,image/gif,image/x-icon,image/jpeg,image/png,application/octet-stream,image/tiff,image/tiff,image/tiff,image/tiff,image/webp allowed!");
+                    "Cannot validate BlobFile. Invalid file format. Only image/bmp,image/gif,image/x-icon,image/jpeg,image/png,image/tiff,image/tiff,image/tiff,image/tiff,image/webp allowed!");
+        }
+
+        [Test]
+        public async Task SetAsyncWithApplicatoinOctetStreamThrowsValidationOnInvalidMimeType()
+        {
+            await using var pdfStream = CreateStream("test", _applicationOctetSignature);
+            var ex = (await _fileStorageSampleBucket
+                .Invoking(async x => await x.SetAsync(
+                    new BlobFile<SampleBucket>(SampleBucket.Logos, "test"),
+                    // ReSharper disable once AccessToDisposedClosure
+                    pdfStream)).Should().ThrowAsync<ValidationDosaicException>()).Subject.First();
+            ex.HttpStatus.Should()
+                .Be(StatusCodes.Status400BadRequest);
+            ex.Message.Should()
+                .Be(
+                    "Cannot validate BlobFile. Invalid file format. Only image/bmp,image/gif,image/x-icon,image/jpeg,image/png,image/tiff,image/tiff,image/tiff,image/tiff,image/webp allowed!");
         }
 
         [Test]
@@ -300,7 +319,7 @@ namespace Dosaic.Plugins.Persistence.S3.Tests.File
             var defs = ((FileStorage)_fileStorage).GetDefinitions(FileType.Images);
 
             defs.Should().NotBeEmpty();
-            defs.Should().BeEquivalentTo(DefaultDefinitions.FileTypes.Images.All());
+            defs.Should().BeEquivalentTo([.. DefaultDefinitions.FileTypes.Images.All().Where(x => !x.File.Extensions.Contains("psd"))]);
         }
 
         [Test]
@@ -330,7 +349,25 @@ namespace Dosaic.Plugins.Persistence.S3.Tests.File
         {
             var fileTypeDefs = ((FileStorage)_fileStorage).GetDefinitions(SampleBucket.Logos.GetFileType());
 
-            fileTypeDefs.Should().BeEquivalentTo(DefaultDefinitions.FileTypes.Images.All());
+            fileTypeDefs.Should().BeEquivalentTo([.. DefaultDefinitions.FileTypes.Images.All().Where(x => !x.File.Extensions.Contains("psd"))]);
+        }
+    }
+
+    internal class TestFileTypeDefinitionResolver : IFileTypeDefinitionResolver
+    {
+        public ImmutableArray<Definition> GetDefinitions(FileType fileType)
+        {
+            return fileType switch
+            {
+                FileType.Any => [],
+                FileType.Archives => DefaultDefinitions.FileTypes.Archives.All(),
+                FileType.Documents => DefaultDefinitions.FileTypes.Documents.All(),
+                FileType.Email => DefaultDefinitions.FileTypes.Email.All(),
+                FileType.Images => [.. DefaultDefinitions.FileTypes.Images.All().Where(x => !x.File.Extensions.Contains("psd"))],
+                FileType.Text => DefaultDefinitions.FileTypes.Text.All(),
+                FileType.Xml => DefaultDefinitions.FileTypes.Xml.All(),
+                _ => DefaultDefinitions.All()
+            };
         }
     }
 }

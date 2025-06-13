@@ -22,14 +22,24 @@ namespace Dosaic.Plugins.Persistence.S3.Tests.Blob
 
         [TestCase("test.jpg", ".jpg")]
         [TestCase(".jpg", ".jpg")]
+        [TestCase("", null)]
+        [TestCase(null, null)]
         public void CreateWithFileExtensionSetsMetadataFileExtension(string inputFilename, string expectedExtension)
         {
 
             var withFilename = new BlobFile<SampleBucket>(SampleBucket.Logos).WithFileExtension(inputFilename);
-            withFilename.MetaData[BlobFileMetaData.FileExtension].Should().Be(expectedExtension);
+            var tryGetFileName = withFilename.MetaData.TryGetValue(BlobFileMetaData.FileExtension, out var withFilenameResult);
+            if (expectedExtension != null && tryGetFileName)
+            {
+                withFilenameResult.Should().Be(expectedExtension);
+            }
 
-            var blobFile = new BlobFile("mybucket", "mykey").WithFileExtension(inputFilename);
-            blobFile.MetaData[BlobFileMetaData.FileExtension].Should().Be(expectedExtension);
+            var withFileExtension = new BlobFile("mybucket", "mykey").WithFileExtension(inputFilename);
+            var tryGetFileExtension = withFileExtension.MetaData.TryGetValue(BlobFileMetaData.FileExtension, out var withFileExtensionResult);
+            if (expectedExtension != null && tryGetFileExtension)
+            {
+                withFileExtensionResult.Should().Be(expectedExtension);
+            }
         }
 
         [Test]

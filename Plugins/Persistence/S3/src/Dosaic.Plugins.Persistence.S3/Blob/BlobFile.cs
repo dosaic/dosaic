@@ -9,13 +9,16 @@ public abstract class BaseBlobFile
 
     protected void ApplyFilename(string filename)
     {
+        if (string.IsNullOrEmpty(filename)) return;
         MetaData[BlobFileMetaData.Filename] = filename;
         ApplyFileExtension(filename);
     }
 
     protected void ApplyFileExtension(string fileExtension)
     {
-        MetaData[BlobFileMetaData.FileExtension] = Path.GetExtension(fileExtension);
+        var path = Path.GetExtension(fileExtension);
+        if (string.IsNullOrEmpty(path)) return;
+        MetaData[BlobFileMetaData.FileExtension] = path;
     }
 }
 

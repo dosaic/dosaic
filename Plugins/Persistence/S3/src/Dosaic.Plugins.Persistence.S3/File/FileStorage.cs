@@ -121,7 +121,7 @@ public class FileStorage(
         {
             file.MetaData.TryGetValue(BlobFileMetaData.FileExtension, out var fileExtension);
             file.MetaData[BlobFileMetaData.ContentType] = string.IsNullOrEmpty(fileExtension)
-                ? GetMimeTypeFromContent(stream)
+                ? GetMimeTypeFromContent(stream) ?? ApplicationOctetStream
                 : GetMimeTypeFromFileExtension(fileExtension) ?? ApplicationOctetStream;
         }
 

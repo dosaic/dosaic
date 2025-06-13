@@ -1,10 +1,12 @@
 using Dosaic.Plugins.Persistence.S3.Blob;
 using Dosaic.Plugins.Persistence.S3.File;
 using Dosaic.Testing.NUnit;
+using Dosaic.Testing.NUnit.Extensions;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using MimeDetective;
+using MimeDetective.Storage;
 using Minio;
 using NUnit.Framework;
 
@@ -67,5 +69,26 @@ public class ServiceCollectionExtensionsTests
         _serviceCollection.Should().Contain(x =>
             x.ServiceType == typeof(IHostedService) &&
             x.ImplementationType == typeof(BlobStorageBucketMigrationService<SampleBucket>));
+    }
+
+    [Test]
+    public void ServiceReplacementWorks()
+    {
+        _serviceCollection.AddS3BlobStoragePlugin(new S3Configuration()
+        {
+            Endpoint = "test-endpoint",
+            AccessKey = "test-access-key",
+            SecretKey = "test-secret-key",
+        });
+
+        _serviceCollection.ReplaceContentInspector(new List<Definition>());
+        _serviceCollection.ReplaceDefaultFileTypeDefinitionResolver(new EmptyFileTypeDefinitionResolver());
+
+        var sp = _serviceCollection.BuildServiceProvider();
+
+        sp.GetRequiredService<IFileTypeDefinitionResolver>().Should().BeOfType<EmptyFileTypeDefinitionResolver>();
+        var contentInspector = sp.GetRequiredService<IContentInspector>();
+        var matchers = contentInspector.GetInaccessibleValue("DefinitionMatchers");
+        matchers.GetType().GetProperty("Length")!.GetValue(matchers).Should().Be(0);
     }
 }
