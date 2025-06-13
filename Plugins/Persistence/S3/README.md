@@ -122,6 +122,11 @@ interface.
         }
     }
 ```
+And then passing it to the following method so it gets replaced in the serviceColletion:
+
+```csharp
+serviceCollection.ReplaceDefaultFileTypeDefinitionResolver<EmptyFileTypeDefinitionResolver>();
+```
 
 The default implementation is `DefaultFileTypeDefinitionResolver` can uses all the default definitions from class
 `MimeDetective.Definitions.DefaultDefinitions`.
@@ -134,6 +139,8 @@ implementation.
 Example
 
 ```csharp
+serviceCollection.ReplaceContentInspector(new List<Definition>());
+// OR
 serviceCollection.Replace(ServiceDescriptor.Singleton<IContentInspector>(sp =>
 new ContentInspectorBuilder
     {
