@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using System.Net.Http;
 using Dosaic.Plugins.Persistence.S3.File;
 using Dosaic.Testing.NUnit;
@@ -5,10 +6,15 @@ using Dosaic.Testing.NUnit.Extensions;
 using FluentAssertions;
 using HealthChecks.Uris;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+using MimeDetective;
+using MimeDetective.Definitions;
+using MimeDetective.Storage;
 using Minio;
 using NSubstitute;
 using NUnit.Framework;
+using FileType = Dosaic.Plugins.Persistence.S3.File.FileType;
 
 namespace Dosaic.Plugins.Persistence.S3.Tests
 {
@@ -23,6 +29,7 @@ namespace Dosaic.Plugins.Persistence.S3.Tests
             Region = "region",
             UseSsl = true
         };
+
         private S3FileStoragePlugin _plugin = null!;
 
         [SetUp]
@@ -57,9 +64,58 @@ namespace Dosaic.Plugins.Persistence.S3.Tests
             var secure = client.Config.Secure;
             secure.Should().Be(_configuration.UseSsl);
 
-            var fileStorage = sp.GetRequiredService<IFileStorage<SampleBucket>>();
-            fileStorage.Should().NotBeNull();
-            fileStorage.Should().BeOfType<FileStorage<SampleBucket>>();
+            sp.GetRequiredService<IFileTypeDefinitionResolver>().Should().NotBeNull();
+            sp.GetRequiredService<IFileStorage>().Should().NotBeNull();
+            var fileStorage = sp.GetRequiredService<IFileStorage>() as FileStorage;
+            fileStorage!.GetDefinitions(FileType.All).Should().HaveCount(65);
+
+            var fileStorageSampleBucket = sp.GetRequiredService<IFileStorage<SampleBucket>>();
+            fileStorageSampleBucket.Should().NotBeNull();
+            fileStorageSampleBucket.Should().BeOfType<FileStorage<SampleBucket>>();
+        }
+
+        [Test]
+        public void IContentInspectorCanBeCustomized()
+        {
+            var sc = TestingDefaults.ServiceCollection();
+            _plugin.ConfigureServices(sc);
+
+            sc.Should().Contain(d => d.ServiceType == typeof(IContentInspector));
+
+            sc.Replace(ServiceDescriptor.Singleton<IContentInspector>(sp =>
+                new ContentInspectorBuilder
+                {
+                    Definitions = DefaultDefinitions.All()
+                            .Where(x => x.File.Extensions.Contains("pdf")).ToList()
+                }
+                    .Build()));
+
+            var sp = sc.BuildServiceProvider();
+
+            var contentInspector = sp.GetRequiredService<IContentInspector>();
+            var matchers = contentInspector.GetInaccessibleValue("DefinitionMatchers");
+            matchers.GetType().GetProperty("Length")!.GetValue(matchers).Should().Be(1);
+        }
+
+        [Test]
+        public void IFileTypeDefinitionResolverCanBeCustomized()
+        {
+            var sc = TestingDefaults.ServiceCollection();
+            _plugin.ConfigureServices(sc);
+            sc.AddSingleton<S3Configuration>();
+
+            sc.Should().Contain(d => d.ServiceType == typeof(IFileTypeDefinitionResolver));
+
+            sc.Replace(ServiceDescriptor.Singleton<IFileTypeDefinitionResolver>(sp =>
+                new EmptyFileTypeDefinitionResolver()));
+
+            var sp = sc.BuildServiceProvider();
+
+            var typeDefinitionResolver = sp.GetRequiredService<IFileTypeDefinitionResolver>();
+            typeDefinitionResolver.GetDefinitions(FileType.All).Should().BeEmpty();
+
+            var fileStorage = sp.GetRequiredService<IFileStorage>() as FileStorage;
+            fileStorage!.GetDefinitions(FileType.All).Should().BeEmpty();
         }
 
         [Test]
@@ -100,6 +156,14 @@ namespace Dosaic.Plugins.Persistence.S3.Tests
             var uriOption = uriOptions.Single();
             uriOption.Uri.Authority.Should().Be(_configuration.Endpoint);
             uriOption.Uri.AbsolutePath.Should().Be("/" + _configuration.HealthCheckPath.TrimStart('/'));
+        }
+    }
+
+    internal class EmptyFileTypeDefinitionResolver : IFileTypeDefinitionResolver
+    {
+        public ImmutableArray<Definition> GetDefinitions(FileType fileType)
+        {
+            return ImmutableArray<Definition>.Empty;
         }
     }
 }

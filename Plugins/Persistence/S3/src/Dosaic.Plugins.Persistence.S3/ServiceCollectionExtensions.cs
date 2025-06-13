@@ -1,6 +1,9 @@
 using Dosaic.Plugins.Persistence.S3.Blob;
 using Dosaic.Plugins.Persistence.S3.File;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using MimeDetective;
+using MimeDetective.Storage;
 
 namespace Dosaic.Plugins.Persistence.S3;
 
@@ -22,6 +25,26 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddFileStorage(this IServiceCollection serviceCollection)
     {
         return serviceCollection.AddSingleton<IFileStorage, FileStorage>();
+    }
+
+    public static IServiceCollection AddDefaultFileTypeDefinitionResolver(this IServiceCollection serviceCollection)
+    {
+        return serviceCollection.AddSingleton<IFileTypeDefinitionResolver, DefaultFileTypeDefinitionResolver>();
+    }
+
+    public static IServiceCollection
+        ReplaceDefaultFileTypeDefinitionResolver<TReplacement>(this IServiceCollection serviceCollection)
+        where TReplacement : class, IFileTypeDefinitionResolver
+    {
+        return serviceCollection.Replace(ServiceDescriptor.Singleton<IFileTypeDefinitionResolver, TReplacement>());
+    }
+
+    public static IServiceCollection ReplaceContentInspector(this IServiceCollection serviceCollection,
+        IList<Definition> definitions)
+    {
+        return serviceCollection.Replace(ServiceDescriptor.Singleton(sp =>
+            new ContentInspectorBuilder { Definitions = definitions }
+                .Build()));
     }
 
     public static IServiceCollection AddFileStorageWithBucketMigration<T>(this IServiceCollection serviceCollection)

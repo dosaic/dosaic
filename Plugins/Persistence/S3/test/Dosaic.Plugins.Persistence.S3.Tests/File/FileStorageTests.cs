@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using System.Globalization;
 using System.Net;
 using System.Text;
@@ -11,6 +12,7 @@ using FluentAssertions.Common;
 using Microsoft.AspNetCore.Http;
 using MimeDetective;
 using MimeDetective.Definitions;
+using MimeDetective.Storage;
 using Minio;
 using Minio.DataModel;
 using Minio.DataModel.Args;
@@ -18,8 +20,9 @@ using Minio.DataModel.Response;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
 using NUnit.Framework;
+using FileType = Dosaic.Plugins.Persistence.S3.File.FileType;
 
-namespace Dosaic.Plugins.Persistence.S3.Tests
+namespace Dosaic.Plugins.Persistence.S3.Tests.File
 {
     public class FileStorageTests
     {
@@ -28,7 +31,9 @@ namespace Dosaic.Plugins.Persistence.S3.Tests
         private IFileStorage<SampleBucket> _fileStorageSampleBucket;
         private IFileStorage _fileStorage;
         private S3Configuration _configuration;
+        private readonly TestFileTypeDefinitionResolver _testFileTypeDefinitionResolver = new TestFileTypeDefinitionResolver();
         private static readonly byte[] _imageSignature = [0xFF, 0xD8, 0xFF, 0x00];
+        private static readonly byte[] _applicationOctetSignature = [0x00];
         private static readonly byte[] _pdfSignature = "%PDF"u8.ToArray();
 
         [SetUp]
@@ -42,7 +47,7 @@ namespace Dosaic.Plugins.Persistence.S3.Tests
             }.Build();
             _configuration = new S3Configuration { BucketPrefix = "dev-" };
             _fileStorage = new FileStorage(_minioClient, _contentInspector,
-                new FakeLogger<FileStorage>(), _configuration);
+                new FakeLogger<FileStorage>(), _configuration, _testFileTypeDefinitionResolver);
             _fileStorageSampleBucket = new FileStorage<SampleBucket>(_fileStorage);
         }
 
@@ -137,14 +142,16 @@ namespace Dosaic.Plugins.Persistence.S3.Tests
         {
             _minioClient.GetObjectAsync(Arg.Any<GetObjectArgs>(), Arg.Any<CancellationToken>())
                 .Throws(new Exception("test"));
-            await _fileStorageSampleBucket.Invoking(async x => await x.GetFileAsync(GetId("123"))).Should().ThrowAsync<Exception>();
+            await _fileStorageSampleBucket.Invoking(async x => await x.GetFileAsync(GetId("123"))).Should()
+                .ThrowAsync<Exception>();
         }
 
         [Test]
         public async Task ConsumeAsyncWorks()
         {
             using var stream = new MemoryStream();
-            await _fileStorageSampleBucket.ConsumeStreamAsync(GetId("123"), (stream1, token) => stream1.CopyToAsync(stream, token));
+            await _fileStorageSampleBucket.ConsumeStreamAsync(GetId("123"),
+                (stream1, token) => stream1.CopyToAsync(stream, token));
             var args = _minioClient.ReceivedCalls().First().GetArguments().OfType<GetObjectArgs>().First();
             var cb = args.GetInaccessibleValue<Func<Stream, CancellationToken, Task>>("CallBack");
             cb.Should().NotBeNull();
@@ -157,16 +164,18 @@ namespace Dosaic.Plugins.Persistence.S3.Tests
         }
 
         [Test]
-        public async Task SetAsyncWorks()
+        public async Task SetWithFilenameAsyncWorks()
         {
             _minioClient.PutObjectAsync(Arg.Any<PutObjectArgs>(), Arg.Any<CancellationToken>())
                 .Returns(new PutObjectResponse(HttpStatusCode.OK, "", new Dictionary<string, string>(), 1, ""));
             await using var imageStream = CreateStream("test", _imageSignature);
             var result = await _fileStorageSampleBucket.SetAsync(
-                new BlobFile<SampleBucket>
+                new BlobFile<SampleBucket>(SampleBucket.Logos, "test")
                 {
-                    Id = new FileId<SampleBucket>(SampleBucket.Logos, "test"),
-                    MetaData = new Dictionary<string, string> { { BlobFileMetaData.Filename, "test.pdf" } }
+                    MetaData = new Dictionary<string, string>
+                    {
+                        { BlobFileMetaData.Filename, "test.pdf" }, { "something-custom", "test" }
+                    }
                 },
                 imageStream);
             result.Bucket.Should().Be(SampleBucket.Logos);
@@ -174,14 +183,39 @@ namespace Dosaic.Plugins.Persistence.S3.Tests
 
             var args = _minioClient.ReceivedCalls().First().GetArguments().OfType<PutObjectArgs>().First();
             args.Should().NotBeNull();
-            args.GetInaccessibleValue<string>("BucketName").Should().Be($"{_configuration.BucketPrefix}{SampleBucket.Logos.GetName()}");
+            args.GetInaccessibleValue<string>("BucketName").Should()
+                .Be($"{_configuration.BucketPrefix}{SampleBucket.Logos.GetName()}");
             args.GetInaccessibleValue<string>("ContentType").Should().Be("image/jpeg");
             args.GetInaccessibleValue<string>("ObjectName").Should().Be("test");
-            const string AmzKey = "x-amz-meta-" + BlobFileMetaData.Filename;
+            const string FilenameKey = "x-amz-meta-" + BlobFileMetaData.Filename;
             const string HashKey = "x-amz-meta-" + BlobFileMetaData.Hash;
-            args.GetInaccessibleValue<Dictionary<string, string>>("Headers").Should().ContainKey(AmzKey);
-            args.GetInaccessibleValue<Dictionary<string, string>>("Headers").Should().ContainKey(HashKey);
-            args.GetInaccessibleValue<Dictionary<string, string>>("Headers")[AmzKey].Should().Be("test.pdf");
+            args.GetInaccessibleValue<Dictionary<string, string>>("Headers")[FilenameKey].Should().Be("test.pdf");
+            args.GetInaccessibleValue<Dictionary<string, string>>("Headers")["x-amz-meta-something-custom"].Should()
+                .Be("test");
+            args.GetInaccessibleValue<Dictionary<string, string>>("Headers")[HashKey].Should().NotBeNullOrWhiteSpace();
+            await using var data = args.GetInaccessibleValue<Stream>("ObjectStreamData");
+            using var sr = new StreamReader(data);
+            (await sr.ReadToEndAsync()).Should().EndWith("test");
+        }
+
+        [Test]
+        public async Task SetWithFileExtensionAsyncWorks()
+        {
+            _minioClient.PutObjectAsync(Arg.Any<PutObjectArgs>(), Arg.Any<CancellationToken>())
+                .Returns(new PutObjectResponse(HttpStatusCode.OK, "", new Dictionary<string, string>(), 1, ""));
+            await using var imageStream = CreateStream("test", _imageSignature);
+            var result = await _fileStorageSampleBucket.SetAsync(
+                new BlobFile<SampleBucket>(SampleBucket.Logos, "test").WithFileExtension(".jpg"),
+                imageStream);
+            result.Bucket.Should().Be(SampleBucket.Logos);
+            result.Key.Should().Be("test");
+
+            var args = _minioClient.ReceivedCalls().First().GetArguments().OfType<PutObjectArgs>().First();
+            args.Should().NotBeNull();
+
+            const string FileExtensionKey = "x-amz-meta-" + BlobFileMetaData.FileExtension;
+            const string HashKey = "x-amz-meta-" + BlobFileMetaData.Hash;
+            args.GetInaccessibleValue<Dictionary<string, string>>("Headers")[FileExtensionKey].Should().Be(".jpg");
             args.GetInaccessibleValue<Dictionary<string, string>>("Headers")[HashKey].Should().NotBeNullOrWhiteSpace();
             await using var data = args.GetInaccessibleValue<Stream>("ObjectStreamData");
             using var sr = new StreamReader(data);
@@ -194,7 +228,7 @@ namespace Dosaic.Plugins.Persistence.S3.Tests
             await using var imgStream = CreateStream("test", _imageSignature);
             var ex = (await _fileStorageSampleBucket
                 .Invoking(async x => await x.SetAsync(
-                    new BlobFile<SampleBucket> { Id = new FileId<SampleBucket>(SampleBucket.Logos, "test") },
+                    new BlobFile<SampleBucket>(SampleBucket.Logos, "test"),
                     // ReSharper disable once AccessToDisposedClosure
                     imgStream)).Should().ThrowAsync<DosaicException>()).Subject.First();
             ex.HttpStatus.Should()
@@ -203,32 +237,35 @@ namespace Dosaic.Plugins.Persistence.S3.Tests
         }
 
         [Test]
-        public async Task SetAsyncThrowsValidationOnNoMimeType()
-        {
-            var ex = (await _fileStorageSampleBucket
-                    .Invoking(async x => await x.SetAsync(
-                        new BlobFile<SampleBucket> { Id = new FileId<SampleBucket>(SampleBucket.Logos, "test") },
-                        new MemoryStream("test"u8.ToArray()))).Should().ThrowAsync<ValidationDosaicException>()).Subject
-                .First();
-            ex.HttpStatus.Should()
-                .Be(StatusCodes.Status400BadRequest);
-            ex.Message.Should().Be("Cannot validate BlobFile. Could not determine content type, abort processing.");
-        }
-
-        [Test]
         public async Task SetAsyncThrowsValidationOnInvalidMimeType()
         {
             await using var pdfStream = CreateStream("test", _pdfSignature);
             var ex = (await _fileStorageSampleBucket
                 .Invoking(async x => await x.SetAsync(
-                    new BlobFile<SampleBucket> { Id = new FileId<SampleBucket>(SampleBucket.Logos, "test") },
+                    new BlobFile<SampleBucket>(SampleBucket.Logos, "test"),
                     // ReSharper disable once AccessToDisposedClosure
                     pdfStream)).Should().ThrowAsync<ValidationDosaicException>()).Subject.First();
             ex.HttpStatus.Should()
                 .Be(StatusCodes.Status400BadRequest);
             ex.Message.Should()
                 .Be(
-                    "Cannot validate BlobFile. Invalid file format. Only image/bmp,image/gif,image/x-icon,image/jpeg,image/png,application/octet-stream,image/tiff,image/tiff,image/tiff,image/tiff,image/webp allowed!");
+                    "Cannot validate BlobFile. Invalid file format. Only image/bmp,image/gif,image/x-icon,image/jpeg,image/png,image/tiff,image/tiff,image/tiff,image/tiff,image/webp allowed!");
+        }
+
+        [Test]
+        public async Task SetAsyncWithApplicatoinOctetStreamThrowsValidationOnInvalidMimeType()
+        {
+            await using var pdfStream = CreateStream("test", _applicationOctetSignature);
+            var ex = (await _fileStorageSampleBucket
+                .Invoking(async x => await x.SetAsync(
+                    new BlobFile<SampleBucket>(SampleBucket.Logos, "test"),
+                    // ReSharper disable once AccessToDisposedClosure
+                    pdfStream)).Should().ThrowAsync<ValidationDosaicException>()).Subject.First();
+            ex.HttpStatus.Should()
+                .Be(StatusCodes.Status400BadRequest);
+            ex.Message.Should()
+                .Be(
+                    "Cannot validate BlobFile. Invalid file format. Only image/bmp,image/gif,image/x-icon,image/jpeg,image/png,image/tiff,image/tiff,image/tiff,image/tiff,image/webp allowed!");
         }
 
         [Test]
@@ -265,6 +302,72 @@ namespace Dosaic.Plugins.Persistence.S3.Tests
             var stream = new MemoryStream(bytes);
             hash = await _fileStorage.ComputeHash(stream);
             hash.Should().Be("9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08");
+        }
+
+        [Test]
+        public void GetDefinitionsForAllFileTypeReturnsAllDefinitions()
+        {
+            var defs = ((FileStorage)_fileStorage).GetDefinitions(FileType.All);
+
+            defs.Should().NotBeEmpty();
+            defs.Should().BeEquivalentTo(DefaultDefinitions.All());
+        }
+
+        [Test]
+        public void GetDefinitionsForSpecificFileTypeReturnsMatchingDefinitions()
+        {
+            var defs = ((FileStorage)_fileStorage).GetDefinitions(FileType.Images);
+
+            defs.Should().NotBeEmpty();
+            defs.Should().BeEquivalentTo([.. DefaultDefinitions.FileTypes.Images.All().Where(x => !x.File.Extensions.Contains("psd"))]);
+        }
+
+        [Test]
+        public void GetDefinitionsForNoneFileTypeReturnsEmptyCollection()
+        {
+            var defs = ((FileStorage)_fileStorage).GetDefinitions(FileType.Any);
+
+            defs.Should().BeEmpty();
+        }
+
+        [Test]
+        public void GetDefinitionsForMultipleFileTypesReturnsCombinedDefinitions()
+        {
+            var combinedType = FileType.Xml | FileType.Documents;
+            var defs = ((FileStorage)_fileStorage).GetDefinitions(combinedType);
+
+            var expectedDefs = new List<Definition>();
+            expectedDefs.AddRange(DefaultDefinitions.FileTypes.Xml.All());
+            expectedDefs.AddRange(DefaultDefinitions.FileTypes.Documents.All());
+
+            defs.Should().NotBeEmpty();
+            defs.Should().BeEquivalentTo(expectedDefs);
+        }
+
+        [Test]
+        public void GetDefinitionsForBucketReturnsDefinitionsMatchingBucketFileType()
+        {
+            var fileTypeDefs = ((FileStorage)_fileStorage).GetDefinitions(SampleBucket.Logos.GetFileType());
+
+            fileTypeDefs.Should().BeEquivalentTo([.. DefaultDefinitions.FileTypes.Images.All().Where(x => !x.File.Extensions.Contains("psd"))]);
+        }
+    }
+
+    internal class TestFileTypeDefinitionResolver : IFileTypeDefinitionResolver
+    {
+        public ImmutableArray<Definition> GetDefinitions(FileType fileType)
+        {
+            return fileType switch
+            {
+                FileType.Any => [],
+                FileType.Archives => DefaultDefinitions.FileTypes.Archives.All(),
+                FileType.Documents => DefaultDefinitions.FileTypes.Documents.All(),
+                FileType.Email => DefaultDefinitions.FileTypes.Email.All(),
+                FileType.Images => [.. DefaultDefinitions.FileTypes.Images.All().Where(x => !x.File.Extensions.Contains("psd"))],
+                FileType.Text => DefaultDefinitions.FileTypes.Text.All(),
+                FileType.Xml => DefaultDefinitions.FileTypes.Xml.All(),
+                _ => DefaultDefinitions.All()
+            };
         }
     }
 }

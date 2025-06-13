@@ -34,10 +34,9 @@ s3:
 
 ## Registration and Configuration
 
+### File Storage with pre-defined buckets
 
-### File Storage with pre defined buckets
-
-To use the file storage functionality with a pre defined bucket list, define an enum for your buckets:
+To use the file storage functionality with a pre-defined bucket list, define an enum for your buckets:
 
 ```csharp
 public enum MyBucket
@@ -72,12 +71,12 @@ services.AddBlobStorageBucketMigrationService(MyBucket.Logos);
 services.AddBlobStorageBucketMigrationService(MyOtherBucket.Cars);
 ```
 
-
 ### File Storage without enum based buckets
 
 The plugin automatically registers IFilestorage with the service collection.
 
-**When using `IFilestorage` instead of `IFilestorage<MyBucket>`, there is no bucket migration service since, we don't know what buckets should exist at runtime.**
+**When using `IFilestorage` instead of `IFilestorage<MyBucket>`, there is no bucket migration service since, we don't
+know what buckets should exist at runtime.**
 
 Therefor you must create your bucket at runtime
 
@@ -87,7 +86,6 @@ public class FileProvider(IFileStorage fileStorage)
     await fileStorage.CreateBucketAsync("mybucket", cancellationToken);
 }
 ```
-
 
 ### Basic setup without a dosaic web host (optional)
 
@@ -99,6 +97,7 @@ you'll need to register the S3 plugin manually:
 services.AddS3BlobStoragePlugin(new S3Configuration
 {
     Endpoint = "s3.example.com",
+    BucketPrefix = "myapp-", // optional, used to prefix all bucket names
     AccessKey = "your-access-key",
     SecretKey = "your-secret-key",
     Region = "us-west-1", // optional
@@ -107,7 +106,94 @@ services.AddS3BlobStoragePlugin(new S3Configuration
 });
 ```
 
+## Custom mimetype definitions
+
+### Filetype Definitions
+
+You can define/override custom definitions for each `Filetype` by implementing the `IFileTypeDefinitionResolver`
+interface.
+
+```csharp
+  internal class EmptyFileTypeDefinitionResolver : IFileTypeDefinitionResolver
+    {
+        public ImmutableArray<Definition> GetDefinitions(FileType fileType)
+        {
+            return ImmutableArray<Definition>.Empty;
+        }
+    }
+```
+And then passing it to the following method so it gets replaced in the serviceColletion:
+
+```csharp
+serviceCollection.ReplaceDefaultFileTypeDefinitionResolver<EmptyFileTypeDefinitionResolver>();
+```
+
+The default implementation is `DefaultFileTypeDefinitionResolver` can uses all the default definitions from class
+`MimeDetective.Definitions.DefaultDefinitions`.
+
+### ContentInspector Definitions
+
+You can define/override definitions the content inspector by replacing the `IContentInspector` in the IoC with your own
+implementation.
+
+Example
+
+```csharp
+serviceCollection.ReplaceContentInspector(new List<Definition>());
+// OR
+serviceCollection.Replace(ServiceDescriptor.Singleton<IContentInspector>(sp =>
+new ContentInspectorBuilder
+    {
+        Definitions = DefaultDefinitions.All()
+            .Where(x => x.File.Extensions.Contains("pdf")).ToList() // only use pdf defitions
+    }
+.Build()));
+```
+
+The plugin uses by default `Definitions = DefaultDefinitions.All()`.
+
 ## Working with Files
+
+### Blob file creation
+
+```csharp
+// sets original-filename metadata
+// sets fileExtension metadata
+new BlobFile<MyBucket>(MyBucket.Logos, "someKey").WithFilename("myfile.pdf")
+// sets fileExtension metadata
+// sets custom metadata
+new BlobFile<MyBucket>(MyBucket.Logos, "someKey").WithFileExtension(".pdf")
+{
+     MetaData = new Dictionary<string, string>
+        {
+            { "something-custom", "test" }
+        },
+    LastModified = DateTimeOffset.UtcNow
+}
+```
+
+### Mimetype detection
+
+If the `MetaData[BlobFileMetaData.ContentType]` of the `BlobFile` is not set,
+the plugin will automatically try to detect the mimetype in the following order:
+
+1. If the `MetaData[BlobFileMetaData.FileExtension]` is set, it will use the `IFileTypeDefinitionResolver` to get the
+   mimetype.
+2. If the `MetaData[BlobFileMetaData.FileExtension]` is not set, it will use the `IContentInspector` to detect the
+   mimetype based on the file content.
+3. If the mimetype cannot be detected, it will default to `application/octet-stream`.
+
+### Validation
+
+Validation depends on the `FileType` of the `SetAsync()` method and the detected mimetype result in
+`MetaData[BlobFileMetaData.ContentType]`.
+
+If `FileType.Any` is used, no validation is performed.
+
+Otherwise, the detected mimetype must match one of the allowed mimetypes defined in the `FileType` enum (can be
+customized via `IFileTypeDefinitionResolver`).
+
+### Usage with permission checks or acl's
 
 Example of using the file storage interface:
 
@@ -147,7 +233,7 @@ public class FileProvider(IFileStorage<MyBucket> fileStorage)
 
 ```
 
-## Example usage in a controller
+### Example usage in a controller
 
 ```csharp
 [[ApiController, Route("/files"), Authorize]
@@ -168,7 +254,7 @@ public class FilesController(IFileStorage<MyBucket> fileStorage) : ControllerBas
         var fileName = file.MetaData.TryGetValue(BlobFileMetaData.Filename, out var value) ? value : fileId.Id;
 
         Response.Headers.Append("Content-Length", file.MetaData[BlobFileMetaData.ContentLength]);
-        Response.Headers.Append("Cache-Control", "private, max-age=86400, immutable, must-revalidate");
+        Response.Headers.Append("Cache-Control", "private, max-age=300, immutable, must-revalidate");
 
         return Results.Stream(sr => fileStorage.ConsumeStreamAsync(fileId, async (stream, ct) => await stream.CopyToAsync(sr, ct), cancellationToken), file.MetaData[BlobMetaData.ContentType], fileName, lastModified, new EntityTagHeaderValue(etag));
     }
