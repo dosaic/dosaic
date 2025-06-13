@@ -82,7 +82,7 @@ public class ServiceCollectionExtensionsTests
         });
 
         _serviceCollection.ReplaceContentInspector(new List<Definition>());
-        _serviceCollection.ReplaceDefaultFileTypeDefinitionResolver(new EmptyFileTypeDefinitionResolver());
+        _serviceCollection.ReplaceDefaultFileTypeDefinitionResolver<EmptyFileTypeDefinitionResolver>();
 
         var sp = _serviceCollection.BuildServiceProvider();
 

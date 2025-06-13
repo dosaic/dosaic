@@ -32,10 +32,11 @@ public static class ServiceCollectionExtensions
         return serviceCollection.AddSingleton<IFileTypeDefinitionResolver, DefaultFileTypeDefinitionResolver>();
     }
 
-    public static IServiceCollection ReplaceDefaultFileTypeDefinitionResolver(this IServiceCollection serviceCollection,
-        IFileTypeDefinitionResolver replacement)
+    public static IServiceCollection
+        ReplaceDefaultFileTypeDefinitionResolver<TReplacement>(this IServiceCollection serviceCollection)
+        where TReplacement : class, IFileTypeDefinitionResolver
     {
-        return serviceCollection.Replace(ServiceDescriptor.Singleton(sp => replacement));
+        return serviceCollection.Replace(ServiceDescriptor.Singleton<IFileTypeDefinitionResolver, TReplacement>());
     }
 
     public static IServiceCollection ReplaceContentInspector(this IServiceCollection serviceCollection,
