@@ -1,8 +1,8 @@
 using System.Security.Claims;
 using System.Security.Principal;
+using AwesomeAssertions;
 using Chronos.Abstractions;
 using Dosaic.Testing.NUnit;
-using FluentAssertions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Session;
 using Microsoft.Extensions.DependencyInjection;

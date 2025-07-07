@@ -1,5 +1,5 @@
+using AwesomeAssertions;
 using Dosaic.Plugins.Persistence.EfCore.Abstractions.Transactions;
-using FluentAssertions;
 using Microsoft.EntityFrameworkCore.Storage;
 using NSubstitute;
 using NUnit.Framework;

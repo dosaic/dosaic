@@ -1,6 +1,6 @@
 using System.Diagnostics;
+using AwesomeAssertions;
 using Dosaic.Hosting.WebHost.Logging;
-using FluentAssertions;
 using NUnit.Framework;
 using Serilog.Core;
 using Serilog.Events;

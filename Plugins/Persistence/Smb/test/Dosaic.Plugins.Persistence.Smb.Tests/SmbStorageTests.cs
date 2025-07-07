@@ -1,5 +1,5 @@
+using AwesomeAssertions;
 using Dosaic.Testing.NUnit.Assertions;
-using FluentAssertions;
 using NUnit.Framework;
 
 namespace Dosaic.Plugins.Persistence.Smb.Tests

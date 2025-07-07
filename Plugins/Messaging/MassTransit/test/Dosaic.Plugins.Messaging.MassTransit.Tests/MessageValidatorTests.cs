@@ -1,5 +1,5 @@
+using AwesomeAssertions;
 using Dosaic.Plugins.Messaging.Abstractions;
-using FluentAssertions;
 using NUnit.Framework;
 
 namespace Dosaic.Plugins.Messaging.MassTransit.Tests;

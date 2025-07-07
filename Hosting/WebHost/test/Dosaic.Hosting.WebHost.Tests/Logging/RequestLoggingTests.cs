@@ -1,5 +1,5 @@
+using AwesomeAssertions;
 using Dosaic.Hosting.WebHost.Logging;
-using FluentAssertions;
 using Microsoft.AspNetCore.Http;
 using NUnit.Framework;
 using Serilog.Events;

@@ -1,7 +1,7 @@
+using AwesomeAssertions;
 using Dosaic.Hosting.Abstractions.Metrics;
 using Dosaic.Plugins.Persistence.EfCore.Abstractions.Monitoring;
 using Dosaic.Testing.NUnit;
-using FluentAssertions;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using NUnit.Framework;
 

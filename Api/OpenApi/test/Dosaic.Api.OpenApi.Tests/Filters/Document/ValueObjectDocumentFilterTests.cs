@@ -1,6 +1,6 @@
+using AwesomeAssertions;
 using Dosaic.Api.OpenApi.Filters.Common;
 using Dosaic.Api.OpenApi.Filters.Document;
-using FluentAssertions;
 using Microsoft.AspNetCore.Mvc.ApiExplorer;
 using Microsoft.OpenApi.Interfaces;
 using Microsoft.OpenApi.Models;

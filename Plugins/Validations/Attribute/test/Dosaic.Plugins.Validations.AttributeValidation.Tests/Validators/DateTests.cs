@@ -1,7 +1,7 @@
+using AwesomeAssertions;
 using Chronos.Abstractions;
 using Dosaic.Plugins.Validations.Abstractions;
 using Dosaic.Testing.NUnit;
-using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using NUnit.Framework;

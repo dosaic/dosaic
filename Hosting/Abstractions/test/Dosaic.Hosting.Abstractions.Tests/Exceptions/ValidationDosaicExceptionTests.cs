@@ -1,6 +1,6 @@
+using AwesomeAssertions;
 using Dosaic.Hosting.Abstractions.Exceptions;
 using Dosaic.Hosting.Abstractions.Middlewares.Models;
-using FluentAssertions;
 using NUnit.Framework;
 #pragma warning disable SYSLIB0011
 

@@ -6,7 +6,7 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests.Database
 
     using System;
     using System.Linq;
-    using FluentAssertions;
+    using AwesomeAssertions;
     using NUnit.Framework;
 
     namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests.Database

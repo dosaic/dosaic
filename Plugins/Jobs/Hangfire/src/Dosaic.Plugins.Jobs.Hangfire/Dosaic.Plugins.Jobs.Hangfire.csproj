@@ -1,10 +1,4 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
-    <PropertyGroup>
-
-
-    </PropertyGroup>
-
     <ItemGroup>
       <ProjectReference Include="..\..\..\..\..\Hosting\Abstractions\src\Dosaic.Hosting.Abstractions\Dosaic.Hosting.Abstractions.csproj" />
     </ItemGroup>
@@ -16,6 +10,8 @@
       <PackageReference Include="Hangfire.PostgreSql" />
       <PackageReference Include="Microsoft.FeatureManagement" />
       <PackageReference Include="Newtonsoft.Json" />
+      <PackageReference Include="OpenTelemetry.Instrumentation.Hangfire" />
+      <PackageReference Include="OpenTelemetry.Extensions.Hosting" />
     </ItemGroup>
 
 </Project>

@@ -1,8 +1,8 @@
 using System.Net;
 using System.Net.Http;
 using System.Security.Cryptography;
+using AwesomeAssertions;
 using Dosaic.Plugins.Authorization.Keycloak.Scheme;
-using FluentAssertions;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.IdentityModel.Tokens;

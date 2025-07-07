@@ -1,6 +1,6 @@
+using AwesomeAssertions;
 using Dosaic.Plugins.Validations.Abstractions;
 using Dosaic.Testing.NUnit;
-using FluentAssertions;
 using NUnit.Framework;
 
 namespace Dosaic.Plugins.Validations.AttributeValidation.Tests;

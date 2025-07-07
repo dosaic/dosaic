@@ -1,5 +1,5 @@
+using AwesomeAssertions;
 using Dosaic.Testing.NUnit;
-using FluentAssertions;
 using Hangfire;
 using Hangfire.Dashboard;
 using Hangfire.MemoryStorage;

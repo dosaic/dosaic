@@ -1,7 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
+using AwesomeAssertions;
 using Dosaic.Plugins.Jobs.Hangfire.Attributes;
 using Dosaic.Plugins.Jobs.Hangfire.Job;
-using FluentAssertions;
 using Hangfire;
 using Hangfire.States;
 using Hangfire.Storage;

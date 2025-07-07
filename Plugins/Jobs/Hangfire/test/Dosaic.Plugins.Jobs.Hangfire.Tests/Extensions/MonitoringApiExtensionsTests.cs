@@ -1,5 +1,5 @@
+using AwesomeAssertions;
 using Dosaic.Plugins.Jobs.Hangfire.Extensions;
-using FluentAssertions;
 using Hangfire.Storage;
 using Hangfire.Storage.Monitoring;
 using NSubstitute;

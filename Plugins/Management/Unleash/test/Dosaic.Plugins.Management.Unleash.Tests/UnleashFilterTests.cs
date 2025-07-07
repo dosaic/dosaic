@@ -1,6 +1,6 @@
+using AwesomeAssertions;
 using Dosaic.Testing.NUnit;
 using Dosaic.Testing.NUnit.Assertions;
-using FluentAssertions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.FeatureManagement;
 using NSubstitute;

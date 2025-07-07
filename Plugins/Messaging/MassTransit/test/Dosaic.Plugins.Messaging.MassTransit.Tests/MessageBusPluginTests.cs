@@ -1,9 +1,9 @@
+using AwesomeAssertions;
 using Dosaic.Hosting.Abstractions;
 using Dosaic.Hosting.Abstractions.Services;
 using Dosaic.Plugins.Messaging.Abstractions;
 using Dosaic.Testing.NUnit;
 using Dosaic.Testing.NUnit.Extensions;
-using FluentAssertions;
 using MassTransit;
 using MassTransit.Configuration;
 using MassTransit.RabbitMqTransport;

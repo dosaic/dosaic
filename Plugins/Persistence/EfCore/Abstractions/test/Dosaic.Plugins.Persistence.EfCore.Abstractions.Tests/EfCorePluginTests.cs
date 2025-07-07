@@ -1,5 +1,6 @@
 using System.Data;
 using System.Diagnostics;
+using AwesomeAssertions;
 using Chronos;
 using Chronos.Abstractions;
 using Dosaic.Hosting.Abstractions.Extensions;
@@ -12,7 +13,6 @@ using Dosaic.Plugins.Persistence.EfCore.Abstractions.Triggers;
 using Dosaic.Testing.NUnit;
 using Dosaic.Testing.NUnit.Assertions;
 using Dosaic.Testing.NUnit.Extensions;
-using FluentAssertions;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;

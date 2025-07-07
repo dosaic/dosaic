@@ -1,10 +1,10 @@
+using AwesomeAssertions;
 using Dosaic.Hosting.Abstractions.Attributes;
 using Dosaic.Hosting.Abstractions.Extensions;
 using Dosaic.Hosting.Abstractions.Plugins;
 using Dosaic.Hosting.Abstractions.Services;
 using Dosaic.Hosting.WebHost.Services;
 using Dosaic.Testing.NUnit;
-using FluentAssertions;
 using Microsoft.Extensions.Configuration;
 using NSubstitute;
 using NUnit.Framework;

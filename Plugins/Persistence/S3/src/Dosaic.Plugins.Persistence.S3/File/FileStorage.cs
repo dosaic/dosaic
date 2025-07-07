@@ -62,13 +62,13 @@ public class FileStorage(
     S3Configuration configuration,
     IFileTypeDefinitionResolver fileTypeDefinitionResolver) : IFileStorage
 {
-    private static readonly SHA256 _sha256 = SHA256.Create();
     private const string ApplicationOctetStream = "application/octet-stream";
 
     public async Task<string> ComputeHash(Stream stream, CancellationToken cancellationToken)
     {
-        var bytes = await _sha256.ComputeHashAsync(stream, cancellationToken);
-        var hash = BitConverter.ToString(bytes).Replace("-", string.Empty).ToLowerInvariant();
+        using var sha256 = SHA256.Create();
+        var bytes = await sha256.ComputeHashAsync(stream, cancellationToken);
+        var hash = Convert.ToHexStringLower(bytes);
         stream.Seek(0, SeekOrigin.Begin);
         return hash;
     }

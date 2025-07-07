@@ -1,7 +1,7 @@
 using System.Net;
 using System.Net.Http;
+using AwesomeAssertions;
 using Dosaic.Extensions.RestEase.Authentication;
-using FluentAssertions;
 using Newtonsoft.Json;
 using NUnit.Framework;
 using Polly;

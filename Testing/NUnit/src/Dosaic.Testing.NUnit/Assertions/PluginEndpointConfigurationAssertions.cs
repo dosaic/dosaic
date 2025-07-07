@@ -1,8 +1,8 @@
 using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Net.Http;
+using AwesomeAssertions;
 using Dosaic.Hosting.Abstractions.Plugins;
-using FluentAssertions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using NSubstitute;

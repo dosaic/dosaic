@@ -1,6 +1,6 @@
 using System.Security.Claims;
+using AwesomeAssertions;
 using Dosaic.Plugins.Authorization.Keycloak.Scheme;
-using FluentAssertions;
 using Newtonsoft.Json;
 using NUnit.Framework;
 

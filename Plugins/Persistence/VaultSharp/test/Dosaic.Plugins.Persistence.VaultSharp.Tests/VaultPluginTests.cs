@@ -1,6 +1,6 @@
+using AwesomeAssertions;
 using Dosaic.Plugins.Persistence.VaultSharp.Secret;
 using Dosaic.Testing.NUnit;
-using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using NSubstitute;

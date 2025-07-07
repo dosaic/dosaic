@@ -15,6 +15,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.FeatureManagement;
 using Newtonsoft.Json;
+using OpenTelemetry.Trace;
 using BindingFlags = System.Reflection.BindingFlags;
 
 namespace Dosaic.Plugins.Jobs.Hangfire
@@ -75,6 +76,7 @@ namespace Dosaic.Plugins.Jobs.Hangfire
                     recurringJobManager, backgroundJobClient);
             });
             serviceCollection.AddHostedService<HangfireStatisticsMetricsReporter>();
+            serviceCollection.AddOpenTelemetry().WithTracing(builder => builder.AddHangfireInstrumentation());
         }
 
         public void ConfigureApplication(IApplicationBuilder applicationBuilder)

@@ -1,7 +1,7 @@
+using AwesomeAssertions;
 using Dosaic.Api.OpenApi.Filters.Document;
 using Dosaic.Api.OpenApi.Filters.Schema;
 using Dosaic.Testing.NUnit;
-using FluentAssertions;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;

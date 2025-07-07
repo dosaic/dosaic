@@ -1,7 +1,7 @@
+using AwesomeAssertions;
 using Dosaic.Plugins.Persistence.EfCore.Abstractions.Database;
 using Dosaic.Testing.NUnit;
 using Dosaic.Testing.NUnit.Assertions;
-using FluentAssertions;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;

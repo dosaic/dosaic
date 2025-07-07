@@ -1,7 +1,7 @@
+using AwesomeAssertions;
 using Dosaic.Hosting.Abstractions.Extensions;
 using Dosaic.Hosting.Abstractions.Plugins;
 using Dosaic.Hosting.Abstractions.Services;
-using FluentAssertions;
 using NSubstitute;
 using NUnit.Framework;
 

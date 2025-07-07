@@ -1,6 +1,6 @@
 using System.Text;
+using AwesomeAssertions;
 using Dosaic.Hosting.WebHost.Formatters;
-using FluentAssertions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Formatters;
 using Microsoft.AspNetCore.Mvc.ModelBinding;

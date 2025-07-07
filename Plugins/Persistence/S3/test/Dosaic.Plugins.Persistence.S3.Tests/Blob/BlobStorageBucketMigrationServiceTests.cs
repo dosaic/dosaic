@@ -1,8 +1,8 @@
+using AwesomeAssertions;
 using Dosaic.Plugins.Persistence.S3.Blob;
 using Dosaic.Plugins.Persistence.S3.File;
 using Dosaic.Testing.NUnit.Assertions;
 using Dosaic.Testing.NUnit.Extensions;
-using FluentAssertions;
 using Minio;
 using Minio.DataModel;
 using Minio.DataModel.Args;

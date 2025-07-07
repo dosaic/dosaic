@@ -1,7 +1,7 @@
 using System.Globalization;
+using AwesomeAssertions;
 using Dosaic.Extensions.Sqids;
 using Dosaic.Plugins.Persistence.VaultSharp.Secret;
-using FluentAssertions;
 using NUnit.Framework;
 
 namespace Dosaic.Plugins.Persistence.VaultSharp.Tests;
