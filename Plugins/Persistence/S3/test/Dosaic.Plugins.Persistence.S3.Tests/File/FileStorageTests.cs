@@ -305,6 +305,22 @@ namespace Dosaic.Plugins.Persistence.S3.Tests.File
         }
 
         [Test]
+        public async Task ComputeHashWorksIsThreadSafe()
+        {
+            var bytes = Encoding.UTF8.GetBytes(new string('t', 10_000));
+            var tasks = new List<Task<string>>();
+            Parallel.For(0, 1000, _ =>
+            {
+                tasks.Add(_fileStorage.ComputeHash(bytes));
+            });
+            foreach (var task in tasks)
+            {
+                var result = await task;
+                result.Should().NotBeEmpty();
+            }
+        }
+
+        [Test]
         public void GetDefinitionsForAllFileTypeReturnsAllDefinitions()
         {
             var defs = ((FileStorage)_fileStorage).GetDefinitions(FileType.All);

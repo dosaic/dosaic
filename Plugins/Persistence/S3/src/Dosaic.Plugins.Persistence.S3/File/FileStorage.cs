@@ -63,7 +63,6 @@ public class FileStorage(
     IFileTypeDefinitionResolver fileTypeDefinitionResolver) : IFileStorage
 {
     private const string ApplicationOctetStream = "application/octet-stream";
-
     public async Task<string> ComputeHash(Stream stream, CancellationToken cancellationToken)
     {
         using var sha256 = SHA256.Create();
