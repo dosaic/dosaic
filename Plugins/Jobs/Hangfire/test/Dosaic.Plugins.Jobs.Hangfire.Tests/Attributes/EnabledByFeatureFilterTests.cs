@@ -1,6 +1,6 @@
+using AwesomeAssertions;
 using Dosaic.Plugins.Jobs.Hangfire.Attributes;
 using Dosaic.Testing.NUnit.Assertions;
-using FluentAssertions;
 using Hangfire;
 using Hangfire.MemoryStorage;
 using Hangfire.Server;

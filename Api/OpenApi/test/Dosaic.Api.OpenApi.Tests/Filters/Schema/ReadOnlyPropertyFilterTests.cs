@@ -1,6 +1,6 @@
 using System.ComponentModel;
+using AwesomeAssertions;
 using Dosaic.Api.OpenApi.Filters.Schema;
-using FluentAssertions;
 using Microsoft.OpenApi.Models;
 using NUnit.Framework;
 using Swashbuckle.AspNetCore.SwaggerGen;

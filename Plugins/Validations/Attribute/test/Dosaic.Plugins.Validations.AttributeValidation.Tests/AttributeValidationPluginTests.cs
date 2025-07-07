@@ -1,5 +1,5 @@
+using AwesomeAssertions;
 using Dosaic.Plugins.Validations.Abstractions;
-using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using NUnit.Framework;
 

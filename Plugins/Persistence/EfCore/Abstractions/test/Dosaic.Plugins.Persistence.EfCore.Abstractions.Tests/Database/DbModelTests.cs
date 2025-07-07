@@ -1,5 +1,5 @@
+using AwesomeAssertions;
 using Dosaic.Plugins.Persistence.EfCore.Abstractions.Database;
-using FluentAssertions;
 using NUnit.Framework;
 
 namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests.Database

@@ -1,9 +1,9 @@
+using AwesomeAssertions;
 using Dosaic.Hosting.Abstractions.Services;
 using Dosaic.Hosting.WebHost.Configurators;
 using Dosaic.Hosting.WebHost.Logging;
 using Dosaic.Testing.NUnit;
 using Dosaic.Testing.NUnit.Assertions;
-using FluentAssertions;
 using Microsoft.Extensions.Hosting;
 using NSubstitute;
 using NUnit.Framework;

@@ -1,6 +1,6 @@
+using AwesomeAssertions;
 using Chronos.Abstractions;
 using Dosaic.Plugins.Persistence.EfCore.Abstractions.Database;
-using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using NSubstitute;
 using NUnit.Framework;

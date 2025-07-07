@@ -1,6 +1,6 @@
+using AwesomeAssertions;
 using Chronos.Abstractions;
 using Dosaic.Plugins.Messaging.Abstractions;
-using FluentAssertions;
 using MassTransit;
 using NSubstitute;
 using NUnit.Framework;

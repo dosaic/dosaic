@@ -1,5 +1,5 @@
+using AwesomeAssertions;
 using Dosaic.Hosting.WebHost.Extensions;
-using FluentAssertions;
 using Microsoft.AspNetCore.Cors.Infrastructure;
 using NUnit.Framework;
 

@@ -1,6 +1,6 @@
+using AwesomeAssertions;
 using Dosaic.Hosting.Abstractions.Extensions;
 using Dosaic.Plugins.Jobs.Hangfire.Job;
-using FluentAssertions;
 using Hangfire;
 using Hangfire.Common;
 using Hangfire.States;

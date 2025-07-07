@@ -1,8 +1,8 @@
 using System.Net;
+using AwesomeAssertions;
 using Dosaic.Hosting.Abstractions.Exceptions;
 using Dosaic.Plugins.Persistence.VaultSharp.Secret;
 using Dosaic.Plugins.Persistence.VaultSharp.Types;
-using FluentAssertions;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
 using NUnit.Framework;

@@ -1,6 +1,6 @@
+using AwesomeAssertions;
 using Dosaic.Plugins.Persistence.EfCore.Abstractions.Audit;
 using Dosaic.Plugins.Persistence.EfCore.Abstractions.Models;
-using FluentAssertions;
 using NUnit.Framework;
 
 namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests.Audit;

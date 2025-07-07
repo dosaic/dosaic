@@ -1,6 +1,6 @@
+using AwesomeAssertions;
 using Dosaic.Plugins.Persistence.EfCore.Abstractions.Eventsourcing;
 using Dosaic.Testing.NUnit;
-using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using NUnit.Framework;
 

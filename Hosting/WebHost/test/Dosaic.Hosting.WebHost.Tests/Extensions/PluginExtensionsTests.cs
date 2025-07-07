@@ -1,6 +1,6 @@
+using AwesomeAssertions;
 using Dosaic.Hosting.Abstractions.Plugins;
 using Dosaic.Hosting.WebHost.Extensions;
-using FluentAssertions;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;

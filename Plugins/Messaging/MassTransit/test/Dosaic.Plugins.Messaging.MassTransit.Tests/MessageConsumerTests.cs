@@ -1,6 +1,6 @@
+using AwesomeAssertions;
 using Dosaic.Plugins.Messaging.Abstractions;
 using Dosaic.Testing.NUnit.Assertions;
-using FluentAssertions;
 using MassTransit;
 using Microsoft.Extensions.Logging;
 using NSubstitute;

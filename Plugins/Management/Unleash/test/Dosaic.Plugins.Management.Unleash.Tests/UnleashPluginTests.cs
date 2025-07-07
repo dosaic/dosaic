@@ -1,7 +1,7 @@
+using AwesomeAssertions;
 using Dosaic.Testing.NUnit;
 using Dosaic.Testing.NUnit.Assertions;
 using Dosaic.Testing.NUnit.Extensions;
-using FluentAssertions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;

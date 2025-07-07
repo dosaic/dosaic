@@ -1,7 +1,7 @@
+using AwesomeAssertions;
 using Dosaic.Hosting.Abstractions.DependencyInjection;
 using Dosaic.Hosting.Abstractions.Extensions;
 using Dosaic.Testing.NUnit;
-using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using NUnit.Framework;
 

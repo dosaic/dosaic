@@ -1,6 +1,6 @@
+using AwesomeAssertions;
 using Dosaic.Hosting.Abstractions;
 using Dosaic.Testing.NUnit;
-using FluentAssertions;
 using HealthChecks.Redis;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Caching.StackExchangeRedis;

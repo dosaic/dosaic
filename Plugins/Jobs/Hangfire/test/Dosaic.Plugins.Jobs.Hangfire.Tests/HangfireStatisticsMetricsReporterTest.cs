@@ -1,7 +1,7 @@
+using AwesomeAssertions;
 using Dosaic.Hosting.Abstractions.Metrics;
 using Dosaic.Testing.NUnit;
 using Dosaic.Testing.NUnit.Assertions;
-using FluentAssertions;
 using Hangfire;
 using Hangfire.Storage;
 using Hangfire.Storage.Monitoring;

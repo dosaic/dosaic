@@ -1,3 +1,4 @@
+using AwesomeAssertions;
 using Chronos.Abstractions;
 using Dosaic.Hosting.Abstractions;
 using Dosaic.Hosting.Abstractions.Plugins;
@@ -5,7 +6,6 @@ using Dosaic.Hosting.Abstractions.Services;
 using Dosaic.Hosting.WebHost.Configurators;
 using Dosaic.Testing.NUnit.Assertions;
 using ExternalNamespace;
-using FluentAssertions;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;

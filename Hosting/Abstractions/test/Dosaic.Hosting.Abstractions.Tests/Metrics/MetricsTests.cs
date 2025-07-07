@@ -1,6 +1,6 @@
 using System.Diagnostics.Metrics;
+using AwesomeAssertions;
 using Dosaic.Testing.NUnit;
-using FluentAssertions;
 using NUnit.Framework;
 using Metric = Dosaic.Hosting.Abstractions.Metrics.Metrics;
 

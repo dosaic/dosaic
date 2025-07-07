@@ -1,5 +1,5 @@
+using AwesomeAssertions;
 using Dosaic.Hosting.Abstractions.Services;
-using FluentAssertions;
 using Mapster;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;

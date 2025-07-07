@@ -1,5 +1,5 @@
+using AwesomeAssertions;
 using Dosaic.Hosting.Abstractions.Metrics;
-using FluentAssertions;
 using NUnit.Framework;
 using OpenTelemetry;
 using OpenTelemetry.Metrics;

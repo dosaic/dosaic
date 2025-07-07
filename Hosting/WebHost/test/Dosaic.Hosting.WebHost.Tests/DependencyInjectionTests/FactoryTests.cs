@@ -1,5 +1,5 @@
+using AwesomeAssertions;
 using Dosaic.Hosting.Abstractions.DependencyInjection;
-using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using NUnit.Framework;
 

@@ -1,4 +1,4 @@
-using FluentAssertions;
+using AwesomeAssertions;
 using NUnit.Framework;
 
 namespace Dosaic.Plugins.Jobs.Hangfire.Tests

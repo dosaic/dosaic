@@ -1,5 +1,5 @@
+using AwesomeAssertions;
 using Dosaic.Testing.NUnit;
-using FluentAssertions;
 using MongoDB.Driver;
 using MongoDB.Driver.Core.Events;
 using NUnit.Framework;

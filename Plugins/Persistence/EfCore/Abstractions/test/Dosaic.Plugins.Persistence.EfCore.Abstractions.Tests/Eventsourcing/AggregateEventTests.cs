@@ -1,6 +1,6 @@
+using AwesomeAssertions;
 using Chronos.Abstractions;
 using Dosaic.Extensions.NanoIds;
-using FluentAssertions;
 using NSubstitute;
 using NUnit.Framework;
 

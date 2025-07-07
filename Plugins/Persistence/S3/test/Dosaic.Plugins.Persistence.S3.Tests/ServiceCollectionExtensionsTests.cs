@@ -1,8 +1,8 @@
+using AwesomeAssertions;
 using Dosaic.Plugins.Persistence.S3.Blob;
 using Dosaic.Plugins.Persistence.S3.File;
 using Dosaic.Testing.NUnit;
 using Dosaic.Testing.NUnit.Extensions;
-using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using MimeDetective;

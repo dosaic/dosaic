@@ -1,6 +1,6 @@
 using System.Text.Json;
+using AwesomeAssertions;
 using Dosaic.Hosting.Abstractions.Extensions;
-using FluentAssertions;
 using Microsoft.Extensions.Configuration;
 using NUnit.Framework;
 

@@ -1,7 +1,7 @@
 using System.Diagnostics.Metrics;
-using FluentAssertions;
-using FluentAssertions.Collections;
-using FluentAssertions.Execution;
+using AwesomeAssertions;
+using AwesomeAssertions.Collections;
+using AwesomeAssertions.Execution;
 
 namespace Dosaic.Testing.NUnit
 {

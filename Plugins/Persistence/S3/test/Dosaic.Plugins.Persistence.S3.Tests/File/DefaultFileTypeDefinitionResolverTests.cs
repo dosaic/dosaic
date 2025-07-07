@@ -1,5 +1,5 @@
+using AwesomeAssertions;
 using Dosaic.Plugins.Persistence.S3.File;
-using FluentAssertions;
 using MimeDetective.Definitions;
 using NUnit.Framework;
 

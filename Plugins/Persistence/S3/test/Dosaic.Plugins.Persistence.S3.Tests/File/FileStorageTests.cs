@@ -2,13 +2,13 @@ using System.Collections.Immutable;
 using System.Globalization;
 using System.Net;
 using System.Text;
+using AwesomeAssertions;
+using AwesomeAssertions.Common;
 using Dosaic.Hosting.Abstractions.Exceptions;
 using Dosaic.Plugins.Persistence.S3.Blob;
 using Dosaic.Plugins.Persistence.S3.File;
 using Dosaic.Testing.NUnit.Assertions;
 using Dosaic.Testing.NUnit.Extensions;
-using FluentAssertions;
-using FluentAssertions.Common;
 using Microsoft.AspNetCore.Http;
 using MimeDetective;
 using MimeDetective.Definitions;
@@ -302,6 +302,22 @@ namespace Dosaic.Plugins.Persistence.S3.Tests.File
             var stream = new MemoryStream(bytes);
             hash = await _fileStorage.ComputeHash(stream);
             hash.Should().Be("9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08");
+        }
+
+        [Test]
+        public async Task ComputeHashWorksIsThreadSafe()
+        {
+            var bytes = Encoding.UTF8.GetBytes(new string('t', 10_000));
+            var tasks = new List<Task<string>>();
+            Parallel.For(0, 1000, _ =>
+            {
+                tasks.Add(_fileStorage.ComputeHash(bytes));
+            });
+            foreach (var task in tasks)
+            {
+                var result = await task;
+                result.Should().NotBeEmpty();
+            }
         }
 
         [Test]

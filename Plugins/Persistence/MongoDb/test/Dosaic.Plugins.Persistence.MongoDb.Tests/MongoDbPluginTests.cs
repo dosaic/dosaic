@@ -1,7 +1,7 @@
+using AwesomeAssertions;
 using Chronos;
 using Chronos.Abstractions;
 using Dosaic.Hosting.Abstractions;
-using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using NSubstitute;

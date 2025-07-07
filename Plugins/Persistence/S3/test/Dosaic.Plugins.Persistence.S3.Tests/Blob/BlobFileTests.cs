@@ -1,5 +1,5 @@
+using AwesomeAssertions;
 using Dosaic.Plugins.Persistence.S3.Blob;
-using FluentAssertions;
 using NUnit.Framework;
 
 namespace Dosaic.Plugins.Persistence.S3.Tests.Blob

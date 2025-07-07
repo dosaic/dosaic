@@ -1,5 +1,5 @@
+using AwesomeAssertions;
 using Dosaic.Hosting.Abstractions.Configuration;
-using FluentAssertions;
 using Microsoft.Extensions.Configuration;
 using NUnit.Framework;
 

@@ -1,7 +1,7 @@
 using System.Reflection;
 using System.Text.Json;
+using AwesomeAssertions;
 using Dosaic.Api.OpenApi.Filters.Operation;
-using FluentAssertions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Abstractions;

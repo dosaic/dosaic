@@ -1,5 +1,5 @@
+using AwesomeAssertions;
 using Dosaic.Testing.NUnit.Assertions;
-using FluentAssertions;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;

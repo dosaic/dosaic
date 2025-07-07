@@ -1,3 +1,4 @@
+using AwesomeAssertions;
 using Chronos.Abstractions;
 using Dosaic.Extensions.NanoIds;
 using Dosaic.Plugins.Persistence.EfCore.Abstractions.Audit;
@@ -5,7 +6,6 @@ using Dosaic.Plugins.Persistence.EfCore.Abstractions.Database;
 using Dosaic.Plugins.Persistence.EfCore.Abstractions.Models;
 using Dosaic.Plugins.Persistence.EfCore.Abstractions.Triggers;
 using EntityFrameworkCore.Testing.NSubstitute;
-using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using NSubstitute;
 using NUnit.Framework;

@@ -1,9 +1,9 @@
 using System.Collections.Immutable;
 using System.Net.Http;
+using AwesomeAssertions;
 using Dosaic.Plugins.Persistence.S3.File;
 using Dosaic.Testing.NUnit;
 using Dosaic.Testing.NUnit.Extensions;
-using FluentAssertions;
 using HealthChecks.Uris;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;

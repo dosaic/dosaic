@@ -1,5 +1,5 @@
+using AwesomeAssertions;
 using Dosaic.Testing.NUnit;
-using FluentAssertions;
 using Hangfire;
 using Microsoft.Extensions.DependencyInjection;
 using NUnit.Framework;
