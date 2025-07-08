@@ -78,7 +78,14 @@ namespace Dosaic.Plugins.Mapping.Mapster
                         .First(m => m.Name == "Select" && m.GetParameters().Length == 2)
                         .MakeGenericMethod(elementType, targetElementType);
 
-                    body = Expression.Call(selectMethod, Expression.PropertyOrField(body, paths[i]), collectionLambda);
+                    var propAccess = Expression.PropertyOrField(body, paths[i]);
+                    var selectCall = Expression.Call(selectMethod, propAccess, collectionLambda);
+                    var nullCheck = Expression.Equal(propAccess, Expression.Constant(null, propAccess.Type));
+                    var conditional = Expression.Condition(nullCheck,
+                        Expression.Constant(null, typeof(IEnumerable<>).MakeGenericType(targetElementType)),
+                        selectCall);
+
+                    body = conditional;
                     break;
                 }
                 body = Expression.PropertyOrField(body, paths[i]);

@@ -11,7 +11,9 @@ public class SourceMapTest
 {
     public int Id { get; set; }
     public NestedClass Nested { get; set; } = null!;
+    public NestedClass2 NestedNull { get; set; } = null!;
     public required List<NestedClass> Classes { get; set; }
+    public List<NestedClass2> NullList { get; set; }
 }
 
 public class NestedClass
@@ -36,6 +38,12 @@ public class TargetClass
     public IEnumerable<NestedClass2> Classes { get; set; } = null!;
 
     public NestedClass2 Nested { get; set; } = null!;
+
+    [MapFrom<SourceMapTest>(nameof(SourceMapTest.NestedNull))]
+    public NestedClass2 NestedNull { get; set; } = null!;
+
+    [MapFrom<SourceMapTest>(nameof(SourceMapTest.NullList))]
+    public IEnumerable<NestedClass2> NullList { get; set; } = null!;
 }
 
 public class MapsterPluginTests
@@ -77,7 +85,9 @@ public class MapsterPluginTests
                 new() { Name = "A", Id = 123 },
                 new() { Name = "B", Id = 1234 }
             ],
-            Nested = new NestedClass { Name = "C", Id = 12345 }
+            Nested = new NestedClass { Name = "C", Id = 12345 },
+            NullList = null,
+            NestedNull = null
         };
         var target = src.Adapt<TargetClass>();
         target.Id.Should().Be(1);
@@ -89,5 +99,6 @@ public class MapsterPluginTests
         target.Classes.Should().Contain(x => x.Name == "B" && x.Id == 1234);
         target.Nested.Id.Should().Be(12345);
         target.Nested.Name.Should().Be("C");
+        target.NullList.Should().BeNull();
     }
 }
