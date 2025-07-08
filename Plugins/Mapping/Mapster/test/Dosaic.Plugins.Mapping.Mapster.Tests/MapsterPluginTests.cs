@@ -1,6 +1,7 @@
 using AwesomeAssertions;
 using Dosaic.Hosting.Abstractions.Services;
 using Mapster;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using NUnit.Framework;
@@ -11,7 +12,9 @@ public class SourceMapTest
 {
     public int Id { get; set; }
     public NestedClass Nested { get; set; } = null!;
+    public NestedClass2 NestedNull { get; set; } = null!;
     public required List<NestedClass> Classes { get; set; }
+    public List<NestedClass2> NullList { get; set; }
 }
 
 public class NestedClass
@@ -36,11 +39,29 @@ public class TargetClass
     public IEnumerable<NestedClass2> Classes { get; set; } = null!;
 
     public NestedClass2 Nested { get; set; } = null!;
+
+    [MapFrom<SourceMapTest>(nameof(SourceMapTest.NestedNull))]
+    public NestedClass2 NestedNull { get; set; } = null!;
+
+    [MapFrom<SourceMapTest>(nameof(SourceMapTest.NullList))]
+    public IEnumerable<NestedClass2> NullList { get; set; } = null!;
 }
 
 public class MapsterPluginTests
 {
     private MapsterPlugin _plugin;
+    private readonly SourceMapTest _sourceMapTest = new()
+    {
+        Id = 1,
+        Classes =
+        [
+            new() { Name = "A", Id = 123 },
+            new() { Name = "B", Id = 1234 }
+        ],
+        Nested = new NestedClass { Name = "C", Id = 12345 },
+        NullList = null,
+        NestedNull = null
+    };
 
     [SetUp]
     public void Setup()
@@ -69,17 +90,7 @@ public class MapsterPluginTests
     public void MapsCorrectly()
     {
         _plugin.ConfigureServices(new ServiceCollection());
-        var src = new SourceMapTest
-        {
-            Id = 1,
-            Classes =
-            [
-                new() { Name = "A", Id = 123 },
-                new() { Name = "B", Id = 1234 }
-            ],
-            Nested = new NestedClass { Name = "C", Id = 12345 }
-        };
-        var target = src.Adapt<TargetClass>();
+        var target = _sourceMapTest.Adapt<TargetClass>();
         target.Id.Should().Be(1);
         target.Names.Should().HaveCount(2);
         target.Names.Should().Contain("A");
@@ -89,5 +100,22 @@ public class MapsterPluginTests
         target.Classes.Should().Contain(x => x.Name == "B" && x.Id == 1234);
         target.Nested.Id.Should().Be(12345);
         target.Nested.Name.Should().Be("C");
+        target.NullList.Should().BeNull();
+    }
+
+    private class TestDb(DbContextOptions<TestDb> options) : DbContext(options)
+    {
+        public DbSet<SourceMapTest> SourceMaps { get; set; } = null!;
+    }
+
+    [Test]
+    public void CanBeTranslatedToSql()
+    {
+        var ctx = new TestDb(new DbContextOptionsBuilder<TestDb>().UseSqlite().Options);
+        var qry = ctx.SourceMaps.ProjectToType<TargetClass>();
+        var queryString = qry.ToQueryString();
+        queryString.Should().NotBeNullOrWhiteSpace();
+        var normalQueryString = ctx.SourceMaps.ToQueryString();
+        queryString.Should().NotBe(normalQueryString);
     }
 }
