@@ -1,6 +1,7 @@
 using AwesomeAssertions;
 using Dosaic.Hosting.Abstractions.Services;
 using Mapster;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using NUnit.Framework;
@@ -49,6 +50,18 @@ public class TargetClass
 public class MapsterPluginTests
 {
     private MapsterPlugin _plugin;
+    private readonly SourceMapTest _sourceMapTest = new()
+    {
+        Id = 1,
+        Classes =
+        [
+            new() { Name = "A", Id = 123 },
+            new() { Name = "B", Id = 1234 }
+        ],
+        Nested = new NestedClass { Name = "C", Id = 12345 },
+        NullList = null,
+        NestedNull = null
+    };
 
     [SetUp]
     public void Setup()
@@ -77,19 +90,7 @@ public class MapsterPluginTests
     public void MapsCorrectly()
     {
         _plugin.ConfigureServices(new ServiceCollection());
-        var src = new SourceMapTest
-        {
-            Id = 1,
-            Classes =
-            [
-                new() { Name = "A", Id = 123 },
-                new() { Name = "B", Id = 1234 }
-            ],
-            Nested = new NestedClass { Name = "C", Id = 12345 },
-            NullList = null,
-            NestedNull = null
-        };
-        var target = src.Adapt<TargetClass>();
+        var target = _sourceMapTest.Adapt<TargetClass>();
         target.Id.Should().Be(1);
         target.Names.Should().HaveCount(2);
         target.Names.Should().Contain("A");
@@ -100,5 +101,21 @@ public class MapsterPluginTests
         target.Nested.Id.Should().Be(12345);
         target.Nested.Name.Should().Be("C");
         target.NullList.Should().BeNull();
+    }
+
+    private class TestDb(DbContextOptions<TestDb> options) : DbContext(options)
+    {
+        public DbSet<SourceMapTest> SourceMaps { get; set; } = null!;
+    }
+
+    [Test]
+    public void CanBeTranslatedToSql()
+    {
+        var ctx = new TestDb(new DbContextOptionsBuilder<TestDb>().UseSqlite().Options);
+        var qry = ctx.SourceMaps.ProjectToType<TargetClass>();
+        var queryString = qry.ToQueryString();
+        queryString.Should().NotBeNullOrWhiteSpace();
+        var normalQueryString = ctx.SourceMaps.ToQueryString();
+        queryString.Should().NotBe(normalQueryString);
     }
 }
