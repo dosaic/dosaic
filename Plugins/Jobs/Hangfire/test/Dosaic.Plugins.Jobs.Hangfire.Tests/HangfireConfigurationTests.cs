@@ -8,7 +8,7 @@ namespace Dosaic.Plugins.Jobs.Hangfire.Tests
         [Test]
         public void Config()
         {
-            var config = HangfirePluginTests.HangfireConfiguration;
+            var config = HangfirePluginTests.GetConfiguration();
 
             config.ConnectionString.Should()
                 .Be("Host=testHost;Port=9999;Database=testDatabase;Username=testUser;Password=testPassword;");
@@ -22,6 +22,8 @@ namespace Dosaic.Plugins.Jobs.Hangfire.Tests
             config.PollingIntervalInMs.Should().Be(1000);
             config.User.Should().Be("testUser");
             config.Password.Should().Be("testPassword");
+            config.MaxJobArgumentsSizeToRenderInBytes.Should().Be(4096);
+            config.InvisibilityTimeoutInMinutes.Should().Be(30);
         }
     }
 }

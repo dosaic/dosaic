@@ -304,7 +304,7 @@ namespace Dosaic.Plugins.Persistence.S3.Tests.File
             hash.Should().Be("9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08");
         }
 
-        [Test]
+        [Test, Parallelizable(ParallelScope.None)]
         public async Task ComputeHashWorksIsThreadSafe()
         {
             var bytes = Encoding.UTF8.GetBytes(new string('t', 10_000));

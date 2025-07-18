@@ -21,7 +21,7 @@ namespace Dosaic.Plugins.Jobs.Hangfire.Tests
 {
     public class HangfirePluginTests
     {
-        internal static readonly HangfireConfiguration HangfireConfiguration = new()
+        internal static HangfireConfiguration GetConfiguration() => new()
         {
             Database = "testDatabase",
             Host = "testHost",
@@ -35,16 +35,18 @@ namespace Dosaic.Plugins.Jobs.Hangfire.Tests
             User = "testUser",
             Queues = ["default", "test"]
         };
+        private HangfireConfiguration _hangfireConfiguration;
 
         private IImplementationResolver _implementationResolver;
         private IHangfireConfigurator _configurator;
-        private HangFirePlugin GetPlugin() => new(HangfireConfiguration, _implementationResolver, [_configurator]);
+        private HangFirePlugin GetPlugin() => new(_hangfireConfiguration, _implementationResolver, [_configurator]);
 
         [SetUp]
         public void Up()
         {
             _configurator = Substitute.For<IHangfireConfigurator>();
             _implementationResolver = Substitute.For<IImplementationResolver>();
+            _hangfireConfiguration = GetConfiguration();
         }
 
         [Test]
@@ -100,7 +102,7 @@ namespace Dosaic.Plugins.Jobs.Hangfire.Tests
         public void HangfireConfigureHealthChecksWorks()
         {
             var hcBuilder = Substitute.For<IHealthChecksBuilder>();
-            var plugin = new HangFirePlugin(HangfireConfiguration, _implementationResolver, []);
+            var plugin = new HangFirePlugin(_hangfireConfiguration, _implementationResolver, []);
             plugin.ConfigureHealthChecks(hcBuilder);
             hcBuilder.Add(Arg.Is<HealthCheckRegistration>(h => h.Name == "hangfire" && h.Tags.Contains(HealthCheckTag.Readiness.Value)))
                 .Received(Quantity.Exactly(1));
@@ -119,9 +121,27 @@ namespace Dosaic.Plugins.Jobs.Hangfire.Tests
             property.Should().NotBeNull();
             var options = (property.GetValue(hangfireHostedService) as BackgroundJobServerOptions)!;
             options.Should().NotBeNull();
-            options.SchedulePollingInterval.Should().Be(TimeSpan.FromMilliseconds(HangfireConfiguration.PollingIntervalInMs!.Value));
-            options.WorkerCount.Should().Be(HangfireConfiguration.WorkerCount!.Value);
+            options.SchedulePollingInterval.Should().Be(TimeSpan.FromMilliseconds(_hangfireConfiguration.PollingIntervalInMs!.Value));
+            options.WorkerCount.Should().Be(_hangfireConfiguration.WorkerCount!.Value);
+        }
 
+        [Test, Parallelizable(ParallelScope.None)]
+        public void DoesNotConfigureStorageIfConfiguratorsIncludeStorage()
+        {
+            JobStorage.Current = null;
+            _configurator.IncludesStorage.Returns(true);
+            _hangfireConfiguration.InMemory = false;
+            var sc = new ServiceCollection();
+            sc.AddSingleton<ILoggerFactory>(NullLoggerFactory.Instance);
+            GetPlugin().ConfigureServices(sc);
+            var sp = sc.BuildServiceProvider();
+            sp.GetRequiredService<IGlobalConfiguration>().Should().NotBeNull();
+            var jobStorage = () => JobStorage.Current;
+            var exception = jobStorage.Invoking(x => x())
+                .Should()
+                .Throw<InvalidOperationException>()
+                .Which;
+            exception.Message.Should().Contain("Current JobStorage instance has not been initialized yet");
         }
     }
 }
