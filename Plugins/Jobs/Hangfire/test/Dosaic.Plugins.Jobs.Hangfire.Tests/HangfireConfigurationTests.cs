@@ -8,7 +8,7 @@ namespace Dosaic.Plugins.Jobs.Hangfire.Tests
         [Test]
         public void Config()
         {
-            var config = HangfirePluginTests.HangfireConfiguration;
+            var config = HangfirePluginTests.GetConfiguration();
 
             config.ConnectionString.Should()
                 .Be("Host=testHost;Port=9999;Database=testDatabase;Username=testUser;Password=testPassword;");

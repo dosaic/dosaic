@@ -44,7 +44,7 @@ namespace Dosaic.Plugins.Jobs.Hangfire
                     conf.UseMaxArgumentSizeToRender(_hangfireConfig.MaxJobArgumentsSizeToRenderInBytes);
                     if (_hangfireConfig.InMemory)
                         conf.UseMemoryStorage();
-                    else
+                    else if (_configurators.All(x => !x.IncludesStorage))
                         conf.UsePostgreSqlStorage(opts => opts.UseNpgsqlConnection(_hangfireConfig.ConnectionString),
                             new PostgreSqlStorageOptions
                             {
