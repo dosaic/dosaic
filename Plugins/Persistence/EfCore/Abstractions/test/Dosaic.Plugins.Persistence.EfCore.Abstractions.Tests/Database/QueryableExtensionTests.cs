@@ -23,5 +23,22 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests.Database
             processedCount.Should().Be(itemValues.Count);
             processedItems.Should().BeEquivalentTo(itemValues);
         }
+
+        [Test]
+        public async Task ProcessAndGetAsyncWillProcessAllItemsAndReturnProcessedItems()
+        {
+            var processedItems = new List<int>();
+            var itemValues = new List<int> { 1, 2, 3, 4, 5 };
+            var items = new AsyncEnumerable<int>(itemValues).AsQueryable();
+
+            var result = await items.ProcessAndGetAsync(async (item, ct) =>
+            {
+                await Task.Delay(1, ct);
+                processedItems.Add(item);
+            });
+
+            result.Should().BeEquivalentTo(itemValues);
+            processedItems.Should().BeEquivalentTo(itemValues);
+        }
     }
 }
