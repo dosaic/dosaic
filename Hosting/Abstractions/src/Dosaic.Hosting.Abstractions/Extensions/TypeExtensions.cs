@@ -45,5 +45,13 @@ namespace Dosaic.Hosting.Abstractions.Extensions
                 });
         }
         public static IList<Type> GetAssemblyTypes(this Type t, Predicate<Type> typePredicate = null) => t.Assembly.GetTypes(typePredicate);
+        public static string GetNormalizedName(this Type type)
+        {
+            if (!type.IsGenericType) return type.Name;
+            var nonGenericTypeName = type.Name.Split('`')[0];
+            if (type.IsGenericTypeDefinition) return $"{nonGenericTypeName}<{new string(',', type.GetGenericArguments().Length - 1)}>";
+            var genericArguments = type.GetGenericArguments();
+            return $"{nonGenericTypeName}<{string.Join(", ", genericArguments.Select(GetNormalizedName))}>";
+        }
     }
 }

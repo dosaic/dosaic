@@ -28,6 +28,17 @@ namespace Dosaic.Hosting.Abstractions.Tests.Extensions
             type.Implements(typeof(Generic<>)).Should().BeTrue();
             type.Implements(typeof(Generic<int>)).Should().BeTrue();
         }
+
+        [Test]
+        public void CanGetNormalizedNamesFromTypes()
+        {
+            typeof(int).GetNormalizedName().Should().Be("Int32");
+            typeof(decimal).GetNormalizedName().Should().Be("Decimal");
+            typeof(List<>).GetNormalizedName().Should().Be("List<>");
+            typeof(List<int>).GetNormalizedName().Should().Be("List<Int32>");
+            typeof(Dictionary<int, string>).GetNormalizedName().Should().Be("Dictionary<Int32, String>");
+            typeof(IDictionary<int, IList<decimal>>).GetNormalizedName().Should().Be("IDictionary<Int32, IList<Decimal>>");
+        }
     }
 
     [AttributeUsage(AttributeTargets.Class)]
