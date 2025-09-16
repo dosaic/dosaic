@@ -77,7 +77,7 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Database
             {
                 if (model is AuditableModel auditableModel)
                     auditableModel.ModifiedUtc = DateTime.UtcNow;
-                existing.Patch(model, true);
+                existing.PatchModel(model, PatchMode.IgnoreLists);
                 foreach (var prop in listProps)
                 {
                     var itemType = prop.PropertyType.GenericTypeArguments[0];
@@ -118,7 +118,7 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Database
                     dbSet.Add(newEntity);
                 else
                 {
-                    existingEntity.Patch(newEntity, true);
+                    existingEntity.PatchModel(newEntity, PatchMode.IgnoreLists);
                     dbSet.Update(existingEntity);
                 }
             }

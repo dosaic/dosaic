@@ -1,4 +1,3 @@
-using System.Reflection;
 using AwesomeAssertions;
 using Dosaic.Extensions.NanoIds;
 using Dosaic.Plugins.Persistence.EfCore.Abstractions.Database;
@@ -16,7 +15,7 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests.Database
             var target = new TestModel() { Id = "1", Name = "Old Name" };
             var source = new TestModel { Id = "1", Name = "New Name" };
 
-            target.Patch(source);
+            target.PatchModel(source);
             target.Name.Should().Be("New Name");
         }
 
@@ -26,7 +25,7 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests.Database
             var target = new TestModel { Id = "1", Name = "Name" };
             var source = new TestModel { Id = "1", Name = null!, PropertyName = "123" };
 
-            target.Patch(source);
+            target.PatchModel(source);
 
             target.Name.Should().Be("Name");
             target.PropertyName.Should().Be("123");
@@ -40,7 +39,7 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests.Database
             var target = new TestAuditModel { Id = "1", Name = "test", Subs = [grm1] };
             var source = new TestAuditModel { Id = "1", Name = "test", Subs = [grm1, grm2] };
 
-            target.Patch(source);
+            target.PatchModel(source);
             target.Subs.Should().HaveCount(2);
             target.Subs.Should().Contain([grm1, grm2]);
         }
@@ -50,7 +49,7 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests.Database
         {
             var target = new TestModel() { Id = "1", Name = "Name" };
 
-            target.Patch(null);
+            target.PatchModel(null);
 
             target.Id.Should().Be(NanoId.Parse("1")!);
             target.Name.Should().Be("Name");
@@ -63,25 +62,29 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests.Database
             var source = new TestModel { Id = "1", Name = "Name" };
 
             // ReSharper disable once ExpressionIsAlwaysNull
-            target.Patch(source);
+            target.PatchModel(source);
             // ReSharper disable once ExpressionIsAlwaysNull
             target.Should().BeNull();
         }
 
         [Test]
-        public void GetListValueDoesNothingOnInvalidEnumerables()
+        public void CanPatchModelsWithOwnedObjects()
         {
-            var method =
-                typeof(ModelExtensions).GetMethod("GetListValue", BindingFlags.Static | BindingFlags.NonPublic)!;
-            var prop = typeof(TestGetListValueClass).GetProperty(nameof(TestGetListValueClass.Invalid))!;
-            var value = method.Invoke(null, [prop, new Dictionary<string, string>(), new Dictionary<string, string>()]);
-            value.Should().BeNull();
+            var m = new TestModelWithObjectProp { Id = NanoId.Parse("123"), Object = new TestObject { Name = "test" } };
+            var m2 = new TestModelWithObjectProp { Id = NanoId.Parse("123"), Object = new TestObject { Name = "test 123" } };
+            m.PatchModel(m2);
+            m.Object.Name.Should().Be("test 123");
         }
 
-        private class TestGetListValueClass : IModel
+        private class TestModelWithObjectProp : IModel
         {
-            public IDictionary<string, string> Invalid { get; set; } = null!;
             public required NanoId Id { get; set; }
+            public TestObject Object { get; set; }
+        }
+
+        private class TestObject
+        {
+            public string Name { get; set; } = null!;
         }
     }
 }

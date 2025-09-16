@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Reflection;
 
 namespace Dosaic.Hosting.Abstractions.Extensions
@@ -52,6 +53,11 @@ namespace Dosaic.Hosting.Abstractions.Extensions
             if (type.IsGenericTypeDefinition) return $"{nonGenericTypeName}<{new string(',', type.GetGenericArguments().Length - 1)}>";
             var genericArguments = type.GetGenericArguments();
             return $"{nonGenericTypeName}<{string.Join(", ", genericArguments.Select(GetNormalizedName))}>";
+        }
+
+        public static bool IsEnumerable(this Type type)
+        {
+            return type.IsGenericType && type.GetInterfaces().Any(i => i == typeof(IEnumerable));
         }
     }
 }
