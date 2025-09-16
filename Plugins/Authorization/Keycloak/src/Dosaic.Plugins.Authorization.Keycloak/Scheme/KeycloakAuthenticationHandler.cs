@@ -39,9 +39,8 @@ namespace Dosaic.Plugins.Authorization.Keycloak.Scheme
 
         private AuthenticateResult HandleResult(string result, Activity activity)
         {
-            activity.SetStatus(ActivityStatusCode.Error, result);
-            // ReSharper disable once TemplateIsNotCompileTimeConstantProblem
-            _logger.LogDebug("Failure: {Message}", result);
+            activity.SetStatus(ActivityStatusCode.Ok, result);
+            _logger.LogTrace("Unauthorized: {Message}", result);
             _noResultAuthenticationAttempts.Add(1);
             return AuthenticateResult.NoResult();
         }
