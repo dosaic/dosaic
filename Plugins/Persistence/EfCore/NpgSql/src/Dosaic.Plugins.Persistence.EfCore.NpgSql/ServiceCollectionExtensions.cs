@@ -1,8 +1,11 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
+using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using NeinLinq;
 using Npgsql;
+using Npgsql.EntityFrameworkCore.PostgreSQL.Infrastructure;
 
 namespace Dosaic.Plugins.Persistence.EfCore.NpgSql
 {
@@ -14,11 +17,14 @@ namespace Dosaic.Plugins.Persistence.EfCore.NpgSql
             serviceCollection.AddHostedService<NpgsqlDbMigratorService<TDbContext>>();
         }
 
-        public static void ConfigureNpgSqlDatabase<TDbContext>(IServiceProvider provider,
-            DbContextOptionsBuilder builder, EfCoreNpgSqlConfiguration configuration,
-            Action<WarningsConfigurationBuilder> warningsConfigurationBuilderAction = null,
-            Microsoft.EntityFrameworkCore.Metadata.IModel compiledModel = null) where TDbContext : DbContext
+        public static void ConfigureNpgSqlContext<TDbContext>(this DbContextOptionsBuilder builder,
+            IServiceProvider provider,
+            EfCoreNpgSqlConfiguration configuration,
+            Action<NpgSqlConfiguration> configure = null) where TDbContext : DbContext
         {
+            var npgSqlConfiguration = new NpgSqlConfiguration();
+            configure?.Invoke(npgSqlConfiguration);
+
             var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
             var connectionStringBuilder = new NpgsqlConnectionStringBuilder
             {
@@ -34,26 +40,35 @@ namespace Dosaic.Plugins.Persistence.EfCore.NpgSql
                 IncludeErrorDetail = configuration.IncludeErrorDetail,
             };
 
-            builder
-                .UseNpgsql(new NpgsqlDataSourceBuilder(connectionStringBuilder.ConnectionString)
-                        .MapDbEnums<TDbContext>().Build(),
-                    o => o.UseQuerySplittingBehavior(configuration.SplitQuery
-                            ? QuerySplittingBehavior.SplitQuery
-                            : QuerySplittingBehavior.SingleQuery)
-                        .UseDbEnums<TDbContext>());
+            var dataSourceBuilder = new NpgsqlDataSourceBuilder(connectionStringBuilder.ConnectionString)
+                .MapDbEnums<TDbContext>();
+            npgSqlConfiguration.ConfigureDataSource?.Invoke(dataSourceBuilder);
+            var dataSource = dataSourceBuilder.Build();
 
-            if (compiledModel != null)
+            builder
+                .UseNpgsql(dataSource,
+                    o =>
+                    {
+                        o.UseDbEnums<TDbContext>();
+                        o.UseQuerySplittingBehavior(configuration.SplitQuery
+                            ? QuerySplittingBehavior.SplitQuery
+                            : QuerySplittingBehavior.SingleQuery);
+                        npgSqlConfiguration.ConfigureNpgSqlContext?.Invoke(o);
+                    });
+
+            if (npgSqlConfiguration.CompiledModel is not null)
             {
                 builder
-                    .UseModel(compiledModel);
+                    .UseModel(npgSqlConfiguration.CompiledModel);
             }
 
-            builder.UseProjectables()
+            builder.WithLambdaInjection()
                 .UseLoggerFactory(loggerFactory)
                 .ConfigureLoggingCacheTime(TimeSpan.FromSeconds(configuration.ConfigureLoggingCacheTimeInSeconds));
-            if (warningsConfigurationBuilderAction != null)
+
+            if (npgSqlConfiguration.ConfigureWarnings is not null)
                 builder
-                    .ConfigureWarnings(warningsConfigurationBuilderAction);
+                    .ConfigureWarnings(npgSqlConfiguration.ConfigureWarnings);
 
             if (configuration.EnableDetailedErrors)
             {
@@ -64,6 +79,36 @@ namespace Dosaic.Plugins.Persistence.EfCore.NpgSql
             {
                 builder.EnableSensitiveDataLogging();
             }
+        }
+    }
+
+    public class NpgSqlConfiguration
+    {
+        internal IModel CompiledModel { get; private set; }
+        internal Action<NpgsqlDataSourceBuilder> ConfigureDataSource { get; private set; }
+        internal Action<NpgsqlDbContextOptionsBuilder> ConfigureNpgSqlContext { get; private set; }
+        internal Action<WarningsConfigurationBuilder> ConfigureWarnings { get; private set; }
+
+        public NpgSqlConfiguration WithModel(IModel model)
+        {
+            CompiledModel = model;
+            return this;
+        }
+        public NpgSqlConfiguration WithDataSource(Action<NpgsqlDataSourceBuilder> configureDataSource)
+        {
+            ConfigureDataSource = configureDataSource;
+            return this;
+        }
+
+        public NpgSqlConfiguration WithNpgSql(Action<NpgsqlDbContextOptionsBuilder> configureNpgSql)
+        {
+            ConfigureNpgSqlContext = configureNpgSql;
+            return this;
+        }
+        public NpgSqlConfiguration WithWarnings(Action<WarningsConfigurationBuilder> configureWarnings)
+        {
+            ConfigureWarnings = configureWarnings;
+            return this;
         }
     }
 }

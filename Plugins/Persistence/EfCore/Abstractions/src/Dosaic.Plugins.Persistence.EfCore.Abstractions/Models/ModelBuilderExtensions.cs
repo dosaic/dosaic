@@ -1,4 +1,3 @@
-using System.Text.RegularExpressions;
 using Dosaic.Extensions.NanoIds;
 using Dosaic.Hosting.Abstractions.Extensions;
 using Dosaic.Plugins.Persistence.EfCore.Abstractions.Audit;
@@ -177,17 +176,5 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Models
                     index.SetDatabaseName(index.GetDatabaseName()!.ToSnakeCase());
             }
         }
-
-        private static string ToSnakeCase(this string input)
-        {
-            var startUnderscores = RegexUnderscores().Match(input);
-            return startUnderscores + RegexNames().Replace(input, "$1_$2").ToLower();
-        }
-
-        [GeneratedRegex(@"^_+")]
-        private static partial Regex RegexUnderscores();
-
-        [GeneratedRegex(@"([a-z0-9])([A-Z])")]
-        private static partial Regex RegexNames();
     }
 }

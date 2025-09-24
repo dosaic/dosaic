@@ -4,6 +4,7 @@ using AwesomeAssertions.Execution;
 using AwesomeAssertions.Primitives;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Internal;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Migrations;
 
@@ -201,6 +202,10 @@ namespace Dosaic.Testing.NUnit.Assertions
                 foreach (var prop in subjectProperties)
                 {
                     var value = prop.GetMethod?.Invoke(entry, []);
+#pragma warning disable EF1001
+                    if (value == null || value.GetType().IsDefaultValue(value))
+#pragma warning restore EF1001
+                        continue;
                     dic.Add(prop.Name, value);
                 }
 
@@ -212,7 +217,27 @@ namespace Dosaic.Testing.NUnit.Assertions
                 .FailWith(
                     "You need to specify data with at least one row and all rows needs to be the same type (model type)")
                 .Then
-                .Given(() => Subject.GetSeedData())
+                .Given(() =>
+                {
+                    var x = Subject.GetSeedData();
+                    var convertedSeedData = new List<IDictionary<string, object>>();
+                    foreach (var entry in x)
+                    {
+                        var dic = new Dictionary<string, object>();
+                        foreach (var (key, value) in entry)
+                        {
+
+#pragma warning disable EF1001
+                            if (value == null || value.GetType().IsDefaultValue(value))
+#pragma warning restore EF1001
+                                continue;
+                            dic.Add(key, value);
+                        }
+
+                        convertedSeedData.Add(dic);
+                    }
+                    return convertedSeedData;
+                })
                 .ForCondition(d => d != null
                                    && CompareListOfDictionaries(d.ToList(), convertedData)
                 )

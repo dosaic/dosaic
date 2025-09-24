@@ -54,7 +54,7 @@ namespace Dosaic.Plugins.Persistence.EfCore.NpgSql.Tests
         [Test]
         public void ConfigureNpgSqlDatabaseWithDefaultParameters()
         {
-            ServiceCollectionExtensions.ConfigureNpgSqlDatabase<TestEfCoreDb>(_serviceProvider, _builder, _config);
+            _builder.ConfigureNpgSqlContext<TestEfCoreDb>(_serviceProvider, _config);
 
             _builder.Options.Should().NotBeNull();
             _builder.Options.Should().NotBeNull();
@@ -63,8 +63,7 @@ namespace Dosaic.Plugins.Persistence.EfCore.NpgSql.Tests
             extensions[0].Should()
                 .BeOfType<Npgsql.EntityFrameworkCore.PostgreSQL.Infrastructure.Internal.NpgsqlOptionsExtension>();
             extensions[1].Should().BeOfType<Microsoft.EntityFrameworkCore.Infrastructure.CoreOptionsExtension>();
-            extensions[2].Should()
-                .BeOfType<EntityFrameworkCore.Projectables.Infrastructure.Internal.ProjectionOptionsExtension>();
+            extensions[2].GetType().FullName.Should().Be("NeinLinq.RewriteDbContextOptionsExtension");
             var npgsqlOptions = extensions[0]
                 .As<Npgsql.EntityFrameworkCore.PostgreSQL.Infrastructure.Internal.NpgsqlOptionsExtension>();
 
@@ -80,10 +79,6 @@ namespace Dosaic.Plugins.Persistence.EfCore.NpgSql.Tests
             coreOptions.IsSensitiveDataLoggingEnabled.Should().BeTrue();
             coreOptions.LoggingCacheTime.Should().Be(TimeSpan.FromMinutes(5));
             coreOptions.WarningsConfiguration.DefaultBehavior.Should().Be(WarningBehavior.Log);
-
-            var projection = extensions[2]
-                .As<EntityFrameworkCore.Projectables.Infrastructure.Internal.ProjectionOptionsExtension>();
-            projection.Should().NotBeNull();
         }
 
         [Test]
@@ -105,9 +100,10 @@ namespace Dosaic.Plugins.Persistence.EfCore.NpgSql.Tests
                 SplitQuery = false,
                 ConfigureLoggingCacheTimeInSeconds = 1
             };
-            ServiceCollectionExtensions.ConfigureNpgSqlDatabase<TestEfCoreDb>(_serviceProvider, _builder, customConfig,
-                x => x.Log((CoreEventId.RowLimitingOperationWithoutOrderByWarning, LogLevel.Debug))
-            );
+            _builder.ConfigureNpgSqlContext<TestEfCoreDb>(_serviceProvider, customConfig, c =>
+            {
+                c.WithWarnings(x => x.Log((CoreEventId.RowLimitingOperationWithoutOrderByWarning, LogLevel.Debug)));
+            });
 
             _builder.Options.Should().NotBeNull();
             _builder.Options.Should().NotBeNull();
@@ -116,8 +112,7 @@ namespace Dosaic.Plugins.Persistence.EfCore.NpgSql.Tests
             extensions[0].Should()
                 .BeOfType<Npgsql.EntityFrameworkCore.PostgreSQL.Infrastructure.Internal.NpgsqlOptionsExtension>();
             extensions[1].Should().BeOfType<Microsoft.EntityFrameworkCore.Infrastructure.CoreOptionsExtension>();
-            extensions[2].Should()
-                .BeOfType<EntityFrameworkCore.Projectables.Infrastructure.Internal.ProjectionOptionsExtension>();
+            extensions[2].GetType().FullName.Should().Be("NeinLinq.RewriteDbContextOptionsExtension");
             var npgsqlOptions = extensions[0]
                 .As<Npgsql.EntityFrameworkCore.PostgreSQL.Infrastructure.Internal.NpgsqlOptionsExtension>();
 
@@ -141,10 +136,6 @@ namespace Dosaic.Plugins.Persistence.EfCore.NpgSql.Tests
             warnings.Should().Contain(x =>
                 x.Key == CoreEventId.RowLimitingOperationWithoutOrderByWarning &&
                 x.Value.Item1 == WarningBehavior.Log && x.Value.Item2 == LogLevel.Debug);
-
-            var projection = extensions[2]
-                .As<EntityFrameworkCore.Projectables.Infrastructure.Internal.ProjectionOptionsExtension>();
-            projection.Should().NotBeNull();
         }
 
         [Test]
@@ -152,8 +143,7 @@ namespace Dosaic.Plugins.Persistence.EfCore.NpgSql.Tests
         {
             var model = Substitute.For<Microsoft.EntityFrameworkCore.Metadata.IModel>();
 
-            ServiceCollectionExtensions.ConfigureNpgSqlDatabase<TestEfCoreDb>(_serviceProvider, _builder, _config, null,
-                model);
+            _builder.ConfigureNpgSqlContext<TestEfCoreDb>(_serviceProvider, _config, c => c.WithModel(model));
 
             _builder.Options.Should().NotBeNull();
             var extensions = _builder.Options.Extensions.ToList();
@@ -163,8 +153,6 @@ namespace Dosaic.Plugins.Persistence.EfCore.NpgSql.Tests
 
             extensions[1].As<Microsoft.EntityFrameworkCore.Infrastructure.CoreOptionsExtension>().Model.Should()
                 .Be(model);
-            extensions[2].Should()
-                .BeOfType<EntityFrameworkCore.Projectables.Infrastructure.Internal.ProjectionOptionsExtension>();
         }
 
         [Test]
@@ -172,9 +160,8 @@ namespace Dosaic.Plugins.Persistence.EfCore.NpgSql.Tests
         {
             var invalidConfig = new EfCoreNpgSqlConfiguration { Host = null, Database = null };
 
-            Action act = () =>
-                ServiceCollectionExtensions.ConfigureNpgSqlDatabase<TestEfCoreDb>(_serviceProvider, _builder,
-                    invalidConfig);
+            var act = () =>
+                _builder.ConfigureNpgSqlContext<TestEfCoreDb>(_serviceProvider, invalidConfig);
 
             act.Should().Throw<Exception>();
         }
@@ -192,6 +179,36 @@ namespace Dosaic.Plugins.Persistence.EfCore.NpgSql.Tests
 
             serviceDescriptor.Should().NotBeNull();
             serviceDescriptor?.Lifetime.Should().Be(ServiceLifetime.Singleton);
+        }
+
+        [Test]
+        public void CanConfigureDeep()
+        {
+            var model = Substitute.For<Microsoft.EntityFrameworkCore.Metadata.IModel>();
+
+            _builder.ConfigureNpgSqlContext<TestEfCoreDb>(_serviceProvider, _config, c =>
+            {
+                c.WithModel(model)
+                    .WithWarnings(x => x.Log((CoreEventId.RowLimitingOperationWithoutOrderByWarning, LogLevel.Debug)))
+                    .WithDataSource(x => x.ConfigureTracing(b => b.ConfigureCommandFilter(y => y.IsPrepared)))
+                    .WithNpgSql(x => x.CommandTimeout(5000))
+                    ;
+            });
+            _builder.Options.Should().NotBeNull();
+            var extensions = _builder.Options.Extensions.ToList();
+            var npgsqlOptions = extensions[0]
+                .As<Npgsql.EntityFrameworkCore.PostgreSQL.Infrastructure.Internal.NpgsqlOptionsExtension>();
+            npgsqlOptions.CommandTimeout.Should().Be(5000);
+            var coreOptions = extensions[1].As<Microsoft.EntityFrameworkCore.Infrastructure.CoreOptionsExtension>();
+            coreOptions.Model.Should().BeSameAs(model);
+            var warnings =
+                (ImmutableSortedDictionary<int, (WarningBehavior?, LogLevel?)>)coreOptions.WarningsConfiguration
+                    .GetInaccessibleValue(
+                        "_explicitBehaviors");
+            warnings.Should().NotBeNull();
+            warnings.Should().Contain(x =>
+                x.Key == CoreEventId.RowLimitingOperationWithoutOrderByWarning &&
+                x.Value.Item1 == WarningBehavior.Log && x.Value.Item2 == LogLevel.Debug);
         }
     }
 }
