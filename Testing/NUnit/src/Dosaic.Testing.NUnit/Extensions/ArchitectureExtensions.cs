@@ -8,7 +8,7 @@ namespace Dosaic.Testing.NUnit.Extensions
 {
     public static class ArchitectureExtensions
     {
-        private static readonly Type[] _types = AppDomain.CurrentDomain.GetAssemblies().GetTypes().ToArray();
+        private static readonly Type[] _types = AppDomain.CurrentDomain.GetAssemblies().GetTypesSafely().ToArray();
 
         public static Type GetRealType(this Class cls)
         {

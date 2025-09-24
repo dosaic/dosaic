@@ -10,10 +10,10 @@ namespace Dosaic.Hosting.Abstractions.Tests.Extensions
         [Test]
         public void CanQueryTypesEasily()
         {
-            typeof(AssemblyExtensionTests).GetAssemblyTypes(t => t.Name == nameof(AssemblyExtensionTests))
+            typeof(AssemblyExtensionTests).GetAssemblyTypesSafely(t => t.Name == nameof(AssemblyExtensionTests))
                 .Should().HaveCount(1);
             var x = new List<Assembly> { typeof(AssemblyExtensionTests).Assembly }; ;
-            x.GetTypes(t => t.Name == nameof(AssemblyExtensionTests))
+            x.GetTypesSafely(t => t.Name == nameof(AssemblyExtensionTests))
                 .Should().HaveCount(1);
         }
     }

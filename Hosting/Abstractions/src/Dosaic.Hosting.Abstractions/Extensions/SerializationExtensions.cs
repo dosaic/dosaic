@@ -121,8 +121,7 @@ namespace Dosaic.Hosting.Abstractions.Extensions
         {
             if (!_kindTypes.TryGetValue(type, out var possibleTypes))
             {
-                var types = AppDomain.CurrentDomain.GetAssemblies()
-                    .SelectMany(x => x.GetTypes()).ToArray();
+                var types = AppDomain.CurrentDomain.GetAssemblies().GetTypesSafely();
                 possibleTypes = types.Where(x => x.IsClass && type.IsAssignableFrom(x)).ToArray();
                 _kindTypes[type] = possibleTypes;
                 foreach (var pt in possibleTypes)
@@ -161,8 +160,7 @@ namespace Dosaic.Hosting.Abstractions.Extensions
         {
             if (_converters.TryGetValue(typeToConvert, out var cachedConverter))
                 return cachedConverter;
-            var types = AppDomain.CurrentDomain.GetAssemblies()
-                .SelectMany(x => x.GetTypes());
+            var types = AppDomain.CurrentDomain.GetAssemblies().GetTypesSafely();
             var converterType = typeof(KindSpecifierConverter<>).MakeGenericType(typeToConvert);
             var converter = (JsonConverter)Activator.CreateInstance(converterType, [types])!;
             _converters.Add(typeToConvert, converter);
