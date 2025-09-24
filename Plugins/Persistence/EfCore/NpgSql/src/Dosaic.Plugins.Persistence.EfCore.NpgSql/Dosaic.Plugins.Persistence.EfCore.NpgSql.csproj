@@ -7,7 +7,6 @@
   <ItemGroup>
     <PackageReference Include="OpenTelemetry.Instrumentation.EntityFrameworkCore" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
-    <PackageReference Include="EntityFrameworkCore.Projectables" />
     <PackageReference Include="Linq.Expression.Optimizer" />
     <PackageReference Include="LinqKit.Microsoft.EntityFrameworkCore" />
 

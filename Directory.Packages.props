@@ -35,6 +35,7 @@
     <PackageVersion Include="HangFire" Version="1.8.20" />
     <PackageVersion Include="Hangfire.MemoryStorage" Version="1.8.1.2" />
     <PackageVersion Include="Hangfire.PostgreSql" Version="1.20.12" />
+    <PackageVersion Include="NeinLinq.EntityFrameworkCore" Version="7.3.2" />
     <PackageVersion Include="NetEscapades.Configuration.Yaml" Version="3.1.0" />
     <PackageVersion Include="OpenTelemetry.Exporter.InMemory" Version="1.12.0" />
     <PackageVersion Include="OpenTelemetry.Exporter.Prometheus.AspNetCore" Version="1.12.0-beta.1" />
@@ -114,7 +115,6 @@
     <PackageVersion Include="Linq.Expression.Optimizer" Version="1.0.32" />
     <PackageVersion Include="LinqKit.Microsoft.EntityFrameworkCore" Version="9.0.8" />
     <PackageVersion Include="GracefulExpandoObject" Version="1.6.0" />
-    <PackageVersion Include="EntityFrameworkCore.Projectables" Version="4.0.0" />
     <PackageVersion Include="Nanoid" Version="3.1.0" />
     <PackageVersion Include="EntityFrameworkCore.Testing.NSubstitute" Version="9.0.1" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.7">
