@@ -1,9 +1,11 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 
 namespace Dosaic.Hosting.Abstractions.Extensions
 {
     public static class AssemblyExtensions
     {
+        [ExcludeFromCodeCoverage]
         private static Type[] GetTypesSafe(Assembly assembly)
         {
             try
