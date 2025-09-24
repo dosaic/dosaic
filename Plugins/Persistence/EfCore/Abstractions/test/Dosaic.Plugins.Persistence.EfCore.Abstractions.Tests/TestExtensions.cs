@@ -1,6 +1,3 @@
-using ArchUnitNET.Domain;
-using AutoBogus;
-using Dosaic.Hosting.Abstractions.Extensions;
 using Dosaic.Plugins.Persistence.EfCore.Abstractions.Audit;
 using Dosaic.Plugins.Persistence.EfCore.Abstractions.Database;
 using Dosaic.Plugins.Persistence.EfCore.Abstractions.Models;
@@ -11,20 +8,6 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests
 {
     public static class TestExtensions
     {
-        private static readonly Type[] _types = AppDomain.CurrentDomain.GetAssemblies().GetTypes().ToArray();
-
-        public static Type GetRealType(this Class cls)
-        {
-            return _types.FirstOrDefault(x => x.FullName == cls.FullName);
-        }
-
-        public static T Fake<T>(Action<T> configure = null) where T : class
-        {
-            var result = new AutoFaker<T>().Configure(c => c.WithRecursiveDepth(0)).Generate();
-            configure?.Invoke(result);
-            return result;
-        }
-
         public static T GetModel<T>(Action<T> configure = null) where T : IModel
         {
             var m = Activator.CreateInstance<T>();
