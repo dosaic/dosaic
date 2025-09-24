@@ -5,8 +5,24 @@ namespace Dosaic.Hosting.Abstractions.Extensions
 {
     public static class AssemblyExtensions
     {
+        public static bool HasType(this Assembly assembly, Predicate<Type> typePredicate)
+        {
+            return GetAllTypesSafely(assembly).Any(t => typePredicate(t));
+        }
+
+        public static IList<Type> GetTypesSafely(this IEnumerable<Assembly> assemblies,
+            Predicate<Type> typePredicate = null)
+        {
+            return assemblies.SelectMany(x => x.GetTypesSafely(typePredicate)).ToList();
+        }
+
+        public static IList<Type> GetTypesSafely(this Assembly assembly, Predicate<Type> typePredicate = null)
+        {
+            return GetAllTypesSafely(assembly).Where(x => typePredicate == null || typePredicate(x)).ToList();
+        }
+
         [ExcludeFromCodeCoverage]
-        private static Type[] GetTypesSafe(Assembly assembly)
+        private static Type[] GetAllTypesSafely(Assembly assembly)
         {
             try
             {
@@ -16,21 +32,6 @@ namespace Dosaic.Hosting.Abstractions.Extensions
             {
                 return [];
             }
-        }
-
-        public static bool HasType(this Assembly assembly, Predicate<Type> typePredicate)
-        {
-            return GetTypesSafe(assembly).Any(t => typePredicate(t));
-        }
-
-        public static IList<Type> GetTypes(this IEnumerable<Assembly> assemblies, Predicate<Type> typePredicate = null)
-        {
-            return assemblies.SelectMany(x => x.GetTypes(typePredicate)).ToList();
-        }
-
-        public static IList<Type> GetTypes(this Assembly assembly, Predicate<Type> typePredicate = null)
-        {
-            return GetTypesSafe(assembly).Where(x => typePredicate == null || typePredicate(x)).ToList();
         }
     }
 }

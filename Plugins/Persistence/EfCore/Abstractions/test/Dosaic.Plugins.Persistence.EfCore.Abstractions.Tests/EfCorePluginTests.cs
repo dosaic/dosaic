@@ -33,7 +33,7 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests
         {
             _implementationResolver = Substitute.For<IImplementationResolver>();
             _implementationResolver.FindTypes().Returns([
-                .. typeof(EfCorePlugin).GetAssemblyTypes(), .. typeof(EfCorePluginTests).GetAssemblyTypes()
+                .. typeof(EfCorePlugin).GetAssemblyTypesSafely(), .. typeof(EfCorePluginTests).GetAssemblyTypesSafely()
             ]);
             _implementationResolver.FindAssemblies()
                 .Returns([typeof(EfCorePlugin).Assembly, typeof(TestAggregate).Assembly]);
