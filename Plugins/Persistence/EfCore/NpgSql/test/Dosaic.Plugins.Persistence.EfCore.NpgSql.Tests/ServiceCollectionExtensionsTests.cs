@@ -171,14 +171,17 @@ namespace Dosaic.Plugins.Persistence.EfCore.NpgSql.Tests
         {
             var services = TestingDefaults.ServiceCollection();
 
-            services.AddNpgsqlDbMigratorService<TestEfCoreDb>();
+            services.AddNpgsqlDbMigratorService<TestEfCoreDb>(false);
 
             var serviceDescriptor = services.FirstOrDefault(sd =>
-                sd.ServiceType == typeof(Microsoft.Extensions.Hosting.IHostedService) &&
-                sd.ImplementationType == typeof(NpgsqlDbMigratorService<TestEfCoreDb>));
+                sd.ServiceType == typeof(Microsoft.Extensions.Hosting.IHostedService)
+                && sd.ImplementationFactory!.GetType() == typeof(Func<IServiceProvider, NpgsqlDbMigratorService<TestEfCoreDb>>));
 
             serviceDescriptor.Should().NotBeNull();
             serviceDescriptor?.Lifetime.Should().Be(ServiceLifetime.Singleton);
+
+            var migService = serviceDescriptor!.ImplementationFactory!(services.BuildServiceProvider());
+            migService.Should().BeOfType<NpgsqlDbMigratorService<TestEfCoreDb>>();
         }
 
         [Test]
