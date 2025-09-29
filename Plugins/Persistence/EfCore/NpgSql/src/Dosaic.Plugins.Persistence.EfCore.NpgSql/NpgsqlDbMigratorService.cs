@@ -21,7 +21,12 @@ namespace Dosaic.Plugins.Persistence.EfCore.NpgSql
                     using var scope = scopeFactory.CreateScope();
                     var db = scope.ServiceProvider.GetRequiredService<TDbContext>();
                     if (!db.Database.IsRelational()) return;
-                    await db.Database.MigrateAsync(stoppingToken);
+                    var migrations = await db.Database.GetPendingMigrationsAsync(stoppingToken);
+                    foreach (var migration in migrations.Order())
+                    {
+                        logger.LogInformation("Applying migration {Migration}", migration);
+                        await db.Database.MigrateAsync(migration, stoppingToken);
+                    }
                     if (db.Database.GetDbConnection() is not NpgsqlConnection npgsqlConnection) return;
                     await ReloadDbTypesAsync(npgsqlConnection, stoppingToken);
                     return;
