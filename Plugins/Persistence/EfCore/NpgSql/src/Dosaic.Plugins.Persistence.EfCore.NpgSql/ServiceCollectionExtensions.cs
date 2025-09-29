@@ -11,15 +11,10 @@ namespace Dosaic.Plugins.Persistence.EfCore.NpgSql
 {
     public static class ServiceCollectionExtensions
     {
-        public static void AddNpgsqlDbMigratorService<TDbContext>(this IServiceCollection serviceCollection, bool migrateAllAtOnce = true)
+        public static void AddNpgsqlDbMigratorService<TDbContext>(this IServiceCollection serviceCollection)
             where TDbContext : DbContext
         {
-            serviceCollection.AddHostedService(sp =>
-            {
-                var scopeFactory = sp.GetRequiredService<IServiceScopeFactory>();
-                var logger = sp.GetRequiredService<ILogger<NpgsqlDbMigratorService<TDbContext>>>();
-                return new NpgsqlDbMigratorService<TDbContext>(scopeFactory, logger, migrateAllAtOnce);
-            });
+            serviceCollection.AddHostedService<NpgsqlDbMigratorService<TDbContext>>();
         }
 
         public static void ConfigureNpgSqlContext<TDbContext>(this DbContextOptionsBuilder builder,

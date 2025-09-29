@@ -9,7 +9,7 @@ using Npgsql;
 namespace Dosaic.Plugins.Persistence.EfCore.NpgSql
 {
     [ExcludeFromCodeCoverage(Justification = "Needs an actual postgres database")]
-    public class NpgsqlDbMigratorService<TDbContext>(IServiceScopeFactory scopeFactory, ILogger logger, bool migrateAllAtOnce = true)
+    public class NpgsqlDbMigratorService<TDbContext>(IServiceScopeFactory scopeFactory, ILogger logger)
         : BackgroundService where TDbContext : DbContext
     {
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -21,19 +21,11 @@ namespace Dosaic.Plugins.Persistence.EfCore.NpgSql
                     using var scope = scopeFactory.CreateScope();
                     var db = scope.ServiceProvider.GetRequiredService<TDbContext>();
                     if (!db.Database.IsRelational()) return;
-                    if (migrateAllAtOnce)
+                    var migrations = await db.Database.GetPendingMigrationsAsync(stoppingToken);
+                    foreach (var migration in migrations.Order())
                     {
-                        logger.LogInformation("Applying all pending migrations");
-                        await db.Database.MigrateAsync(stoppingToken);
-                    }
-                    else
-                    {
-                        var migrations = await db.Database.GetPendingMigrationsAsync(stoppingToken);
-                        foreach (var migration in migrations.Order())
-                        {
-                            logger.LogInformation("Applying migration {Migration}", migration);
-                            await db.Database.MigrateAsync(migration, stoppingToken);
-                        }
+                        logger.LogInformation("Applying migration {Migration}", migration);
+                        await db.Database.MigrateAsync(migration, stoppingToken);
                     }
                     if (db.Database.GetDbConnection() is not NpgsqlConnection npgsqlConnection) return;
                     await ReloadDbTypesAsync(npgsqlConnection, stoppingToken);
