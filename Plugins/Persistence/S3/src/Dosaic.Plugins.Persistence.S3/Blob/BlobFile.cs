@@ -5,7 +5,20 @@ namespace Dosaic.Plugins.Persistence.S3.Blob;
 
 public abstract class BaseBlobFile
 {
-    public Dictionary<string, string> MetaData { get; set; } = new();
+    public Dictionary<string, string> MetaData { get; } = new();
+
+    public void AddMetaData(KeyValuePair<string, string> metaData)
+    {
+        MetaData.Add(metaData.Key.ToUrlEncoded(), metaData.Value.ToUrlEncoded());
+    }
+
+    public void AddMetaData(IEnumerable<KeyValuePair<string, string>> metaData)
+    {
+        foreach (var item in metaData)
+        {
+            MetaData.Add(item.Key.ToUrlEncoded(), item.Value.ToUrlEncoded());
+        }
+    }
     public DateTimeOffset LastModified { get; set; }
 
     protected void ApplyFilename(string filename)

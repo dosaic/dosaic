@@ -169,14 +169,13 @@ namespace Dosaic.Plugins.Persistence.S3.Tests.File
             _minioClient.PutObjectAsync(Arg.Any<PutObjectArgs>(), Arg.Any<CancellationToken>())
                 .Returns(new PutObjectResponse(HttpStatusCode.OK, "", new Dictionary<string, string>(), 1, ""));
             await using var imageStream = CreateStream("test", _imageSignature);
+            var blob = new BlobFile<SampleBucket>(SampleBucket.Logos, "test");
+            blob.AddMetaData(new Dictionary<string, string>
+            {
+                { BlobFileMetaData.Filename, "test.pdf" }, { "something-custom", "test" }
+            });
             var result = await _fileStorageSampleBucket.SetAsync(
-                new BlobFile<SampleBucket>(SampleBucket.Logos, "test")
-                {
-                    MetaData = new Dictionary<string, string>
-                    {
-                        { BlobFileMetaData.Filename, "test.pdf" }, { "something-custom", "test" }
-                    }
-                },
+               blob,
                 imageStream);
             result.Bucket.Should().Be(SampleBucket.Logos);
             result.Key.Should().Be("test");

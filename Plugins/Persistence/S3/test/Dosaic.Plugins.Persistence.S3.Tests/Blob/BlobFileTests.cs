@@ -50,6 +50,60 @@ namespace Dosaic.Plugins.Persistence.S3.Tests.Blob
             blobFile.MetaData.Should().BeEmpty();
         }
 
+        [TestCase("Meta Space", "A B", "Meta%20Space", "A%20B")]
+        [TestCase("Key+Plus", "1+2", "Key%2BPlus", "1%2B2")]
+        [TestCase("Slash/Back", "foo/bar", "Slash%2FBack", "foo%2Fbar")]
+        [TestCase("Emoji😊", "x😊y", "Emoji%F0%9F%98%8A", "x%F0%9F%98%8Ay")]
+        [TestCase("Umlauts ÄÖÜ", "äöü", "Umlauts%20%C3%84%C3%96%C3%9C", "%C3%A4%C3%B6%C3%BC")]
+        public void EncodesKeyAndValueForCommonSpecials(string key, string value, string expectedKey, string expectedValue)
+        {
+            var blob = new BlobFile<SampleBucket>(SampleBucket.Logos);
+
+            blob.AddMetaData(new KeyValuePair<string, string>(key, value));
+
+            blob.MetaData.Should().ContainKey(expectedKey);
+            blob.MetaData[expectedKey].Should().Be(expectedValue);
+        }
+
+        [Test]
+        public void AddMetaDataEnumerableEncodesAllItems()
+        {
+            var blob = new BlobFile<SampleBucket>(SampleBucket.Logos);
+            var items = new[]
+            {
+            new KeyValuePair<string, string>("Ä", "Ü"),
+            new KeyValuePair<string, string>("Space Key", "A B"),
+            new KeyValuePair<string, string>("Slash/Key", "val/ue"),
+        };
+
+            blob.AddMetaData(items);
+
+            blob.MetaData.Should().ContainKeys("%C3%84", "Space%20Key", "Slash%2FKey");
+            blob.MetaData["%C3%84"].Should().Be("%C3%9C");
+            blob.MetaData["Space%20Key"].Should().Be("A%20B");
+            blob.MetaData["Slash%2FKey"].Should().Be("val%2Fue");
+        }
+
+        [Test]
+        public void AddMetaDataDuplicateKeyAfterEncodingThrows()
+        {
+            var blob = new BlobFile<SampleBucket>(SampleBucket.Logos);
+            blob.AddMetaData(new KeyValuePair<string, string>("A B", "first"));
+
+            Action act = () => blob.AddMetaData(new KeyValuePair<string, string>("A B", "second"));
+            act.Should().Throw<ArgumentException>();
+        }
+
+        [Test]
+        public void AddMetaDataEmptyEnumerableDoesNothing()
+        {
+            var blob = new BlobFile<SampleBucket>(SampleBucket.Logos);
+
+            blob.AddMetaData(Array.Empty<KeyValuePair<string, string>>());
+
+            blob.MetaData.Should().BeEmpty();
+        }
+
         [Test]
         public void CreateSetsIdCorrectly()
         {
