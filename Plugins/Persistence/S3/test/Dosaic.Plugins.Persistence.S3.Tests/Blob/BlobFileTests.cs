@@ -6,21 +6,22 @@ namespace Dosaic.Plugins.Persistence.S3.Tests.Blob
 {
     public class BlobFileTests
     {
-        [Test]
-        public void CreateWithFileNameSetsMetadataFileName()
+        [TestCase("test.jpg", "test.jpg", ".jpg")]
+        [TestCase("testÄ.jpg", "test%C3%84.jpg", ".jpg")]
+        public void CreateWithFileNameSetsMetadataFileName(string fileName, string expectedFileName, string extension)
         {
-            var fileName = "test.jpg";
             var withFilename = new BlobFile<SampleBucket>(SampleBucket.Logos).WithFilename(fileName);
 
-            withFilename.MetaData[BlobFileMetaData.Filename].Should().Be(fileName);
-            withFilename.MetaData[BlobFileMetaData.FileExtension].Should().Be(".jpg");
+            withFilename.MetaData[BlobFileMetaData.Filename].Should().Be(expectedFileName);
+            withFilename.MetaData[BlobFileMetaData.FileExtension].Should().Be(extension);
 
             var blobFile = new BlobFile("mybucket", "mykey").WithFilename(fileName);
-            blobFile.MetaData[BlobFileMetaData.Filename].Should().Be(fileName);
-            blobFile.MetaData[BlobFileMetaData.FileExtension].Should().Be(".jpg");
+            blobFile.MetaData[BlobFileMetaData.Filename].Should().Be(expectedFileName);
+            blobFile.MetaData[BlobFileMetaData.FileExtension].Should().Be(extension);
         }
 
         [TestCase("test.jpg", ".jpg")]
+        [TestCase(".Äo", ".%C3%84o")]
         [TestCase(".jpg", ".jpg")]
         [TestCase("", null)]
         [TestCase(null, null)]

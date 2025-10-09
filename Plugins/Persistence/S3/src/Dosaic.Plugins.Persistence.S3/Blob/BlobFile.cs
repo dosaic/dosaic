@@ -1,3 +1,4 @@
+using Dosaic.Hosting.Abstractions.Extensions;
 using Dosaic.Plugins.Persistence.S3.File;
 
 namespace Dosaic.Plugins.Persistence.S3.Blob;
@@ -10,7 +11,7 @@ public abstract class BaseBlobFile
     protected void ApplyFilename(string filename)
     {
         if (string.IsNullOrEmpty(filename)) return;
-        MetaData[BlobFileMetaData.Filename] = filename;
+        MetaData[BlobFileMetaData.Filename] = filename.ToUrlEncodedUtf8();
         ApplyFileExtension(filename);
     }
 
@@ -18,7 +19,7 @@ public abstract class BaseBlobFile
     {
         var path = Path.GetExtension(fileExtension);
         if (string.IsNullOrEmpty(path)) return;
-        MetaData[BlobFileMetaData.FileExtension] = path;
+        MetaData[BlobFileMetaData.FileExtension] = path.ToUrlEncodedUtf8();
     }
 }
 
