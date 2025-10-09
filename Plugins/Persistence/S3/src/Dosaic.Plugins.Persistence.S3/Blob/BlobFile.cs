@@ -11,7 +11,7 @@ public abstract class BaseBlobFile
     protected void ApplyFilename(string filename)
     {
         if (string.IsNullOrEmpty(filename)) return;
-        MetaData[BlobFileMetaData.Filename] = filename.ToUrlEncodedUtf8();
+        MetaData[BlobFileMetaData.Filename] = filename.ToUrlEncoded();
         ApplyFileExtension(filename);
     }
 
@@ -19,7 +19,7 @@ public abstract class BaseBlobFile
     {
         var path = Path.GetExtension(fileExtension);
         if (string.IsNullOrEmpty(path)) return;
-        MetaData[BlobFileMetaData.FileExtension] = path.ToUrlEncodedUtf8();
+        MetaData[BlobFileMetaData.FileExtension] = path.ToUrlEncoded();
     }
 }
 

@@ -1,4 +1,3 @@
-using System.Text.Encodings.Web;
 using System.Text.RegularExpressions;
 
 namespace Dosaic.Hosting.Abstractions.Extensions
@@ -17,17 +16,19 @@ namespace Dosaic.Hosting.Abstractions.Extensions
         [GeneratedRegex(@"([a-z0-9])([A-Z])")]
         private static partial Regex RegexNames();
 
-        public static string ToUrlEncodedUtf8(this string? input)
+        public static string ToUrlEncoded(this string? input)
         {
             if (string.IsNullOrEmpty(input))
-                return input;
-            return UrlEncoder.Default.Encode(input);
+                return input ?? string.Empty;
+
+            return Uri.EscapeDataString(input);
         }
 
-        public static string FromUrlEncodedUtf8(this string? input)
+        public static string FromUrlEncoded(this string? input)
         {
             if (string.IsNullOrEmpty(input))
-                return input;
+                return input ?? string.Empty;
+
             return Uri.UnescapeDataString(input);
         }
     }

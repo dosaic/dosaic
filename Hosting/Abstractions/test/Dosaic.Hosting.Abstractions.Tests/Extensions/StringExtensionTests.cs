@@ -25,7 +25,7 @@ namespace Dosaic.Hosting.Abstractions.Tests.Extensions
         [TestCase("äöü ß&€", "%C3%A4%C3%B6%C3%BC%20%C3%9F%26%E2%82%AC")]
         public void ToUrlEncodedUtf8_Encodes_AsExpected(string input, string expected)
         {
-            var encoded = input.ToUrlEncodedUtf8();
+            var encoded = input.ToUrlEncoded();
             encoded.Should().Be(expected);
         }
 
@@ -35,7 +35,7 @@ namespace Dosaic.Hosting.Abstractions.Tests.Extensions
         [TestCase("plain-text_123", "plain-text_123")]
         public void FromUrlEncodedUtf8_Decodes_AsExpected(string input, string expected)
         {
-            var decoded = input.FromUrlEncodedUtf8();
+            var decoded = input.FromUrlEncoded();
             decoded.Should().Be(expected);
         }
 
@@ -51,8 +51,8 @@ namespace Dosaic.Hosting.Abstractions.Tests.Extensions
         [TestCaseSource(nameof(RoundTripSamples))]
         public void UrlEncodingDecode_IsInverse_OfEncode_ForTypicalInputs(string sample)
         {
-            var encoded = sample.ToUrlEncodedUtf8();
-            var roundTrip = encoded.FromUrlEncodedUtf8();
+            var encoded = sample.ToUrlEncoded();
+            var roundTrip = encoded.FromUrlEncoded();
 
             roundTrip.Should().Be(sample, "round-trip should preserve '{0}'", sample);
         }
