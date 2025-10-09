@@ -16,7 +16,7 @@ namespace Dosaic.Hosting.Abstractions.Extensions
         [GeneratedRegex(@"([a-z0-9])([A-Z])")]
         private static partial Regex RegexNames();
 
-        public static string ToUrlEncoded(this string? input)
+        public static string ToUrlEncoded(this string input)
         {
             if (string.IsNullOrEmpty(input))
                 return input ?? string.Empty;
@@ -24,7 +24,7 @@ namespace Dosaic.Hosting.Abstractions.Extensions
             return Uri.EscapeDataString(input);
         }
 
-        public static string FromUrlEncoded(this string? input)
+        public static string FromUrlEncoded(this string input)
         {
             if (string.IsNullOrEmpty(input))
                 return input ?? string.Empty;
