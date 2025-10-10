@@ -94,7 +94,7 @@ public class FileStorage(
         if (objectStat.MetaData.TryGetValue(BlobFileMetaData.Hash, out var hashValue))
             metaData.Add(BlobFileMetaData.Hash, hashValue);
         var blob = new BlobFile(id) { LastModified = objectStat.LastModified };
-        blob.AddMetaData(objectStat.MetaData);
+        blob.AddMetaData(metaData);
         return blob;
     }
 
@@ -122,26 +122,26 @@ public class FileStorage(
     public async Task<FileId> SetAsync(BlobFile file, Stream stream, FileType fileType,
         CancellationToken cancellationToken = default)
     {
-        if (!file.MetaData.ContainsKey(BlobFileMetaData.ContentType))
+        if (!file.EncodedMetaData.ContainsKey(BlobFileMetaData.ContentType))
         {
-            file.MetaData.TryGetValue(BlobFileMetaData.FileExtension, out var fileExtension);
-            file.MetaData[BlobFileMetaData.ContentType] = string.IsNullOrEmpty(fileExtension)
+            file.EncodedMetaData.TryGetValue(BlobFileMetaData.FileExtension, out var fileExtension);
+            file.EncodedMetaData[BlobFileMetaData.ContentType] = string.IsNullOrEmpty(fileExtension)
                 ? GetMimeTypeFromContent(stream) ?? ApplicationOctetStream
                 : GetMimeTypeFromFileExtension(fileExtension) ?? ApplicationOctetStream;
         }
 
-        ValidateContentType(fileType, file.MetaData[BlobFileMetaData.ContentType]);
+        ValidateContentType(fileType, file.EncodedMetaData[BlobFileMetaData.ContentType]);
 
-        file.MetaData[BlobFileMetaData.Hash] = await ComputeHash(stream, cancellationToken);
+        file.EncodedMetaData[BlobFileMetaData.Hash] = await ComputeHash(stream, cancellationToken);
 
         var bucketWithPrefix = ResolveBucketName(file.Id.Bucket);
         var arguments = new PutObjectArgs()
             .WithBucket(bucketWithPrefix)
             .WithObject(file.Id.Key)
-            .WithHeaders(file.MetaData)
+            .WithHeaders(file.EncodedMetaData)
             .WithStreamData(stream)
             .WithObjectSize(stream.Length)
-            .WithContentType(file.MetaData[BlobFileMetaData.ContentType]);
+            .WithContentType(file.EncodedMetaData[BlobFileMetaData.ContentType]);
 
         var result = await minioClient.PutObjectAsync(arguments, cancellationToken);
         if (result != null)
