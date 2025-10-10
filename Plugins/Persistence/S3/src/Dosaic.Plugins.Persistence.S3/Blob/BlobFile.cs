@@ -1,16 +1,35 @@
+using Dosaic.Hosting.Abstractions.Extensions;
 using Dosaic.Plugins.Persistence.S3.File;
 
 namespace Dosaic.Plugins.Persistence.S3.Blob;
 
 public abstract class BaseBlobFile
 {
-    public Dictionary<string, string> MetaData { get; set; } = new();
+    internal Dictionary<string, string> EncodedMetaData { get; } = new();
+
+    public Dictionary<string, string> MetaData =>
+        EncodedMetaData.ToDictionary(
+            kv => kv.Key.FromUrlEncoded(),
+            kv => kv.Value.FromUrlEncoded()
+        );
+
+    public void AddMetaData(KeyValuePair<string, string> metaData)
+    {
+        EncodedMetaData.Add(metaData.Key.ToUrlEncoded(), metaData.Value.ToUrlEncoded());
+    }
+    public void AddMetaData(IEnumerable<KeyValuePair<string, string>> metaData)
+    {
+        foreach (var item in metaData)
+        {
+            EncodedMetaData.Add(item.Key.ToUrlEncoded(), item.Value.ToUrlEncoded());
+        }
+    }
     public DateTimeOffset LastModified { get; set; }
 
     protected void ApplyFilename(string filename)
     {
         if (string.IsNullOrEmpty(filename)) return;
-        MetaData[BlobFileMetaData.Filename] = filename;
+        EncodedMetaData[BlobFileMetaData.Filename] = filename.ToUrlEncoded();
         ApplyFileExtension(filename);
     }
 
@@ -18,7 +37,7 @@ public abstract class BaseBlobFile
     {
         var path = Path.GetExtension(fileExtension);
         if (string.IsNullOrEmpty(path)) return;
-        MetaData[BlobFileMetaData.FileExtension] = path;
+        EncodedMetaData[BlobFileMetaData.FileExtension] = path.ToUrlEncoded();
     }
 }
 
