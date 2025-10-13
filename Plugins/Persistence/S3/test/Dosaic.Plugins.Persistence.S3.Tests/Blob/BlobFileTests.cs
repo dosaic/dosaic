@@ -6,21 +6,29 @@ namespace Dosaic.Plugins.Persistence.S3.Tests.Blob
 {
     public class BlobFileTests
     {
-        [Test]
-        public void CreateWithFileNameSetsMetadataFileName()
+        [TestCase("test.jpg", ".jpg")]
+        [TestCase("testÄ.png", ".png")]
+        [TestCase("report.final.tar.gz", ".gz")]
+        public void CreateWithFileNameSetsMetadataFileName(string fileName, string extension)
         {
-            var fileName = "test.jpg";
             var withFilename = new BlobFile<SampleBucket>(SampleBucket.Logos).WithFilename(fileName);
 
             withFilename.MetaData[BlobFileMetaData.Filename].Should().Be(fileName);
-            withFilename.MetaData[BlobFileMetaData.FileExtension].Should().Be(".jpg");
+            withFilename.MetaData[BlobFileMetaData.FileExtension].Should().Be(extension);
+        }
 
-            var blobFile = new BlobFile("mybucket", "mykey").WithFilename(fileName);
-            blobFile.MetaData[BlobFileMetaData.Filename].Should().Be(fileName);
-            blobFile.MetaData[BlobFileMetaData.FileExtension].Should().Be(".jpg");
+        [TestCase(null)]
+        [TestCase("")]
+        public void CreateWthFileNameEmptyOrNullSetsNoMetadate(string value)
+        {
+            var withFilename = new BlobFile<SampleBucket>(SampleBucket.Logos).WithFilename(value);
+            var tryGetValue = withFilename.MetaData.TryGetValue(BlobFileMetaData.Filename, out var outValue);
+            tryGetValue.Should().BeFalse();
+            outValue.Should().BeNull();
         }
 
         [TestCase("test.jpg", ".jpg")]
+        [TestCase(".Äo", ".Äo")]
         [TestCase(".jpg", ".jpg")]
         [TestCase("", null)]
         [TestCase(null, null)]
@@ -28,17 +36,17 @@ namespace Dosaic.Plugins.Persistence.S3.Tests.Blob
         {
 
             var withFilename = new BlobFile<SampleBucket>(SampleBucket.Logos).WithFileExtension(inputFilename);
+
             var tryGetFileName = withFilename.MetaData.TryGetValue(BlobFileMetaData.FileExtension, out var withFilenameResult);
-            if (expectedExtension != null && tryGetFileName)
+            if (expectedExtension != null)
             {
+                tryGetFileName.Should().BeTrue();
                 withFilenameResult.Should().Be(expectedExtension);
             }
-
-            var withFileExtension = new BlobFile("mybucket", "mykey").WithFileExtension(inputFilename);
-            var tryGetFileExtension = withFileExtension.MetaData.TryGetValue(BlobFileMetaData.FileExtension, out var withFileExtensionResult);
-            if (expectedExtension != null && tryGetFileExtension)
+            else
             {
-                withFileExtensionResult.Should().Be(expectedExtension);
+                tryGetFileName.Should().BeFalse();
+                withFilenameResult.Should().BeNull();
             }
         }
 
@@ -46,7 +54,17 @@ namespace Dosaic.Plugins.Persistence.S3.Tests.Blob
         public void CreateWithoutFileNameCreatesEmptyMetadata()
         {
             var blobFile = new BlobFile<SampleBucket>(SampleBucket.Logos);
-            blobFile.MetaData.Should().BeEmpty();
+            blobFile.MetaData.GetMetadata().Should().BeEmpty();
+        }
+
+        [Test]
+        public void AddMetaDataEmptyEnumerableDoesNothing()
+        {
+            var blob = new BlobFile<SampleBucket>(SampleBucket.Logos);
+
+            blob.MetaData.Set(Array.Empty<KeyValuePair<string, string>>());
+
+            blob.MetaData.GetMetadata().Should().BeEmpty();
         }
 
         [Test]

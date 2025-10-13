@@ -4,13 +4,14 @@ namespace Dosaic.Plugins.Persistence.S3.Blob;
 
 public abstract class BaseBlobFile
 {
-    public Dictionary<string, string> MetaData { get; set; } = new();
+
+    public BlobFileMetaDataStore MetaData { get; } = new();
     public DateTimeOffset LastModified { get; set; }
 
     protected void ApplyFilename(string filename)
     {
         if (string.IsNullOrEmpty(filename)) return;
-        MetaData[BlobFileMetaData.Filename] = filename;
+        MetaData.Set(BlobFileMetaData.Filename, filename);
         ApplyFileExtension(filename);
     }
 
@@ -18,7 +19,7 @@ public abstract class BaseBlobFile
     {
         var path = Path.GetExtension(fileExtension);
         if (string.IsNullOrEmpty(path)) return;
-        MetaData[BlobFileMetaData.FileExtension] = path;
+        MetaData.Set(BlobFileMetaData.FileExtension, path);
     }
 }
 

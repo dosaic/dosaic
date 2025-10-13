@@ -25,11 +25,14 @@ public class FileStorage<BucketEnum>(
     {
         var file = await fileStorage.GetFileAsync(id.ToFileId(), cancellationToken);
 
-        return new BlobFile<BucketEnum>(id.Bucket, file.Id.Key)
+        var blob = new BlobFile<BucketEnum>(id.Bucket, file.Id.Key)
         {
-            MetaData = file.MetaData,
             LastModified = file.LastModified
         };
+
+        blob.MetaData.Set(file.MetaData.GetMetadata());
+
+        return blob;
     }
 
     public Task DeleteFileAsync(FileId<BucketEnum> id, CancellationToken cancellationToken = default)
@@ -47,8 +50,9 @@ public class FileStorage<BucketEnum>(
     public async Task<FileId<BucketEnum>> SetAsync(BlobFile<BucketEnum> file, Stream stream,
         CancellationToken cancellationToken = default)
     {
-        var fileId = await fileStorage.SetAsync(
-            new BlobFile(file.Id.ToFileId()) { LastModified = file.LastModified, MetaData = file.MetaData },
+        var blob = new BlobFile(file.Id.ToFileId()) { LastModified = file.LastModified };
+        blob.MetaData.Set(file.MetaData.GetMetadata());
+        var fileId = await fileStorage.SetAsync(blob,
             stream, file.Id.Bucket.GetFileType(), cancellationToken);
 
         return new FileId<BucketEnum>(file.Id.Bucket, fileId.Key);
@@ -89,7 +93,9 @@ public class FileStorage(
         };
         if (objectStat.MetaData.TryGetValue(BlobFileMetaData.Hash, out var hashValue))
             metaData.Add(BlobFileMetaData.Hash, hashValue);
-        return new BlobFile(id) { LastModified = objectStat.LastModified, MetaData = metaData };
+        var blob = new BlobFile(id) { LastModified = objectStat.LastModified };
+        blob.MetaData.Set(metaData);
+        return blob;
     }
 
     public Task DeleteFileAsync(FileId id, CancellationToken cancellationToken = default)
@@ -119,20 +125,22 @@ public class FileStorage(
         if (!file.MetaData.ContainsKey(BlobFileMetaData.ContentType))
         {
             file.MetaData.TryGetValue(BlobFileMetaData.FileExtension, out var fileExtension);
-            file.MetaData[BlobFileMetaData.ContentType] = string.IsNullOrEmpty(fileExtension)
+            var contentType = string.IsNullOrEmpty(fileExtension)
                 ? GetMimeTypeFromContent(stream) ?? ApplicationOctetStream
                 : GetMimeTypeFromFileExtension(fileExtension) ?? ApplicationOctetStream;
+
+            file.MetaData.Set(BlobFileMetaData.ContentType, contentType);
         }
 
         ValidateContentType(fileType, file.MetaData[BlobFileMetaData.ContentType]);
 
-        file.MetaData[BlobFileMetaData.Hash] = await ComputeHash(stream, cancellationToken);
+        file.MetaData.Set(BlobFileMetaData.Hash, await ComputeHash(stream, cancellationToken));
 
         var bucketWithPrefix = ResolveBucketName(file.Id.Bucket);
         var arguments = new PutObjectArgs()
             .WithBucket(bucketWithPrefix)
             .WithObject(file.Id.Key)
-            .WithHeaders(file.MetaData)
+            .WithHeaders(file.MetaData.GetUrlEncodedMetadata())
             .WithStreamData(stream)
             .WithObjectSize(stream.Length)
             .WithContentType(file.MetaData[BlobFileMetaData.ContentType]);
