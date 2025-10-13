@@ -38,7 +38,7 @@ namespace Dosaic.Plugins.Persistence.S3.Tests.Blob
 
             store["Foo Ä"].Should().Be("Bär Ü");
 
-            var encoded = store.GetEncodedMetadata();
+            var encoded = store.GetUrlEncodedMetadata();
             encoded.Keys.Should().Contain("Foo%20%C3%84");
             encoded["Foo%20%C3%84"].Should().Be("B%C3%A4r%20%C3%9C");
         }
@@ -53,7 +53,7 @@ namespace Dosaic.Plugins.Persistence.S3.Tests.Blob
 
             store.TryGetValue("to-remove", out var removed).Should().BeFalse();
             removed.Should().BeNull();
-            store.GetEncodedMetadata().Should().NotContainKey("to-remove"); // also not present in any encoded form
+            store.GetUrlEncodedMetadata().Should().NotContainKey("to-remove"); // also not present in any encoded form
         }
 
         [Test]
@@ -62,15 +62,25 @@ namespace Dosaic.Plugins.Persistence.S3.Tests.Blob
             var store = new BlobFileMetaDataStore();
             store.Set(new KeyValuePair<string, string>("K", "V"));
 
-            var snapshot1 = store.GetEncodedMetadata();
+            var snapshot1 = store.GetUrlEncodedMetadata();
             snapshot1["K"].Should().Be("V");
 
             snapshot1["K"] = "CHANGED";
 
-            var snapshot2 = store.GetEncodedMetadata();
+            var snapshot2 = store.GetUrlEncodedMetadata();
             snapshot2["K"].Should().Be("V");
 
             store.Get("K").Should().Be("V");
+        }
+
+        [Test]
+        public void ContainsKeyDoesFunctionAsExpected()
+        {
+            var store = new BlobFileMetaDataStore();
+            store.Set("key", "value");
+
+            store.ContainsKey("key").Should().BeTrue();
+            store.ContainsKey("noKey").Should().BeFalse();
         }
 
         [Test]
@@ -100,7 +110,7 @@ namespace Dosaic.Plugins.Persistence.S3.Tests.Blob
                 new KeyValuePair<string, string>("Slash/Key", "val/ue"),
             });
 
-            var encoded = store.GetEncodedMetadata();
+            var encoded = store.GetUrlEncodedMetadata();
             encoded.Should().ContainKeys("%C3%84", "A%20B", "Slash%2FKey");
             encoded["%C3%84"].Should().Be("%C3%9C");
             encoded["A%20B"].Should().Be("C%20D");

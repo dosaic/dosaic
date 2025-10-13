@@ -6,7 +6,7 @@ namespace Dosaic.Plugins.Persistence.S3.Blob
     {
         private readonly Dictionary<string, string> _encoded = new();
 
-        public string? Get(string key)
+        public string Get(string key)
         {
             var encKey = key.ToUrlEncoded();
             return _encoded.TryGetValue(encKey, out var encValue)
@@ -29,7 +29,7 @@ namespace Dosaic.Plugins.Persistence.S3.Blob
             }
         }
 
-        public bool TryGetValue(string key, out string? value)
+        public bool TryGetValue(string key, out string value)
         {
             var encKey = key.ToUrlEncoded();
             if (_encoded.TryGetValue(encKey, out var encValue))
@@ -54,7 +54,9 @@ namespace Dosaic.Plugins.Persistence.S3.Blob
             }
         }
 
-        internal IDictionary<string, string> GetEncodedMetadata() =>
+        public bool ContainsKey(string key) => _encoded.ContainsKey(key.ToUrlEncoded());
+
+        internal IDictionary<string, string> GetUrlEncodedMetadata() =>
             new Dictionary<string, string>(_encoded);
 
         public IDictionary<string, string> GetMetadata() =>

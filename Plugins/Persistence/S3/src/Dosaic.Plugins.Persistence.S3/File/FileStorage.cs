@@ -122,7 +122,7 @@ public class FileStorage(
     public async Task<FileId> SetAsync(BlobFile file, Stream stream, FileType fileType,
         CancellationToken cancellationToken = default)
     {
-        if (!file.MetaData.GetMetadata().ContainsKey(BlobFileMetaData.ContentType))
+        if (!file.MetaData.ContainsKey(BlobFileMetaData.ContentType))
         {
             file.MetaData.TryGetValue(BlobFileMetaData.FileExtension, out var fileExtension);
             var contentType = string.IsNullOrEmpty(fileExtension)
@@ -140,7 +140,7 @@ public class FileStorage(
         var arguments = new PutObjectArgs()
             .WithBucket(bucketWithPrefix)
             .WithObject(file.Id.Key)
-            .WithHeaders(file.MetaData.GetEncodedMetadata())
+            .WithHeaders(file.MetaData.GetUrlEncodedMetadata())
             .WithStreamData(stream)
             .WithObjectSize(stream.Length)
             .WithContentType(file.MetaData[BlobFileMetaData.ContentType]);
