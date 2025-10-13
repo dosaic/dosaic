@@ -30,7 +30,7 @@ public class FileStorage<BucketEnum>(
             LastModified = file.LastModified
         };
 
-        blob.AddMetaData(file.MetaData);
+        blob.MetaData.Set(file.MetaData.GetMetadata());
 
         return blob;
     }
@@ -51,7 +51,7 @@ public class FileStorage<BucketEnum>(
         CancellationToken cancellationToken = default)
     {
         var blob = new BlobFile(file.Id.ToFileId()) { LastModified = file.LastModified };
-        blob.AddMetaData(file.MetaData);
+        blob.MetaData.Set(file.MetaData.GetMetadata());
         var fileId = await fileStorage.SetAsync(blob,
             stream, file.Id.Bucket.GetFileType(), cancellationToken);
 
@@ -94,7 +94,7 @@ public class FileStorage(
         if (objectStat.MetaData.TryGetValue(BlobFileMetaData.Hash, out var hashValue))
             metaData.Add(BlobFileMetaData.Hash, hashValue);
         var blob = new BlobFile(id) { LastModified = objectStat.LastModified };
-        blob.AddMetaData(metaData);
+        blob.MetaData.Set(metaData);
         return blob;
     }
 
@@ -122,26 +122,28 @@ public class FileStorage(
     public async Task<FileId> SetAsync(BlobFile file, Stream stream, FileType fileType,
         CancellationToken cancellationToken = default)
     {
-        if (!file.EncodedMetaData.ContainsKey(BlobFileMetaData.ContentType))
+        if (!file.MetaData.GetMetadata().ContainsKey(BlobFileMetaData.ContentType))
         {
-            file.EncodedMetaData.TryGetValue(BlobFileMetaData.FileExtension, out var fileExtension);
-            file.EncodedMetaData[BlobFileMetaData.ContentType] = string.IsNullOrEmpty(fileExtension)
+            file.MetaData.TryGetValue(BlobFileMetaData.FileExtension, out var fileExtension);
+            var contentType = string.IsNullOrEmpty(fileExtension)
                 ? GetMimeTypeFromContent(stream) ?? ApplicationOctetStream
                 : GetMimeTypeFromFileExtension(fileExtension) ?? ApplicationOctetStream;
+
+            file.MetaData.Set(BlobFileMetaData.ContentType, contentType);
         }
 
-        ValidateContentType(fileType, file.EncodedMetaData[BlobFileMetaData.ContentType]);
+        ValidateContentType(fileType, file.MetaData[BlobFileMetaData.ContentType]);
 
-        file.EncodedMetaData[BlobFileMetaData.Hash] = await ComputeHash(stream, cancellationToken);
+        file.MetaData.Set(BlobFileMetaData.Hash, await ComputeHash(stream, cancellationToken));
 
         var bucketWithPrefix = ResolveBucketName(file.Id.Bucket);
         var arguments = new PutObjectArgs()
             .WithBucket(bucketWithPrefix)
             .WithObject(file.Id.Key)
-            .WithHeaders(file.EncodedMetaData)
+            .WithHeaders(file.MetaData.GetEncodedMetadata())
             .WithStreamData(stream)
             .WithObjectSize(stream.Length)
-            .WithContentType(file.EncodedMetaData[BlobFileMetaData.ContentType]);
+            .WithContentType(file.MetaData[BlobFileMetaData.ContentType]);
 
         var result = await minioClient.PutObjectAsync(arguments, cancellationToken);
         if (result != null)
