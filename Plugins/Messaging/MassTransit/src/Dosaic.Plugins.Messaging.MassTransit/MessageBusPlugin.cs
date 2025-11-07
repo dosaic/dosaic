@@ -49,10 +49,11 @@ public class MessageBusPlugin(IImplementationResolver implementationResolver, Me
         var queueGroups = GetQueueGroups();
         var messageTypes = queueGroups.SelectMany(x => x.MessageTypes).Distinct().ToArray();
         serviceCollection.AddSingleton<IMessageValidator>(new MessageValidator(messageTypes));
+        serviceCollection.AddSingleton<IMessageDeduplicateKeyProvider>(new MessageDeduplicateKeyProvider(configuration));
         serviceCollection.AddSingleton<IMessageBus>(sp => new MessageSender(sp.GetRequiredService<IDateTimeProvider>(),
             sp.GetRequiredService<ISendEndpointProvider>(),
             sp.GetRequiredService<IMessageValidator>(),
-            sp.GetService<IMessageScheduler>()));
+            sp.GetService<IMessageScheduler>(), sp.GetRequiredService<IMessageDeduplicateKeyProvider>()));
         ConfigureMassTransit(serviceCollection, messageTypes, queueGroups);
     }
 

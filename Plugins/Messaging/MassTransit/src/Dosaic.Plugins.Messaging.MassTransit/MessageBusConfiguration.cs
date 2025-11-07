@@ -15,4 +15,5 @@ public class MessageBusConfiguration
     public int RetryDelaySeconds { get; set; } = 30;
     public int MaxRedeliveryCount { get; set; } = 3;
     public int RedeliveryDelaySeconds { get; set; } = 30;
+    public bool Deduplication { get; set; }
 }
