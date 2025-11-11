@@ -148,7 +148,6 @@ public class MessageSenderTests
         observedHeaders.TryGetHeader("key", out var v).Should().BeTrue();
         v.Should().Be("value");
 
-        // Deduplication header should also be present
         observedHeaders.TryGetHeader("x-deduplication-header", out var dedupe).Should().BeTrue();
         dedupe.Should().Be(_deduplicateKeyProvider.TryGetKey(message));
     }
