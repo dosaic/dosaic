@@ -75,7 +75,7 @@ namespace Dosaic.Plugins.Messaging.MassTransit
                 Pipe.Execute<SendContext<object>>(ctx =>
                 {
                     ctx.Durable = true;
-                    var key = deduplicateKeyProvider.TryGetKey(ctx.Message);
+                    var key = deduplicateKeyProvider.TryGetKey(message);
                     if (!string.IsNullOrWhiteSpace(key))
                         ctx.Headers.Set(DedupeHeader, key);
 
