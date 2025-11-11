@@ -55,6 +55,7 @@ public class MessageBusPluginTests
         sp.GetRequiredService<IMessageBus>().Should().BeOfType<MessageSender>();
         sp.GetRequiredService<IMessageValidator>().Should().BeOfType<MessageValidator>();
         sp.GetRequiredService<IMessageConsumer<TestMessage>>().Should().BeOfType<TestConsumer>();
+        sp.GetRequiredService<IMessageDeduplicateKeyProvider>().Should().BeOfType<MessageDeduplicateKeyProvider>();
         var bus = sp.GetRequiredService<IBus>();
         var host = bus.GetInaccessibleValue<RabbitMqHost>("_host");
         var hostConfig = host.GetInaccessibleValue<RabbitMqHostConfiguration>("_hostConfiguration");
