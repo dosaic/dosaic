@@ -28,7 +28,6 @@ namespace Dosaic.Plugins.Messaging.MassTransit
             var endpoint = await GetSendEndpoint(messageType);
             await endpoint.Send(message, ctx =>
             {
-                ctx.Durable = true;
                 var key = deduplicateKeyProvider.TryGetKey(message);
                 if (!string.IsNullOrWhiteSpace(key))
                     ctx.Headers.Set(DedupeHeader, key);

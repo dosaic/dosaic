@@ -142,7 +142,7 @@ public class MessageSenderTests
             Arg.Any<IPipe<SendContext>>(),
             Arg.Any<CancellationToken>());
 
-        durableWasSet.Should().BeTrue();
+        durableWasSet.Should().BeFalse();
 
         observedHeaders.Should().NotBeNull();
         observedHeaders.TryGetHeader("key", out var v).Should().BeTrue();
@@ -176,7 +176,7 @@ public class MessageSenderTests
             Arg.Any<IPipe<SendContext>>(),
             Arg.Any<CancellationToken>());
 
-        durableWasSet.Should().BeTrue();
+        durableWasSet.Should().BeFalse();
         observedHeaders.Should().NotBeNull();
 
         observedHeaders.TryGetHeader("x-deduplication-header", out var dedupe).Should().BeTrue();
@@ -216,7 +216,7 @@ public class MessageSenderTests
             Arg.Any<IPipe<SendContext<object>>>(),
             Arg.Any<CancellationToken>());
 
-        durableWasSet.Should().BeTrue();
+        durableWasSet.Should().BeFalse();
         observedHeaders.Should().NotBeNull();
 
         observedHeaders.TryGetHeader("key", out var v).Should().BeTrue();
@@ -255,7 +255,7 @@ public class MessageSenderTests
             Arg.Any<IPipe<SendContext<object>>>(),
             Arg.Any<CancellationToken>());
 
-        durableWasSet.Should().BeTrue();
+        durableWasSet.Should().BeFalse();
         observedHeaders.Should().NotBeNull();
         observedHeaders.TryGetHeader("x-deduplication-header", out var dedupe).Should().BeTrue();
         dedupe.Should().Be(_deduplicateKeyProvider.TryGetKey(message));
