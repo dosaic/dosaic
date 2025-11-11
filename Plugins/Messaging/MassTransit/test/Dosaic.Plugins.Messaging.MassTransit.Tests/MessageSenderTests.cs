@@ -31,7 +31,7 @@ public class MessageSenderTests
             new MessageDeduplicateKeyProvider(new MessageBusConfiguration
             {
                 Deduplication = true,
-                Host = "testhost.com"
+                Host = "localhost"
             });
         _messageBus = new MessageSender(_dateTimeProvider, _sendEndpointProvider, _messageValidator, _scheduler, _deduplicateKeyProvider);
     }
@@ -125,7 +125,7 @@ public class MessageSenderTests
         var headers = new Dictionary<string, string> { { "key", "value" } };
 
         DictionarySendHeaders observedHeaders = null!;
-        bool durableWasSet = false;
+        var durableWasSet = false;
 
         _sendEndpoint
             .When(x => x.Send(Arg.Any<object>(), Arg.Any<IPipe<SendContext>>(), Arg.Any<CancellationToken>()))
@@ -160,7 +160,7 @@ public class MessageSenderTests
 
         var message = new TestMessage(456);
         DictionarySendHeaders observedHeaders = null!;
-        bool durableWasSet = false;
+        var durableWasSet = false;
 
         _sendEndpoint
             .When(x => x.Send(Arg.Any<object>(), Arg.Any<IPipe<SendContext>>(), Arg.Any<CancellationToken>()))
@@ -268,9 +268,9 @@ public class MessageSenderTests
         var localDurableWasSet = false;
 
         var fakeCtx = Substitute.For<TCtx>();
-        var headers = new DictionarySendHeaders(new Dictionary<string, object?>());
+        var headers = new DictionarySendHeaders(new Dictionary<string, object>());
         fakeCtx.Headers.Returns(headers);
-        fakeCtx.WhenForAnyArgs(x => x.Durable = default)
+        fakeCtx.WhenForAnyArgs(x => x.Durable = false)
             .Do(ci => localDurableWasSet = (bool)ci.Args()[0]!);
 
         pipe.Send(fakeCtx).GetAwaiter().GetResult();

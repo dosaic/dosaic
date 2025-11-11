@@ -68,7 +68,7 @@ namespace Dosaic.Plugins.Messaging.MassTransit
                 throw new InvalidOperationException("Scheduler is not available and must be configured!");
             if (!messageValidator.HasConsumers(messageType)) return;
             var queue = QueueResolver.Resolve(messageType);
-            await scheduler.ScheduleSend<object>(
+            await scheduler.ScheduleSend(
                 queue,
                 scheduledTime,
                 message,
