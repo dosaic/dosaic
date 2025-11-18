@@ -53,25 +53,20 @@ namespace Dosaic.Plugins.Messaging.MassTransit
             return ScheduleAsync(typeof(TMessage), message, scheduledDate, headers, cancellationToken);
         }
 
-        public Task ScheduleAsync(Type messageType, object message, TimeSpan duration, IDictionary<string, string> headers = null,
-            CancellationToken cancellationToken = default)
-        {
-            var dateToSend = dateTimeProvider.UtcNow.Add(duration);
-            return ScheduleAsync(messageType, message, dateToSend, headers, cancellationToken);
-        }
-
-        public async Task ScheduleAsync(Type messageType, object message, DateTime scheduledTime, IDictionary<string, string> headers = null,
+        public async Task ScheduleAsync(Type messageType, object message, TimeSpan duration, IDictionary<string, string> headers = null,
             CancellationToken cancellationToken = default)
         {
             if (scheduler is null)
                 throw new InvalidOperationException("Scheduler is not available and must be configured!");
             if (!messageValidator.HasConsumers(messageType)) return;
             var queue = QueueResolver.Resolve(messageType);
+
             await scheduler.ScheduleSend(
                 queue,
-                scheduledTime,
+                duration,
                 message,
-                Pipe.Execute<SendContext<object>>(ctx =>
+                messageType,
+                ctx =>
                 {
                     var key = deduplicateKeyProvider.TryGetKey(message);
                     if (!string.IsNullOrWhiteSpace(key))
@@ -84,8 +79,16 @@ namespace Dosaic.Plugins.Messaging.MassTransit
                             ctx.Headers.Set(header.Key, header.Value);
                         }
                     }
-                }),
+                },
                 cancellationToken);
+
+        }
+
+        public Task ScheduleAsync(Type messageType, object message, DateTime scheduledTime, IDictionary<string, string> headers = null,
+            CancellationToken cancellationToken = default)
+        {
+            var duration = scheduledTime.Subtract(dateTimeProvider.UtcNow);
+            return ScheduleAsync(messageType, message, duration, headers, cancellationToken);
         }
 
         private async Task<ISendEndpoint> GetSendEndpoint(Type messageType)
