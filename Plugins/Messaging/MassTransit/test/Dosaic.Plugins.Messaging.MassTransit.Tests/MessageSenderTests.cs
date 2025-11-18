@@ -1,6 +1,7 @@
 using AwesomeAssertions;
 using Chronos.Abstractions;
 using Dosaic.Plugins.Messaging.Abstractions;
+using Dosaic.Testing.NUnit.Extensions;
 using MassTransit;
 using MassTransit.Serialization;
 using NSubstitute;
@@ -94,7 +95,7 @@ public class MessageSenderTests
         var expectedDate = _now + ts;
         _messageValidator.HasConsumers(typeof(TestMessage)).Returns(true);
         await _messageBus.ScheduleAsync(msg, ts);
-        await _scheduler.Received(1).ScheduleSend(Arg.Any<Uri>(), Arg.Is<DateTime>(o => Math.Abs((o - expectedDate).TotalSeconds) <= 3), Arg.Is<object>(o => o.Equals(msg)), typeof(TestMessage), Arg.Any<IPipe<SendContext>>(), Arg.Any<CancellationToken>());
+        await _scheduler.Received(1).ScheduleSend(Arg.Any<Uri>(), ArgExt.Is<DateTime>(d => d.Should().BeCloseTo(expectedDate, TimeSpan.FromSeconds(3))), Arg.Is<object>(o => o.Equals(msg)), typeof(TestMessage), Arg.Any<IPipe<SendContext>>(), Arg.Any<CancellationToken>());
     }
 
     [Test]
@@ -114,7 +115,7 @@ public class MessageSenderTests
         var date = _now.AddDays(2);
         _messageValidator.HasConsumers(typeof(TestMessage)).Returns(true);
         await _messageBus.ScheduleAsync(msg, date);
-        await _scheduler.Received(1).ScheduleSend(Arg.Any<Uri>(), Arg.Is<DateTime>(o => Math.Abs((o - date).TotalSeconds) <= 3), Arg.Is<object>(o => o.Equals(msg)), typeof(TestMessage), Arg.Any<IPipe<SendContext>>(), Arg.Any<CancellationToken>());
+        await _scheduler.Received(1).ScheduleSend(Arg.Any<Uri>(), ArgExt.Is<DateTime>(d => d.Should().BeCloseTo(date, TimeSpan.FromSeconds(3))), Arg.Is<object>(o => o.Equals(msg)), typeof(TestMessage), Arg.Any<IPipe<SendContext>>(), Arg.Any<CancellationToken>());
 
     }
 
