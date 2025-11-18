@@ -4,11 +4,11 @@ using Dosaic.Plugins.Messaging.Abstractions;
 
 namespace Dosaic.Plugins.Messaging.MassTransit;
 
-internal static class QueueResolver
+public static class QueueResolver
 {
     private static readonly IDictionary<Type, Uri> _queueNames = new ConcurrentDictionary<Type, Uri>();
 
-    private static string GetQueueNameFromType(Type t)
+    public static string GetQueueNameFromType(Type t)
     {
         var queueNameAttribute = t.GetAttribute<QueueNameAttribute>();
         if (queueNameAttribute is not null)

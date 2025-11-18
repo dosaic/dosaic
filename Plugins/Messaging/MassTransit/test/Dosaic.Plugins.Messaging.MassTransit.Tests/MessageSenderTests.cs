@@ -17,6 +17,7 @@ public class MessageSenderTests
     private IDateTimeProvider _dateTimeProvider;
     private ISendEndpoint _sendEndpoint;
     private IMessageDeduplicateKeyProvider _deduplicateKeyProvider;
+    private static readonly DateTime _now = DateTime.UtcNow;
 
     [SetUp]
     public void Setup()
@@ -25,6 +26,7 @@ public class MessageSenderTests
         _sendEndpointProvider = Substitute.For<ISendEndpointProvider>();
         _sendEndpointProvider.GetSendEndpoint(Arg.Any<Uri>()).Returns(Task.FromResult(_sendEndpoint));
         _dateTimeProvider = Substitute.For<IDateTimeProvider>();
+        _dateTimeProvider.UtcNow.Returns(_now);
         _messageValidator = Substitute.For<IMessageValidator>();
         _scheduler = Substitute.For<IMessageScheduler>();
         _deduplicateKeyProvider =
@@ -88,13 +90,11 @@ public class MessageSenderTests
     public async Task SchedulesMessagesByTimeSpan()
     {
         var msg = new TestMessage(123);
-        var ts = TimeSpan.FromSeconds(1);
-        var date = new DateTime(2020, 1, 1);
-        _dateTimeProvider.UtcNow.Returns(date);
-        var expectedDate = date + ts;
+        var ts = TimeSpan.FromDays(1); ;
+        var expectedDate = _now + ts;
         _messageValidator.HasConsumers(typeof(TestMessage)).Returns(true);
         await _messageBus.ScheduleAsync(msg, ts);
-        await _scheduler.Received(1).ScheduleSend(Arg.Any<Uri>(), expectedDate, Arg.Is<object>(o => o.Equals(msg)), Arg.Any<IPipe<SendContext<object>>>(), Arg.Any<CancellationToken>());
+        await _scheduler.Received(1).ScheduleSend(Arg.Any<Uri>(), Arg.Is<DateTime>(o => Math.Abs((o - expectedDate).TotalSeconds) <= 3), Arg.Is<object>(o => o.Equals(msg)), typeof(TestMessage), Arg.Any<IPipe<SendContext>>(), Arg.Any<CancellationToken>());
     }
 
     [Test]
@@ -111,10 +111,11 @@ public class MessageSenderTests
     public async Task SchedulesMessagesByDateTime()
     {
         var msg = new TestMessage(123);
-        var date = new DateTime(2020, 1, 1);
+        var date = _now.AddDays(2);
         _messageValidator.HasConsumers(typeof(TestMessage)).Returns(true);
         await _messageBus.ScheduleAsync(msg, date);
-        await _scheduler.Received(1).ScheduleSend(Arg.Any<Uri>(), date, Arg.Is<object>(o => o.Equals(msg)), Arg.Any<IPipe<SendContext<object>>>(), Arg.Any<CancellationToken>());
+        await _scheduler.Received(1).ScheduleSend(Arg.Any<Uri>(), Arg.Is<DateTime>(o => Math.Abs((o - date).TotalSeconds) <= 3), Arg.Is<object>(o => o.Equals(msg)), typeof(TestMessage), Arg.Any<IPipe<SendContext>>(), Arg.Any<CancellationToken>());
+
     }
 
     [Test]
@@ -188,7 +189,8 @@ public class MessageSenderTests
     {
         _messageValidator.HasConsumers(typeof(TestMessage)).Returns(true);
         var message = new TestMessage(789);
-        var date = new DateTime(2020, 1, 1);
+        var duration = new TimeSpan(1, 1, 1);
+
         var headers = new Dictionary<string, string> { { "key", "value" } };
         var durableWasSet = false;
 
@@ -197,23 +199,25 @@ public class MessageSenderTests
         _scheduler
             .When(s => s.ScheduleSend(
                 Arg.Any<Uri>(),
-                date,
+                Arg.Any<DateTime>(),
                 Arg.Any<object>(),
-                Arg.Any<IPipe<SendContext<object>>>(),
+                Arg.Any<Type>(),
+                Arg.Any<IPipe<SendContext>>(),
                 Arg.Any<CancellationToken>()))
             .Do(ci =>
             {
-                var pipe = (IPipe<SendContext<object>>)ci[3];
+                var pipe = (IPipe<SendContext>)ci[4];
                 observedHeaders = ExecutePipeOnSendContext(pipe, out durableWasSet);
             });
 
-        await _messageBus.ScheduleAsync(typeof(TestMessage), message, date, headers);
+        await _messageBus.ScheduleAsync(typeof(TestMessage), message, duration, headers);
 
         await _scheduler.Received(1).ScheduleSend(
             Arg.Any<Uri>(),
-            date,
+            Arg.Any<DateTime>(),
             Arg.Is<object>(o => ReferenceEquals(o, message)),
-            Arg.Any<IPipe<SendContext<object>>>(),
+            typeof(TestMessage),
+            Arg.Any<IPipe<SendContext>>(),
             Arg.Any<CancellationToken>());
 
         durableWasSet.Should().BeFalse();
@@ -228,7 +232,7 @@ public class MessageSenderTests
     {
         _messageValidator.HasConsumers(typeof(TestMessage)).Returns(true);
         var message = new TestMessage(999);
-        var date = new DateTime(2020, 2, 2);
+        var date = new DateTime(2020, 2, 2).TimeOfDay;
         var durableWasSet = false;
 
         DictionarySendHeaders observedHeaders = null!;
@@ -236,13 +240,14 @@ public class MessageSenderTests
         _scheduler
             .When(s => s.ScheduleSend(
                 Arg.Any<Uri>(),
-                date,
+                Arg.Any<DateTime>(),
                 Arg.Any<object>(),
-                Arg.Any<IPipe<SendContext<object>>>(),
+                Arg.Any<Type>(),
+                Arg.Any<IPipe<SendContext>>(),
                 Arg.Any<CancellationToken>()))
             .Do(ci =>
             {
-                var pipe = (IPipe<SendContext<object>>)ci[3];
+                var pipe = (IPipe<SendContext<object>>)ci[4];
                 observedHeaders = ExecutePipeOnSendContext(pipe, out durableWasSet);
             });
 
@@ -250,9 +255,10 @@ public class MessageSenderTests
 
         await _scheduler.Received(1).ScheduleSend(
             Arg.Any<Uri>(),
-            date,
+            Arg.Any<DateTime>(),
             Arg.Is<object>(o => ReferenceEquals(o, message)),
-            Arg.Any<IPipe<SendContext<object>>>(),
+            typeof(TestMessage),
+            Arg.Any<IPipe<SendContext>>(),
             Arg.Any<CancellationToken>());
 
         durableWasSet.Should().BeFalse();
