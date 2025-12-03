@@ -22,7 +22,7 @@ jobs:
       - name: setup
         uses: actions/setup-dotnet@v3
         with:
-          dotnet-version: '9.0.x'
+          dotnet-version: '10.0.x'
 
       - name: install
         run: dotnet restore

@@ -15,7 +15,7 @@
 
 <div style="display: flex; justify-content: center; align-items: center;margin-top:10px">
 
-![Framework](https://img.shields.io/badge/framework-net9.0-blueviolet?style=flat-square)
+![Framework](https://img.shields.io/badge/framework-net10.0-blueviolet?style=flat-square)
 [![MIT License](https://img.shields.io/badge/license-MIT-%230b0?style=flat-square)](https://github.com/dosaic/dosaic/blob/main/LICENSE.txt)
 ![Nuget](https://img.shields.io/nuget/v/Dosaic.Hosting.Webhost?style=flat-square)
 ![Nuget](https://img.shields.io/nuget/dt/Dosaic.Hosting.Webhost?style=flat-square)
@@ -45,7 +45,7 @@ Check the individual README files in each plugins directory.
 
 Before you begin, ensure you have met the following requirements:
 
-* You have installed the latest version of `.net9 sdk`
+* You have installed the latest version of `.net10 sdk`
 
 ## Get started
 
