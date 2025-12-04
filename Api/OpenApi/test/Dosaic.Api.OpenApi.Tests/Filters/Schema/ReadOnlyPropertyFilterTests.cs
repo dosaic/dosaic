@@ -1,7 +1,7 @@
 using System.ComponentModel;
 using AwesomeAssertions;
 using Dosaic.Api.OpenApi.Filters.Schema;
-using Microsoft.OpenApi.Models;
+using Microsoft.OpenApi;
 using NUnit.Framework;
 using Swashbuckle.AspNetCore.SwaggerGen;
 // ReSharper disable UnusedMember.Local
@@ -17,7 +17,7 @@ namespace Dosaic.Api.OpenApi.Tests.Filters.Schema
         {
             var openApiSchema = new OpenApiSchema
             {
-                Properties = new Dictionary<string, OpenApiSchema>
+                Properties = new Dictionary<string, IOpenApiSchema>
                 {
                     {"Id", new OpenApiSchema {ReadOnly = false}},
                     {"Name", new OpenApiSchema {ReadOnly = false}}

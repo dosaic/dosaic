@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.OpenApi.Models;
+using Microsoft.OpenApi;
 
 // ReSharper disable UnusedAutoPropertyAccessor.Global
 
@@ -25,7 +25,9 @@ namespace Dosaic.Api.OpenApi
             public string AuthUrl { get; set; }
         }
     }
-    public class OpenApiPlugin : IPluginApplicationConfiguration, IPluginServiceConfiguration, IPluginEndpointsConfiguration
+
+    public class OpenApiPlugin : IPluginApplicationConfiguration, IPluginServiceConfiguration,
+        IPluginEndpointsConfiguration
     {
         private readonly OpenApiConfiguration _configuration;
         private readonly IHostEnvironment _environment;
@@ -68,31 +70,27 @@ namespace Dosaic.Api.OpenApi
                 if (!authEnabled) return;
                 var tokenUrl = new Uri(_configuration.Auth!.TokenUrl!);
                 var authUrl = new Uri(_configuration.Auth!.AuthUrl!);
-                options.AddSecurityDefinition(@"Bearer", new OpenApiSecurityScheme
-                {
-                    Type = SecuritySchemeType.OAuth2,
-                    In = ParameterLocation.Header,
-                    Flows = new OpenApiOAuthFlows
+                options.AddSecurityDefinition("bearer",
+                    new OpenApiSecurityScheme
                     {
-                        AuthorizationCode = new OpenApiOAuthFlow { TokenUrl = tokenUrl, AuthorizationUrl = authUrl }
-                        ,
-                        ClientCredentials = new OpenApiOAuthFlow { TokenUrl = tokenUrl }
-                        ,
-                        Password = new OpenApiOAuthFlow { TokenUrl = tokenUrl }
-                        ,
-                        Implicit = new OpenApiOAuthFlow { AuthorizationUrl = authUrl }
-                    }
-                });
-                options.AddSecurityRequirement(new OpenApiSecurityRequirement {
-                    {
-                        new OpenApiSecurityScheme {
-                            Reference = new OpenApiReference {
-                                Type = ReferenceType.SecurityScheme, Id = "Bearer"
-                            }
-                            , Scheme = "oauth2", Name = "Bearer", In = ParameterLocation.Header
+                        Scheme = "bearer",
+                        BearerFormat = "JWT",
+                        Description = "JWT Authorization header using the Bearer scheme.",
+                        Type = SecuritySchemeType.OAuth2,
+                        In = ParameterLocation.Header,
+                        Flows = new OpenApiOAuthFlows
+                        {
+                            AuthorizationCode =
+                                new OpenApiOAuthFlow { TokenUrl = tokenUrl, AuthorizationUrl = authUrl },
+                            ClientCredentials = new OpenApiOAuthFlow { TokenUrl = tokenUrl },
+                            Password = new OpenApiOAuthFlow { TokenUrl = tokenUrl },
+                            Implicit = new OpenApiOAuthFlow { AuthorizationUrl = authUrl }
                         }
-                        , new List<string>()
-                    }
+                    });
+
+                options.AddSecurityRequirement(document => new OpenApiSecurityRequirement
+                {
+                    [new OpenApiSecuritySchemeReference("bearer", document)] = []
                 });
             });
         }

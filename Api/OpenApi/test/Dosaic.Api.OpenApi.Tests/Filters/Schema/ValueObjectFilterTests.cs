@@ -1,7 +1,7 @@
 using AwesomeAssertions;
 using Dosaic.Api.OpenApi.Filters.Common;
 using Dosaic.Api.OpenApi.Filters.Schema;
-using Microsoft.OpenApi.Models;
+using Microsoft.OpenApi;
 using NUnit.Framework;
 using Swashbuckle.AspNetCore.SwaggerGen;
 using Vogen;
@@ -154,10 +154,10 @@ namespace Dosaic.Api.OpenApi.Tests.Filters.Schema
         [Test]
         public void OpenApiSchemaGetsOnlyChangedForValueObjects()
         {
-            var openApiSchema = new OpenApiSchema { Type = "object" };
+            var openApiSchema = new OpenApiSchema { Type = JsonSchemaType.Object };
             var schemaContext = new SchemaFilterContext(typeof(X), null, null);
             _filter.Apply(openApiSchema, schemaContext);
-            openApiSchema.Type.Should().Be("object");
+            openApiSchema.Type.Should().Be(JsonSchemaType.Object);
         }
 
         [Test]
@@ -165,28 +165,28 @@ namespace Dosaic.Api.OpenApi.Tests.Filters.Schema
         {
             var openApiSchema = new OpenApiSchema
             {
-                Type = "object",
-                Properties = new Dictionary<string, OpenApiSchema>
+                Type = JsonSchemaType.Object,
+                Properties = new Dictionary<string, IOpenApiSchema>
             {
-                {"id", new OpenApiSchema {Type = "object" }},
-                {"id2", new OpenApiSchema {Type = "object" }},
-                {"ids", new OpenApiSchema {Type = "array", Items = new OpenApiSchema()}}
+                {"id", new OpenApiSchema {Type = JsonSchemaType.Object }},
+                {"id2", new OpenApiSchema {Type = JsonSchemaType.Object }},
+                {"ids", new OpenApiSchema {Type = JsonSchemaType.Array, Items = new OpenApiSchema()}}
             }
             };
             var schemaGenerator = new SchemaGenerator(new(), new JsonSerializerDataContractResolver(new()));
             var schemaRepository = new SchemaRepository();
             var schemaContext = new SchemaFilterContext(typeof(Y), schemaGenerator, schemaRepository);
             _filter.Apply(openApiSchema, schemaContext);
-            openApiSchema.Type.Should().Be("object");
-            openApiSchema.Properties["id"].Type.Should().Be("integer");
+            openApiSchema.Type.Should().Be(JsonSchemaType.Object);
+            openApiSchema.Properties["id"].Type.Should().Be(JsonSchemaType.Integer);
             openApiSchema.Properties["id"].Format.Should().Be("int32");
 
-            openApiSchema.Properties["id2"].Type.Should().Be("integer");
+            openApiSchema.Properties["id2"].Type.Should().Be(JsonSchemaType.Integer);
             openApiSchema.Properties["id2"].Format.Should().Be("int32");
             openApiSchema.Properties["id2"].Description.Should().Be("Test summary");
 
-            openApiSchema.Properties["ids"].Type.Should().Be("array");
-            openApiSchema.Properties["ids"].Items.Type.Should().Be("integer");
+            openApiSchema.Properties["ids"].Type.Should().Be(JsonSchemaType.Array);
+            openApiSchema.Properties["ids"].Items.Type.Should().Be(JsonSchemaType.Integer);
             openApiSchema.Properties["ids"].Items.Format.Should().Be("int32");
             openApiSchema.Properties["ids"].Items.Description.Should().Be("list of ids");
         }

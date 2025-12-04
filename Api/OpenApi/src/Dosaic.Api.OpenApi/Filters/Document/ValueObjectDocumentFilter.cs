@@ -1,5 +1,5 @@
 using Dosaic.Api.OpenApi.Filters.Common;
-using Microsoft.OpenApi.Models;
+using Microsoft.OpenApi;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
 namespace Dosaic.Api.OpenApi.Filters.Document
@@ -17,19 +17,27 @@ namespace Dosaic.Api.OpenApi.Filters.Document
                 schema.Extensions.Remove(Markers.ValueObjectFormatMarker);
 
                 var toEdit = swaggerDoc.Paths.SelectMany(x => x.Value.Operations)
-                    .Where(x => x.Value.Parameters?.Any(p => p.Schema?.Reference?.Id == entry) ?? false)
-                    .SelectMany(x => x.Value.Parameters.Where(y => y.Schema?.Reference?.Id == entry));
+                    .Where(x => x.Value.Parameters?.Any(p => ((OpenApiSchemaReference)p.Schema)?.Reference?.Id == entry) ?? false)
+                    .SelectMany(x => x.Value.Parameters.Where(y => ((OpenApiSchemaReference)y.Schema)?.Reference?.Id == entry));
                 foreach (var parameter in toEdit)
                 {
-                    parameter.Schema = schema;
+                    if (parameter is OpenApiParameter schemaParameter)
+                    {
+                        schemaParameter.Schema = schema;
+                    }
+
                 }
 
-                toEdit = swaggerDoc.Paths.SelectMany(x => x.Value.Parameters)
+                toEdit = swaggerDoc.Paths
+                    .Where(x => x.Value.Parameters != null).SelectMany(x => x.Value.Parameters)
                     .Where(x => x.Extensions != null && x.Extensions.ContainsKey(Markers.ValueObjectFormatMarker));
 
                 foreach (var parameter in toEdit)
                 {
-                    parameter.Schema = schema;
+                    if (parameter is OpenApiParameter schemaParameter)
+                    {
+                        schemaParameter.Schema = schema;
+                    }
                 }
 
                 swaggerDoc.Components.Schemas.Remove(entry);
