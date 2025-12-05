@@ -3,6 +3,7 @@
       <PackageReference Include="MassTransit" />
       <PackageReference Include="MassTransit.RabbitMQ" />
       <PackageReference Include="Polly" />
+      <PackageReference Include="OpenTelemetry.Extensions.Hosting"/>
     </ItemGroup>
 
     <ItemGroup>

@@ -34,11 +34,9 @@ namespace Dosaic.Plugins.Messaging.MassTransit
             var json = JsonSerializer.Serialize(instance);
             var inputBytes = Encoding.UTF8.GetBytes(json);
 
-            using (SHA256 sha256 = SHA256.Create())
-            {
-                byte[] hashBytes = sha256.ComputeHash(inputBytes);
-                return Convert.ToBase64String(hashBytes);
-            }
+            using var sha256 = SHA256.Create();
+            var hashBytes = sha256.ComputeHash(inputBytes);
+            return Convert.ToBase64String(hashBytes);
         }
     }
 }

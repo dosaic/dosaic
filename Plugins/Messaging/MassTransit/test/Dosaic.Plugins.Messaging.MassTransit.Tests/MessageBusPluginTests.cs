@@ -3,6 +3,7 @@ using Dosaic.Hosting.Abstractions;
 using Dosaic.Hosting.Abstractions.Services;
 using Dosaic.Plugins.Messaging.Abstractions;
 using Dosaic.Testing.NUnit;
+using Dosaic.Testing.NUnit.Assertions;
 using Dosaic.Testing.NUnit.Extensions;
 using MassTransit;
 using MassTransit.Configuration;
@@ -52,6 +53,7 @@ public class MessageBusPluginTests
         var sc = TestingDefaults.ServiceCollection();
         _plugin.ConfigureServices(sc);
         var sp = sc.BuildServiceProvider();
+        sp.Should().RegisterSources("MassTransit");
         sp.GetRequiredService<IMessageBus>().Should().BeOfType<MessageSender>();
         sp.GetRequiredService<IMessageValidator>().Should().BeOfType<MessageValidator>();
         sp.GetRequiredService<IMessageConsumer<TestMessage>>().Should().BeOfType<TestConsumer>();
