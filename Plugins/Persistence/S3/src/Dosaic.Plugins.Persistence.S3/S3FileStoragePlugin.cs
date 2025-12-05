@@ -27,7 +27,7 @@ public class S3FileStoragePlugin(S3Configuration configuration)
         if (!string.IsNullOrEmpty(configuration.HealthCheckPath))
             url += $"/{configuration.HealthCheckPath.TrimStart('/')}";
         healthChecksBuilder.AddUrlGroup(new Uri(url), "s3", HealthStatus.Unhealthy,
-            new[] { HealthCheckTag.Readiness.Value });
+            [HealthCheckTag.Readiness.Value]);
     }
 
     private IMinioClient GetMinioClient()

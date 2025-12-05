@@ -2,6 +2,7 @@ using Dosaic.Hosting.Abstractions;
 using Dosaic.Hosting.Abstractions.Plugins;
 using Microsoft.Extensions.DependencyInjection;
 using MongoDB.Driver;
+using MongoDB.Driver.Core.Extensions.DiagnosticSources;
 
 namespace Dosaic.Plugins.Persistence.MongoDb
 {
@@ -18,6 +19,8 @@ namespace Dosaic.Plugins.Persistence.MongoDb
         {
             serviceCollection.AddSingleton(_configuration);
             serviceCollection.AddSingleton<IMongoDbInstance, MongoDbInstance>();
+            serviceCollection.AddOpenTelemetry()
+                .WithTracing(b => b.AddSource("MongoDB.Driver.Core.Extensions.DiagnosticSources"));
         }
 
         public void ConfigureHealthChecks(IHealthChecksBuilder healthChecksBuilder)
@@ -26,7 +29,8 @@ namespace Dosaic.Plugins.Persistence.MongoDb
             {
                 Server = new MongoServerAddress(_configuration.Host, _configuration.Port),
                 ConnectTimeout = TimeSpan.FromSeconds(5),
-                HeartbeatInterval = TimeSpan.FromSeconds(5)
+                HeartbeatInterval = TimeSpan.FromSeconds(5),
+                ClusterConfigurator = cc => cc.Subscribe(new DiagnosticsActivityEventSubscriber())
             };
             if (!string.IsNullOrEmpty(_configuration.User) && !string.IsNullOrEmpty(_configuration.Password))
             {

@@ -1,6 +1,7 @@
 using AwesomeAssertions;
 using Dosaic.Hosting.Abstractions;
 using Dosaic.Testing.NUnit;
+using Dosaic.Testing.NUnit.Assertions;
 using HealthChecks.Redis;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Caching.StackExchangeRedis;
@@ -8,6 +9,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using NSubstitute;
 using NUnit.Framework;
+using OpenTelemetry.Instrumentation.StackExchangeRedis;
 
 namespace Dosaic.Plugins.Caching.Redis.Tests;
 
@@ -22,6 +24,7 @@ public class RedisCachePluginTests
         var sc = TestingDefaults.ServiceCollection();
         _plugin.ConfigureServices(sc);
         var sp = sc.BuildServiceProvider();
+        sp.Should().RegisterInstrumentation<StackExchangeRedisInstrumentation>();
         sp.GetRequiredService<RedisCacheConfiguration>().Should().NotBeNull().And.BeEquivalentTo(_configuration);
         sp.GetRequiredService<IDistributedCache>().Should().BeAssignableTo<RedisCache>();
     }

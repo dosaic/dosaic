@@ -56,10 +56,9 @@ namespace Dosaic.Plugins.Persistence.S3.Blob
 
         public bool ContainsKey(string key) => _encoded.ContainsKey(key.ToUrlEncoded());
 
-        internal IDictionary<string, string> GetUrlEncodedMetadata() =>
-            new Dictionary<string, string>(_encoded);
+        internal Dictionary<string, string> GetUrlEncodedMetadata() => new(_encoded);
 
-        public IDictionary<string, string> GetMetadata() =>
+        public Dictionary<string, string> GetMetadata() =>
             _encoded.ToDictionary(kv => kv.Key.FromUrlEncoded(), kv => kv.Value.FromUrlEncoded());
     }
 }

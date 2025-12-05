@@ -3,6 +3,7 @@ using System.Diagnostics.Metrics;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text.Encodings.Web;
+using Dosaic.Hosting.Abstractions;
 using Dosaic.Hosting.Abstractions.Metrics;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.Logging;
@@ -15,7 +16,7 @@ namespace Dosaic.Plugins.Authorization.Keycloak.Scheme
 {
     internal sealed class KeycloakAuthenticationHandler : AuthenticationHandler<AuthenticationSchemeOptions>
     {
-        private readonly ActivitySource _activitySource = new(nameof(KeycloakAuthenticationHandler));
+        private readonly ActivitySource _activitySource = DosaicDiagnostic.CreateSource();
         private readonly IPublicKeyService _publicKeyService;
         private readonly ILogger _logger;
 
