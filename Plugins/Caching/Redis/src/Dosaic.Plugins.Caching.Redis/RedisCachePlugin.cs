@@ -23,8 +23,11 @@ public class RedisCachePlugin(RedisCacheConfiguration configuration) : IPluginSe
         {
             opts.Configuration = configuration.ConnectionString;
         });
-        serviceCollection.AddSingleton<IConnectionMultiplexer>(ConnectionMultiplexer.Connect(configuration.ConnectionString));
-        serviceCollection.AddOpenTelemetry().WithTracing(x => x.AddRedisInstrumentation());
+        var safeConnectionString = configuration.ConnectionString.TrimEnd(',');
+        if (!safeConnectionString.ToLowerInvariant().Contains("abortconnect="))
+            safeConnectionString += ",abortConnect=false";
+        serviceCollection.AddOpenTelemetry().WithTracing(x => x.AddRedisInstrumentation(ConnectionMultiplexer.Connect(safeConnectionString)));
+
     }
 
     public void ConfigureHealthChecks(IHealthChecksBuilder healthChecksBuilder)

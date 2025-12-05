@@ -15,7 +15,7 @@ namespace Dosaic.Plugins.Caching.Redis.Tests;
 
 public class RedisCachePluginTests
 {
-    private static readonly RedisCacheConfiguration _configuration = new() { ConnectionString = "localhost" };
+    private static readonly RedisCacheConfiguration _configuration = new() { ConnectionString = "redis-host" };
     private static readonly RedisCachePlugin _plugin = new(_configuration);
 
     [Test]
