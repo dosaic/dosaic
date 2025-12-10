@@ -285,6 +285,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dosaic.Extensions.NanoIds",
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dosaic.Extensions.NanoIds.Tests", "Extensions\NanoId\test\Dosaic.Extensions.NanoIds.Tests\Dosaic.Extensions.NanoIds.Tests.csproj", "{1CA1AC0A-2B1B-4574-91BD-4C6E7EA662C6}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{39EC19EE-72BD-4BB9-9948-89A0B39C095B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dosaic.Testing.NUnit.Tests", "Testing\NUnit\test\Dosaic.Testing.NUnit.Tests\Dosaic.Testing.NUnit.Tests.csproj", "{8EFE3949-87C7-4500-B6DF-B6338DE8FE19}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -417,6 +421,8 @@ Global
 		{FB9C36B5-B491-4C3D-8A4A-CA41A6CFCAFA} = {BFB04E81-1645-4FAE-8277-62FD0E607CC4}
 		{B7EC0883-096A-487E-BE5B-2F867F2896A0} = {FB9C36B5-B491-4C3D-8A4A-CA41A6CFCAFA}
 		{1CA1AC0A-2B1B-4574-91BD-4C6E7EA662C6} = {FB9C36B5-B491-4C3D-8A4A-CA41A6CFCAFA}
+		{39EC19EE-72BD-4BB9-9948-89A0B39C095B} = {D9818F98-2E32-457F-8D0C-E09AEAE3D39D}
+		{8EFE3949-87C7-4500-B6DF-B6338DE8FE19} = {39EC19EE-72BD-4BB9-9948-89A0B39C095B}
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{92F5E1E5-0269-4378-BE3B-CDDC1864C0FA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
@@ -615,5 +621,9 @@ Global
 		{1CA1AC0A-2B1B-4574-91BD-4C6E7EA662C6}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{1CA1AC0A-2B1B-4574-91BD-4C6E7EA662C6}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{1CA1AC0A-2B1B-4574-91BD-4C6E7EA662C6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8EFE3949-87C7-4500-B6DF-B6338DE8FE19}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8EFE3949-87C7-4500-B6DF-B6338DE8FE19}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8EFE3949-87C7-4500-B6DF-B6338DE8FE19}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8EFE3949-87C7-4500-B6DF-B6338DE8FE19}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
