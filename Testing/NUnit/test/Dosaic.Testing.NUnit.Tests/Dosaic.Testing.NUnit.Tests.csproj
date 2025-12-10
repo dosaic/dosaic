@@ -4,6 +4,11 @@
     </PropertyGroup>
     
     <ItemGroup>
+      <ProjectReference Include="..\..\..\..\Plugins\Persistence\EfCore\NpgSql\src\Dosaic.Plugins.Persistence.EfCore.NpgSql\Dosaic.Plugins.Persistence.EfCore.NpgSql.csproj" />
       <ProjectReference Include="..\..\src\Dosaic.Testing.NUnit\Dosaic.Testing.NUnit.csproj" />
+    </ItemGroup>
+    
+    <ItemGroup>
+      <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" />
     </ItemGroup>
 </Project>
