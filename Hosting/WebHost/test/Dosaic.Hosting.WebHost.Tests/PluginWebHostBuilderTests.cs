@@ -29,10 +29,11 @@ namespace Dosaic.Hosting.WebHost.Tests
 {
     public class PluginWebHostBuilderTests
     {
-        [Test]
+        [Test, Parallelizable(ParallelScope.None)]
         public async Task ShouldWork()
         {
-            var pluginWebHostBuilder = PluginWebHostBuilder.Create(new Type[] { typeof(TypeImplementationResolverTests.UnitTestPluginConfig) });
+            var pluginWebHostBuilder = PluginWebHostBuilder.Create([typeof(TypeImplementationResolverTests.UnitTestPluginConfig)
+            ]);
             var host = pluginWebHostBuilder.Build();
 
             var cultureInfo = CultureInfo.InvariantCulture;

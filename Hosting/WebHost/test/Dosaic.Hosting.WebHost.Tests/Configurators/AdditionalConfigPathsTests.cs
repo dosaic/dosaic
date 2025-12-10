@@ -1,6 +1,6 @@
 using AwesomeAssertions;
 using Dosaic.Hosting.Abstractions.Configuration;
-using Microsoft.AspNetCore.Builder;
+using Dosaic.Hosting.WebHost.Configurators;
 using Microsoft.Extensions.Configuration;
 using NetEscapades.Configuration.Yaml;
 using NUnit.Framework;
@@ -24,16 +24,21 @@ namespace Dosaic.Hosting.WebHost.Tests.Configurators
             Environment.SetEnvironmentVariable("DOSAIC_HOST_ADDITIONALCONFIGPATHS", null);
         }
 
+        private static IConfiguration BuildConfiguration()
+        {
+            var configManager = new ConfigurationManager();
+
+            HostConfigurator.ConfigureAppConfiguration(configManager);
+
+            return configManager;
+        }
+
         [Test]
         public void ShouldLoadConfigFromAdditionalFolderViaEnvironmentVariable()
         {
             Environment.SetEnvironmentVariable("DOSAIC_HOST_ADDITIONALCONFIGPATHS", _testConfigFolder);
 
-            var pluginWebHostBuilder = PluginWebHostBuilder.Create([typeof(TypeImplementationResolverTests.UnitTestPluginConfig)]);
-            var host = pluginWebHostBuilder.Build();
-
-            var webApplication = host.As<WebApplication>();
-            var configuration = webApplication.Configuration;
+            var configuration = BuildConfiguration();
 
             configuration.GetValue<string>("additionalConfig:testValue").Should().Be("loaded from additional folder");
             configuration.GetValue<bool>("additionalConfig:featureFlag").Should().BeTrue();
@@ -44,11 +49,7 @@ namespace Dosaic.Hosting.WebHost.Tests.Configurators
         {
             Environment.SetEnvironmentVariable("DOSAIC_HOST_ADDITIONALCONFIGPATHS", _testConfigFolder);
 
-            var pluginWebHostBuilder = PluginWebHostBuilder.Create([typeof(TypeImplementationResolverTests.UnitTestPluginConfig)]);
-            var host = pluginWebHostBuilder.Build();
-
-            var webApplication = host.As<WebApplication>();
-            var configuration = webApplication.Configuration;
+            var configuration = BuildConfiguration();
 
             configuration.GetValue<string>("subfolder:config").Should().Be("loaded from subfolder");
             configuration.GetValue<int>("subfolder:level").Should().Be(2);
@@ -59,11 +60,7 @@ namespace Dosaic.Hosting.WebHost.Tests.Configurators
         {
             Environment.SetEnvironmentVariable("DOSAIC_HOST_ADDITIONALCONFIGPATHS", _testConfigFolder);
 
-            var pluginWebHostBuilder = PluginWebHostBuilder.Create([typeof(TypeImplementationResolverTests.UnitTestPluginConfig)]);
-            var host = pluginWebHostBuilder.Build();
-
-            var webApplication = host.As<WebApplication>();
-            var configuration = webApplication.Configuration;
+            var configuration = BuildConfiguration();
 
             configuration.GetValue<bool>("jsonConfig:loaded").Should().BeTrue();
             configuration.GetValue<string>("jsonConfig:format").Should().Be("json");
@@ -76,11 +73,7 @@ namespace Dosaic.Hosting.WebHost.Tests.Configurators
             var paths = $"{_testConfigFolder},{folder1}";
             Environment.SetEnvironmentVariable("DOSAIC_HOST_ADDITIONALCONFIGPATHS", paths);
 
-            var pluginWebHostBuilder = PluginWebHostBuilder.Create([typeof(TypeImplementationResolverTests.UnitTestPluginConfig)]);
-            var host = pluginWebHostBuilder.Build();
-
-            var webApplication = host.As<WebApplication>();
-            var configuration = webApplication.Configuration;
+            var configuration = BuildConfiguration();
 
             configuration.GetValue<string>("additionalConfig:testValue").Should().Be("loaded from additional folder");
             configuration.GetValue<string>("subfolder:config").Should().Be("loaded from subfolder");
@@ -93,11 +86,7 @@ namespace Dosaic.Hosting.WebHost.Tests.Configurators
             var paths = $"{_testConfigFolder};{folder1}";
             Environment.SetEnvironmentVariable("DOSAIC_HOST_ADDITIONALCONFIGPATHS", paths);
 
-            var pluginWebHostBuilder = PluginWebHostBuilder.Create([typeof(TypeImplementationResolverTests.UnitTestPluginConfig)]);
-            var host = pluginWebHostBuilder.Build();
-
-            var webApplication = host.As<WebApplication>();
-            var configuration = webApplication.Configuration;
+            var configuration = BuildConfiguration();
 
             configuration.GetValue<string>("additionalConfig:testValue").Should().Be("loaded from additional folder");
             configuration.GetValue<string>("subfolder:config").Should().Be("loaded from subfolder");
@@ -109,11 +98,7 @@ namespace Dosaic.Hosting.WebHost.Tests.Configurators
             var nonExistentPath = "/nonexistent/folder/path";
             Environment.SetEnvironmentVariable("DOSAIC_HOST_ADDITIONALCONFIGPATHS", $"{_testConfigFolder},{nonExistentPath}");
 
-            var pluginWebHostBuilder = PluginWebHostBuilder.Create([typeof(TypeImplementationResolverTests.UnitTestPluginConfig)]);
-            var host = pluginWebHostBuilder.Build();
-
-            var webApplication = host.As<WebApplication>();
-            var configuration = webApplication.Configuration;
+            var configuration = BuildConfiguration();
 
             configuration.GetValue<string>("additionalConfig:testValue").Should().Be("loaded from additional folder");
         }
@@ -126,11 +111,7 @@ namespace Dosaic.Hosting.WebHost.Tests.Configurators
 
             Environment.SetEnvironmentVariable("DOSAIC_HOST_ADDITIONALCONFIGPATHS", relativePath);
 
-            var pluginWebHostBuilder = PluginWebHostBuilder.Create([typeof(TypeImplementationResolverTests.UnitTestPluginConfig)]);
-            var host = pluginWebHostBuilder.Build();
-
-            var webApplication = host.As<WebApplication>();
-            var configuration = webApplication.Configuration;
+            var configuration = BuildConfiguration();
 
             configuration.GetValue<string>("additionalConfig:testValue").Should().Be("loaded from additional folder");
         }
@@ -138,14 +119,14 @@ namespace Dosaic.Hosting.WebHost.Tests.Configurators
         [Test]
         public void ShouldWorkWithoutAdditionalConfigPaths()
         {
-            var pluginWebHostBuilder = PluginWebHostBuilder.Create([typeof(TypeImplementationResolverTests.UnitTestPluginConfig)]);
-            var host = pluginWebHostBuilder.Build();
+            var configuration = BuildConfiguration();
+            var configurationRoot = configuration as IConfigurationRoot;
 
-            var webApplication = host.As<WebApplication>();
-            var configurationProviders = webApplication.Configuration.As<IConfigurationRoot>().Providers.ToList();
+            configurationRoot.Should().NotBeNull();
+            var providers = configurationRoot!.Providers.ToList();
 
-            configurationProviders[0].Should().BeOfType<YamlConfigurationProvider>();
-            configurationProviders[^1].Should().BeOfType<EnvConfigurationProvider>();
+            providers[0].Should().BeOfType<YamlConfigurationProvider>();
+            providers[^1].Should().BeOfType<EnvConfigurationProvider>();
         }
     }
 }
