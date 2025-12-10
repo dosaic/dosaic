@@ -66,6 +66,15 @@ namespace Dosaic.Testing.NUnit.Tests.Extensions
             fakes.Should().HaveCount(10);
             fakes.Should().AllSatisfy(x => x.FirstName.Should().Be("test"));
         }
+
+        [Test]
+        public void TypeRules()
+        {
+            var config = new FakeDataConfig().AddTypeRule(f => 1);
+            var fakeData = new FakeData(config);
+            var x = fakeData.Fake<SampleClass2>();
+            x.Id.Should().Be(1);
+        }
     }
 
     public class SampleClass

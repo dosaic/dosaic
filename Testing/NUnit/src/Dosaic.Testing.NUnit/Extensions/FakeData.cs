@@ -8,6 +8,13 @@ namespace Dosaic.Testing.NUnit.Extensions
     {
         public string Locale { get; set; } = "en";
         public bool UseStrictMode { get; set; }
+        internal IDictionary<Type, Delegate> TypeRules { get; } = new Dictionary<Type, Delegate>();
+
+        public FakeDataConfig AddTypeRule<T>(Func<Faker, T> rule)
+        {
+            TypeRules.Add(typeof(T), rule);
+            return this;
+        }
     }
 
     public class FakeData
@@ -45,6 +52,11 @@ namespace Dosaic.Testing.NUnit.Extensions
         {
             var typedFaker = new Faker<T>(_faker.Locale);
             typedFaker.StrictMode(_config.UseStrictMode);
+            var ruleForTypeMethod = typeof(Faker<T>).GetMethod("RuleForType")!;
+            _config.TypeRules.ForEach(x =>
+            {
+                ruleForTypeMethod.MakeGenericMethod(x.Key).Invoke(typedFaker, [x.Key, x.Value]);
+            });
             _testDataSetups
                 .OfType<IFakeDataSetup<T>>()
                 .ForEach(x => x.ConfigureRules(typedFaker));
