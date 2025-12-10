@@ -24,7 +24,9 @@ namespace Dosaic.Api.OpenApi.Filters.Operation
                         formFileParams.ToDictionary<ParameterInfo, string, IOpenApiSchema>(x => x.Name,
                             x => new OpenApiSchema
                             {
-                                Description = "Upload File", Type = JsonSchemaType.Object, Format = "binary"
+                                Description = "Upload File",
+                                Type = JsonSchemaType.Object,
+                                Format = "binary"
                             }),
                     Required = formFileParams.Select(x => x.Name).ToHashSet()
                 }

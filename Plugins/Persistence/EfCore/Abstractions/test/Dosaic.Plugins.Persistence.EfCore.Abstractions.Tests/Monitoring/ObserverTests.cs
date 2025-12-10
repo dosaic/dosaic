@@ -115,7 +115,7 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests.Monitoring
             var keyValuePair =
                 new KeyValuePair<string, object>("Microsoft.EntityFrameworkCore.Database.Command.CommandExecuted",
                     new CommandExecutedEventData(null!, null!, null!, null!,
-                        null!, null!,DbCommandMethod.ExecuteNonQuery,
+                        null!, null!, DbCommandMethod.ExecuteNonQuery,
                         Guid.Empty, Guid.Empty, null!, false,
                         false, DateTimeOffset.Now, TimeSpan.FromSeconds(10),
                         CommandSource.Unknown));

@@ -36,11 +36,11 @@ namespace Dosaic.Api.OpenApi.Filters.Schema
         private void ApplyToClass(IOpenApiSchema schema, SchemaFilterContext context, Type type)
         {
             var properties = from prop in type.GetProperties()
-                where HasValueObjectAttribute(prop)
-                      || (prop.PropertyType.Implements<IEnumerable>()
-                          && prop.PropertyType.IsGenericType
-                          && HasValueObjectAttribute(prop.PropertyType.GetGenericArguments()[0]))
-                select prop;
+                             where HasValueObjectAttribute(prop)
+                                   || (prop.PropertyType.Implements<IEnumerable>()
+                                       && prop.PropertyType.IsGenericType
+                                       && HasValueObjectAttribute(prop.PropertyType.GetGenericArguments()[0]))
+                             select prop;
             foreach (var prop in properties)
             {
                 var key = schema.Properties.Keys.Single(x =>
@@ -72,8 +72,6 @@ namespace Dosaic.Api.OpenApi.Filters.Schema
 
                 schema.Description = propertyInfo == null ? schema.Description : GetDescription(propertyInfo);
             }
-
-
 
         }
 

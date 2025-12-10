@@ -1,26 +1,26 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-    <PropertyGroup>
-
-
-        <IsPackable>true</IsPackable>
-    </PropertyGroup>
+  <PropertyGroup>
+    <IsPackable>true</IsPackable>
+  </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="AspNetCore.HealthChecks.MongoDb" />
-    <PackageReference Include="Buildalyzer.Workspaces" />
-    <PackageReference Include="Microsoft.CodeAnalysis" />
-    <PackageReference Include="Microsoft.CodeAnalysis.VisualBasic.Workspaces" />
-    <PackageReference Include="MongoDB.Driver" />
-    <PackageReference Include="MongoDB.Driver.Core.Extensions.DiagnosticSources" />
-    <PackageReference Include="MongoDBMigrations" />
-    <PackageReference Include="Newtonsoft.Json" />
-    <PackageReference Include="OpenTelemetry.Extensions.Hosting" />
-    <PackageReference Include="SSH.NET" />
+    <PackageReference Include="AspNetCore.HealthChecks.MongoDb"/>
+    <PackageReference Include="Buildalyzer.Workspaces"/>
+    <PackageReference Include="Microsoft.Build"/>
+    <PackageReference Include="Microsoft.Build.Tasks.Core"/>
+    <PackageReference Include="Microsoft.Build.Utilities.Core"/>
+    <PackageReference Include="Microsoft.CodeAnalysis"/>
+    <PackageReference Include="Microsoft.CodeAnalysis.VisualBasic.Workspaces"/>
+    <PackageReference Include="MongoDB.Driver"/>
+    <PackageReference Include="MongoDB.Driver.Core.Extensions.DiagnosticSources"/>
+    <PackageReference Include="MongoDBMigrations"/>
+    <PackageReference Include="Newtonsoft.Json"/>
+    <PackageReference Include="OpenTelemetry.Extensions.Hosting"/>
+    <PackageReference Include="SSH.NET"/>
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\..\..\Hosting\Abstractions\src\Dosaic.Hosting.Abstractions\Dosaic.Hosting.Abstractions.csproj" />
+    <ProjectReference Include="..\..\..\..\..\Hosting\Abstractions\src\Dosaic.Hosting.Abstractions\Dosaic.Hosting.Abstractions.csproj"/>
   </ItemGroup>
-
 </Project>
