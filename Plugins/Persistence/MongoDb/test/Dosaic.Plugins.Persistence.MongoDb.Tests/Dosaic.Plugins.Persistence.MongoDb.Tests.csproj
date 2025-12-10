@@ -6,11 +6,6 @@
         <IsPackable>false</IsPackable>
         <RootNamespace>Dosaic.Plugins.Persistence.MongoDb</RootNamespace>
     </PropertyGroup>
-  <ItemGroup>
-    <PackageReference Include="Microsoft.Build" />
-    <PackageReference Include="Microsoft.Build.Tasks.Core" />
-    <PackageReference Include="Microsoft.Build.Utilities.Core" />
-  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\..\..\..\Testing\NUnit\src\Dosaic.Testing.NUnit\Dosaic.Testing.NUnit.csproj" />
