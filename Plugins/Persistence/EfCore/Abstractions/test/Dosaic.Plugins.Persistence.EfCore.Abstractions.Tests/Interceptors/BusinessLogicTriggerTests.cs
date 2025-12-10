@@ -1,7 +1,7 @@
-using AutoBogus;
 using Dosaic.Plugins.Persistence.EfCore.Abstractions.Audit;
 using Dosaic.Plugins.Persistence.EfCore.Abstractions.Interceptors;
 using Dosaic.Plugins.Persistence.EfCore.Abstractions.Triggers;
+using Dosaic.Testing.NUnit.Extensions;
 using NSubstitute;
 using NUnit.Framework;
 
@@ -19,7 +19,7 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests.Interceptors
         {
             _interceptor = Substitute.For<IBusinessLogicInterceptor>();
             _trigger = new BusinessLogicTrigger<TestModel>(_interceptor);
-            _entity = AutoFaker.Generate<TestModel>(o => o.WithTreeDepth(1));
+            _entity = new FakeData().Fake<TestModel>();
             _triggerContext = TestExtensions.GetTriggerContext(_entity, ChangeState.Added);
         }
 
