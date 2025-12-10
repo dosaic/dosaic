@@ -2,6 +2,7 @@ using AwesomeAssertions;
 using Chronos;
 using Chronos.Abstractions;
 using Dosaic.Hosting.Abstractions;
+using Dosaic.Testing.NUnit.Assertions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using NSubstitute;
@@ -32,6 +33,8 @@ namespace Dosaic.Plugins.Persistence.MongoDb
             var plugin = new MongoDbPlugin(_mongoDbConfiguration);
             plugin.ConfigureServices(sc);
             var sp = sc.BuildServiceProvider();
+
+            sp.Should().RegisterSources("MongoDB.Driver.Core.Extensions.DiagnosticSources");
 
             var mongoDbConfig = sp.GetRequiredService<MongoDbConfiguration>();
             mongoDbConfig.Should().NotBeNull();

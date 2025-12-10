@@ -1,6 +1,8 @@
+using System.Diagnostics;
 using System.Globalization;
 using System.Net;
 using Dosaic.Hosting.Abstractions.Exceptions;
+using Dosaic.Hosting.Abstractions.Extensions;
 using Dosaic.Plugins.Persistence.VaultSharp.Types;
 using VaultSharp.Core;
 using VaultSharp.V1.SecretsEngines.KeyValue.V2;
@@ -15,54 +17,86 @@ public class SecretStorage<TSecretBucket>(
     : ISecretStorage<TSecretBucket>
     where TSecretBucket : struct, Enum
 {
+    // ReSharper disable once StaticMemberInGenericType
+    private static readonly ActivitySource _activitySource = new("Dosaic.Plugins.Persistence.VaultSharp.Secret.SecretStorage");
+
+    private static void SetSecretTags(Activity activity, SecretId<TSecretBucket> secretId)
+    {
+        activity?.SetTag("secret.bucket", secretId.Bucket);
+        activity?.SetTag("secret.key", secretId.Key);
+        activity?.SetTag("secret.type", secretId.Type);
+    }
+
     public async Task<Secret> GetSecretAsync(SecretId<TSecretBucket> secretId,
         CancellationToken cancellationToken = default)
     {
+        using var activity = _activitySource.StartActivity();
+        SetSecretTags(activity, secretId);
+
         try
         {
-            switch (secretId.Type)
-            {
-                case SecretType.UsernamePassword:
-                    return (await keyValueSecretEngine.ReadSecretAsync<UsernamePasswordSecret>(secretId.Id)).Data.Data;
-                case SecretType.UsernamePasswordApiKey:
-                    return (await keyValueSecretEngine
-                        .ReadSecretAsync<UsernamePasswordApiKeySecret>(secretId.Id)).Data.Data;
-                case SecretType.UsernamePasswordTotp:
-                    var upSecret =
-                        (await keyValueSecretEngine.ReadSecretAsync<UsernamePasswordTotpSecret>(secretId.Id)).Data.Data;
-                    var (remainingSeconds, validUntil) = GetTotpDuration();
-                    var totpCode = (await totpSecretEngine.GetCodeAsync(secretId.Id)).Data.Code!;
-                    return upSecret with
-                    {
-                        Totp = new Totp(new TotpCode(totpCode, validUntil, remainingSeconds), null)
-                    };
-                case SecretType.Certificate:
-                    return (await keyValueSecretEngine.ReadSecretAsync<CertificateSecret>(secretId.Id)).Data.Data;
-                default:
-                    throw new ArgumentOutOfRangeException(nameof(secretId), "Invalid secret type");
-            }
+            var secret = await RetrieveSecretAsync(secretId);
+            activity.SetOkStatus();
+            return secret;
         }
         catch (VaultApiException vaultApiException)
         {
+            activity.SetErrorStatus(vaultApiException);
             if (vaultApiException.HttpStatusCode == HttpStatusCode.NotFound)
                 throw new NotFoundDosaicException(typeof(Secret), "Could not find secret");
             throw new DosaicException("Unexpected exception during retrieval of secret", vaultApiException);
         }
     }
 
+    private async Task<Secret> RetrieveSecretAsync(SecretId<TSecretBucket> secretId)
+    {
+        switch (secretId.Type)
+        {
+            case SecretType.UsernamePassword:
+                return (await keyValueSecretEngine.ReadSecretAsync<UsernamePasswordSecret>(secretId.Id)).Data.Data;
+            case SecretType.UsernamePasswordApiKey:
+                return (await keyValueSecretEngine
+                    .ReadSecretAsync<UsernamePasswordApiKeySecret>(secretId.Id)).Data.Data;
+            case SecretType.UsernamePasswordTotp:
+                var upSecret =
+                    (await keyValueSecretEngine.ReadSecretAsync<UsernamePasswordTotpSecret>(secretId.Id)).Data.Data;
+                var (remainingSeconds, validUntil) = GetTotpDuration();
+                var totpCode = (await totpSecretEngine.GetCodeAsync(secretId.Id)).Data.Code!;
+                return upSecret with
+                {
+                    Totp = new Totp(new TotpCode(totpCode, validUntil, remainingSeconds), null)
+                };
+            case SecretType.Certificate:
+                return (await keyValueSecretEngine.ReadSecretAsync<CertificateSecret>(secretId.Id)).Data.Data;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(secretId), "Invalid secret type");
+        }
+    }
+
     public Task<SecretId<TSecretBucket>> CreateSecretAsync(TSecretBucket bucket, Secret secret,
         CancellationToken cancellationToken = default) =>
-        WriteSecretAsync(GetNewSecretIdFromSecret(bucket, secret), secret);
+        _activitySource.TrackStatusAsync((activity) =>
+        {
+            var newSecret = GetNewSecretIdFromSecret(bucket, secret);
+            SetSecretTags(activity, newSecret);
+            return WriteSecretAsync(newSecret, secret);
+        });
 
     public Task<SecretId<TSecretBucket>> UpdateSecretAsync(SecretId<TSecretBucket> secretId, Secret secret,
-        CancellationToken cancellationToken = default) => WriteSecretAsync(secretId, secret);
-
-    public async Task DeleteSecretAsync(SecretId<TSecretBucket> secretId, CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default) => _activitySource.TrackStatusAsync((activity) =>
     {
-        if (secretId.Type == SecretType.UsernamePasswordTotp)
-            await totpSecretEngine.DeleteKeyAsync(secretId.Id);
-        await keyValueSecretEngine.DeleteSecretAsync(secretId.Id);
-    }
+        SetSecretTags(activity, secretId);
+        return WriteSecretAsync(secretId, secret);
+    });
+
+    public Task DeleteSecretAsync(SecretId<TSecretBucket> secretId, CancellationToken cancellationToken = default) =>
+        _activitySource.TrackStatusAsync(async (activity) =>
+        {
+            SetSecretTags(activity, secretId);
+            if (secretId.Type == SecretType.UsernamePasswordTotp)
+                await totpSecretEngine.DeleteKeyAsync(secretId.Id);
+            await keyValueSecretEngine.DeleteSecretAsync(secretId.Id);
+        });
 
     private static SecretId<TSecretBucket> GetNewSecretIdFromSecret(TSecretBucket bucket, Secret secret)
     {

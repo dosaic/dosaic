@@ -147,7 +147,7 @@ namespace Dosaic.Hosting.WebHost.Configurators
                         .AddHttpClientInstrumentation()
                         .AddRuntimeInstrumentation()
                         .AddProcessInstrumentation()
-                        .AddMeter("*")
+                        .AddMeter("*", DosaicDiagnostic.DosaicAllActivities)
                         .AddOtlpExporter(setExporterOptions)
                         .AddPrometheusExporter();
                 });
@@ -157,7 +157,7 @@ namespace Dosaic.Hosting.WebHost.Configurators
             otel.WithTracing(
                 builder => builder
                     .ConfigureResource(setResource)
-                    .AddSource("*")
+                    .AddSource("*", DosaicDiagnostic.DosaicAllActivities)
                     .AddHttpClientInstrumentation()
                     .AddAspNetCoreInstrumentation(instrumentationOptions => instrumentationOptions.Filter = (context) => !context.Request.Path.StartsWithSegments("/swagger"))
                     .AddOtlpExporter(setExporterOptions)

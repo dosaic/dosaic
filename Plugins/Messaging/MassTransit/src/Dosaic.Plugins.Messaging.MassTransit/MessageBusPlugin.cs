@@ -12,6 +12,7 @@ namespace Dosaic.Plugins.Messaging.MassTransit;
 
 public class MessageBusPlugin(IImplementationResolver implementationResolver, MessageBusConfiguration configuration, IMessageBusConfigurator[] configurators) : IPluginServiceConfiguration
 {
+    private const string OpenTelemetrySourceName = "MassTransit";
     private record QueueMessageTypes(Uri Queue, Type[] MessageTypes);
     private IList<Type> GetMessageConsumers()
     {
@@ -55,6 +56,10 @@ public class MessageBusPlugin(IImplementationResolver implementationResolver, Me
             sp.GetRequiredService<IMessageValidator>(),
             sp.GetService<IMessageScheduler>(), sp.GetRequiredService<IMessageDeduplicateKeyProvider>()));
         ConfigureMassTransit(serviceCollection, messageTypes, queueGroups);
+        serviceCollection.AddOpenTelemetry().WithTracing(builder =>
+        {
+            builder.AddSource(OpenTelemetrySourceName);
+        });
     }
 
     private void ConfigureMassTransit(IServiceCollection serviceCollection, Type[] messageTypes, IList<QueueMessageTypes> queueGroups)

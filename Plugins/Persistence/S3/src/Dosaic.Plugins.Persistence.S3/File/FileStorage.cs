@@ -1,7 +1,10 @@
 using System.Collections.Immutable;
+using System.Diagnostics;
 using System.Globalization;
 using System.Security.Cryptography;
+using Dosaic.Hosting.Abstractions;
 using Dosaic.Hosting.Abstractions.Exceptions;
+using Dosaic.Hosting.Abstractions.Extensions;
 using Dosaic.Plugins.Persistence.S3.Blob;
 using Microsoft.Extensions.Logging;
 using MimeDetective;
@@ -66,7 +69,15 @@ public class FileStorage(
     S3Configuration configuration,
     IFileTypeDefinitionResolver fileTypeDefinitionResolver) : IFileStorage
 {
+    private static readonly ActivitySource _activitySource = DosaicDiagnostic.CreateSource();
     private const string ApplicationOctetStream = "application/octet-stream";
+
+    private static void SetFileIdTags(Activity activity, FileId fileId)
+    {
+        activity?.SetTag("file.bucket", fileId.Bucket);
+        activity?.SetTag("file.key", fileId.Key);
+    }
+
     public async Task<string> ComputeHash(Stream stream, CancellationToken cancellationToken)
     {
         using var sha256 = SHA256.Create();
@@ -76,9 +87,10 @@ public class FileStorage(
         return hash;
     }
 
-    public async Task<BlobFile> GetFileAsync(FileId id,
-        CancellationToken cancellationToken = default)
+    public Task<BlobFile> GetFileAsync(FileId id,
+        CancellationToken cancellationToken = default) => _activitySource.TrackStatusAsync(async (activity) =>
     {
+        SetFileIdTags(activity, id);
         var statArgs = new StatObjectArgs().WithBucket(ResolveBucketName(id.Bucket)).WithObject(id.Key);
         var objectStat = await minioClient.StatObjectAsync(statArgs, cancellationToken);
         var metaData = new Dictionary<string, string>
@@ -91,37 +103,46 @@ public class FileStorage(
             { BlobFileMetaData.ContentType, objectStat.ContentType },
             { BlobFileMetaData.ContentLength, objectStat.Size.ToString(CultureInfo.InvariantCulture) }
         };
+        activity.SetTags(metaData, "file.metadata.");
         if (objectStat.MetaData.TryGetValue(BlobFileMetaData.Hash, out var hashValue))
             metaData.Add(BlobFileMetaData.Hash, hashValue);
         var blob = new BlobFile(id) { LastModified = objectStat.LastModified };
         blob.MetaData.Set(metaData);
         return blob;
-    }
+    });
 
-    public Task DeleteFileAsync(FileId id, CancellationToken cancellationToken = default)
-    {
-        return minioClient.RemoveObjectAsync(
-            new RemoveObjectArgs().WithBucket(ResolveBucketName(id.Bucket)).WithObject(id.Key),
-            cancellationToken);
-    }
+    public Task DeleteFileAsync(FileId id, CancellationToken cancellationToken = default) =>
+        _activitySource.TrackStatusAsync((
+            activity) =>
+        {
+            SetFileIdTags(activity, id);
+            return minioClient.RemoveObjectAsync(
+                new RemoveObjectArgs().WithBucket(ResolveBucketName(id.Bucket)).WithObject(id.Key),
+                cancellationToken);
+        });
 
-    public async Task CreateBucketAsync(string bucket, CancellationToken cancellationToken = default)
-    {
-        await minioClient.MakeBucketAsync(new MakeBucketArgs().WithBucket(ResolveBucketName(bucket)),
-            cancellationToken);
-    }
+    public Task CreateBucketAsync(string bucket, CancellationToken cancellationToken = default) =>
+        _activitySource.TrackStatusAsync(async (activity) =>
+        {
+            var bucketName = ResolveBucketName(bucket);
+            activity?.SetTag("s3.bucket", bucketName);
+            await minioClient.MakeBucketAsync(new MakeBucketArgs().WithBucket(bucketName),
+                cancellationToken);
+        });
 
     public async Task ConsumeStreamAsync(FileId id, Func<Stream, CancellationToken, Task> streamConsumer,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default) => await _activitySource.TrackStatusAsync(async (activity) =>
     {
+        SetFileIdTags(activity, id);
         var getArgs = new GetObjectArgs().WithBucket(ResolveBucketName(id.Bucket)).WithObject(id.Key)
             .WithCallbackStream(streamConsumer);
         await minioClient.GetObjectAsync(getArgs, cancellationToken);
-    }
+    });
 
     public async Task<FileId> SetAsync(BlobFile file, Stream stream, FileType fileType,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default) => await _activitySource.TrackStatusAsync(async (activity) =>
     {
+        SetFileIdTags(activity, file.Id);
         if (!file.MetaData.ContainsKey(BlobFileMetaData.ContentType))
         {
             file.MetaData.TryGetValue(BlobFileMetaData.FileExtension, out var fileExtension);
@@ -132,9 +153,12 @@ public class FileStorage(
             file.MetaData.Set(BlobFileMetaData.ContentType, contentType);
         }
 
-        ValidateContentType(fileType, file.MetaData[BlobFileMetaData.ContentType]);
-
         file.MetaData.Set(BlobFileMetaData.Hash, await ComputeHash(stream, cancellationToken));
+
+        activity?.SetTag("file.type", fileType);
+        activity.SetTags(file.MetaData.GetMetadata(), "file.metadata.");
+
+        ValidateContentType(fileType, file.MetaData[BlobFileMetaData.ContentType]);
 
         var bucketWithPrefix = ResolveBucketName(file.Id.Bucket);
         var arguments = new PutObjectArgs()
@@ -155,7 +179,7 @@ public class FileStorage(
         var errorMessage = $"Could not save file {bucketWithPrefix}:{file.Id.Key} to s3";
         logger.LogError(errorMessage);
         throw new DosaicException(errorMessage);
-    }
+    });
 
     private string GetMimeTypeFromFileExtension(string filename)
     {

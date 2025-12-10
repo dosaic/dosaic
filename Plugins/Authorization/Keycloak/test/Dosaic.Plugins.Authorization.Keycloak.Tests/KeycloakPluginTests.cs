@@ -2,6 +2,7 @@ using System.Net.Http;
 using AwesomeAssertions;
 using Dosaic.Hosting.Abstractions;
 using Dosaic.Plugins.Authorization.Keycloak.Scheme;
+using Dosaic.Testing.NUnit.Assertions;
 using Dosaic.Testing.NUnit.Extensions;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
