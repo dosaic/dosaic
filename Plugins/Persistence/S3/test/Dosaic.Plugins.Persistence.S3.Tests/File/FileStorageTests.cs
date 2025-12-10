@@ -31,7 +31,9 @@ namespace Dosaic.Plugins.Persistence.S3.Tests.File
         private IFileStorage<SampleBucket> _fileStorageSampleBucket;
         private IFileStorage _fileStorage;
         private S3Configuration _configuration;
-        private readonly TestFileTypeDefinitionResolver _testFileTypeDefinitionResolver = new TestFileTypeDefinitionResolver();
+
+        private readonly TestFileTypeDefinitionResolver _testFileTypeDefinitionResolver = new();
+
         private static readonly byte[] _imageSignature = [0xFF, 0xD8, 0xFF, 0x00];
         private static readonly byte[] _applicationOctetSignature = [0x00];
         private static readonly byte[] _pdfSignature = "%PDF"u8.ToArray();
@@ -175,7 +177,7 @@ namespace Dosaic.Plugins.Persistence.S3.Tests.File
                 { BlobFileMetaData.Filename, "test.pdf" }, { "something-custom", "test" }
             });
             var result = await _fileStorageSampleBucket.SetAsync(
-               blob,
+                blob,
                 imageStream);
             result.Bucket.Should().Be(SampleBucket.Logos);
             result.Key.Should().Be("test");
@@ -307,16 +309,12 @@ namespace Dosaic.Plugins.Persistence.S3.Tests.File
         public async Task ComputeHashWorksIsThreadSafe()
         {
             var bytes = Encoding.UTF8.GetBytes(new string('t', 10_000));
-            var tasks = new List<Task<string>>();
-            Parallel.For(0, 1000, _ =>
-            {
-                tasks.Add(_fileStorage.ComputeHash(bytes));
-            });
-            foreach (var task in tasks)
-            {
-                var result = await task;
-                result.Should().NotBeEmpty();
-            }
+            var tasks = new System.Collections.Concurrent.ConcurrentBag<Task<string>>();
+
+            Parallel.For(0, 1000, _ => { tasks.Add(_fileStorage.ComputeHash(bytes)); });
+
+            var results = await Task.WhenAll(tasks);
+            results.Should().AllSatisfy(r => r.Should().NotBeEmpty());
         }
 
         [Test]
@@ -334,7 +332,9 @@ namespace Dosaic.Plugins.Persistence.S3.Tests.File
             var defs = ((FileStorage)_fileStorage).GetDefinitions(FileType.Images);
 
             defs.Should().NotBeEmpty();
-            defs.Should().BeEquivalentTo([.. DefaultDefinitions.FileTypes.Images.All().Where(x => !x.File.Extensions.Contains("psd"))]);
+            defs.Should().BeEquivalentTo([
+                .. DefaultDefinitions.FileTypes.Images.All().Where(x => !x.File.Extensions.Contains("psd"))
+            ]);
         }
 
         [Test]
@@ -364,7 +364,9 @@ namespace Dosaic.Plugins.Persistence.S3.Tests.File
         {
             var fileTypeDefs = ((FileStorage)_fileStorage).GetDefinitions(SampleBucket.Logos.GetFileType());
 
-            fileTypeDefs.Should().BeEquivalentTo([.. DefaultDefinitions.FileTypes.Images.All().Where(x => !x.File.Extensions.Contains("psd"))]);
+            fileTypeDefs.Should().BeEquivalentTo([
+                .. DefaultDefinitions.FileTypes.Images.All().Where(x => !x.File.Extensions.Contains("psd"))
+            ]);
         }
     }
 
@@ -378,7 +380,8 @@ namespace Dosaic.Plugins.Persistence.S3.Tests.File
                 FileType.Archives => DefaultDefinitions.FileTypes.Archives.All(),
                 FileType.Documents => DefaultDefinitions.FileTypes.Documents.All(),
                 FileType.Email => DefaultDefinitions.FileTypes.Email.All(),
-                FileType.Images => [.. DefaultDefinitions.FileTypes.Images.All().Where(x => !x.File.Extensions.Contains("psd"))],
+                FileType.Images =>
+                    [.. DefaultDefinitions.FileTypes.Images.All().Where(x => !x.File.Extensions.Contains("psd"))],
                 FileType.Text => DefaultDefinitions.FileTypes.Text.All(),
                 FileType.Xml => DefaultDefinitions.FileTypes.Xml.All(),
                 _ => DefaultDefinitions.All()
