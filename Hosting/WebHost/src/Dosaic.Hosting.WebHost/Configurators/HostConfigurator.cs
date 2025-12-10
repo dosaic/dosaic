@@ -31,11 +31,25 @@ namespace Dosaic.Hosting.WebHost.Configurators
 
             configurationManager.Sources.Clear();
 
-            var settings = FindAppSettingFiles("json", "yaml", "yml").ToList();
-            foreach (var file in settings.Where(x => !IsSecretsFile(x)))
+            var additionalPaths = GetAdditionalConfigPaths();
+            var allSettings = new List<string>();
+
+            allSettings.AddRange(FindAppSettingFiles("json", "yaml", "yml"));
+
+            foreach (var path in additionalPaths)
+            {
+                allSettings.AddRange(FindAppSettingFilesRecursive(path, "json", "yaml", "yml"));
+            }
+
+            var orderedSettings = allSettings
+                .Distinct()
+                .OrderBy(x => Path.GetFileName(x).Split('.').Length)
+                .ToList();
+
+            foreach (var file in orderedSettings.Where(x => !IsSecretsFile(x)))
                 configurationManager.AddFile(file);
 
-            foreach (var file in settings.Where(IsSecretsFile))
+            foreach (var file in orderedSettings.Where(IsSecretsFile))
                 configurationManager.AddFile(file);
 
             configurationManager.AddEnvVariables();
@@ -45,6 +59,48 @@ namespace Dosaic.Hosting.WebHost.Configurators
         private static bool IsSecretsFile(string filename) => filename.EndsWith(".secrets.yaml") ||
                                                              filename.EndsWith(".secrets.yml") ||
                                                              filename.EndsWith(".secrets.json");
+
+        private static IEnumerable<string> GetAdditionalConfigPaths()
+        {
+            var paths = new List<string>();
+
+            var envVar = Environment.GetEnvironmentVariable("DOSAIC_HOST_ADDITIONALCONFIGPATHS");
+            if (!string.IsNullOrWhiteSpace(envVar))
+            {
+                paths.AddRange(envVar.Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries)
+                    .Select(p => p.Trim()));
+            }
+
+            var argsVar = Environment.GetCommandLineArgs()
+                .SkipWhile(x => !x.Equals("--additional-config-paths", StringComparison.OrdinalIgnoreCase))
+                .Skip(1)
+                .FirstOrDefault();
+
+            if (!string.IsNullOrWhiteSpace(argsVar))
+            {
+                paths.AddRange(argsVar.Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries)
+                    .Select(p => p.Trim()));
+            }
+
+            var resolvedPaths = new List<string>();
+            foreach (var path in paths)
+            {
+                try
+                {
+                    var fullPath = Path.GetFullPath(path);
+                    if (Directory.Exists(fullPath))
+                    {
+                        resolvedPaths.Add(fullPath);
+                    }
+                }
+                catch (Exception)
+                {
+                    // Skip invalid paths
+                }
+            }
+
+            return resolvedPaths.Distinct().ToList();
+        }
 
         private static IEnumerable<string> FindAppSettingFiles(params string[] extensions)
         {
@@ -56,6 +112,29 @@ namespace Dosaic.Hosting.WebHost.Configurators
                 .ToList();
 
             return files;
+        }
+
+        private static IEnumerable<string> FindAppSettingFilesRecursive(string directory, params string[] extensions)
+        {
+            if (!Directory.Exists(directory))
+                return Enumerable.Empty<string>();
+
+            try
+            {
+                var files = Directory.EnumerateFiles(directory, "appsettings.*", SearchOption.AllDirectories)
+                    .Where(x => extensions.Any(e => x.EndsWith($".{e}", StringComparison.InvariantCultureIgnoreCase)))
+                    .ToList();
+
+                return files;
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return Enumerable.Empty<string>();
+            }
+            catch (DirectoryNotFoundException)
+            {
+                return Enumerable.Empty<string>();
+            }
         }
 
         private void ConfigureLogging()

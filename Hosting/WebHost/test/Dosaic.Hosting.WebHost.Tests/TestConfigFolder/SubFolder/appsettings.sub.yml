@@ -1,0 +1,4 @@
+subfolder:
+  config: "loaded from subfolder"
+  level: 2
+

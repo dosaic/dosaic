@@ -34,6 +34,7 @@ using Dosaic.Hosting.WebHost;
 PluginWebHostBuilder.RunDefault(Dosaic.Generated.DosaicPluginTypes.All);
 ```
 
+
 ## Config files and ENV vars
 
 Dosaic will try to load config files and values in the following order
@@ -46,21 +47,45 @@ Dosaic will try to load config files and values in the following order
 6. `appsettings.*.yml`
 7. `appsettings.secrets.yml`
 8. `appsettings.*.secrets.yml`
-9`ENV variables`
+9. `ENV variables`
 
 **NOTE:**
 All settings (does not matter which file extension) will be ordered by node length. And the secret files will be loaded as last (except the environment variables).
 
+### Additional Config Paths
+
+You can load config files from extra folders. Dosaic will scan them first, before the main app folder.
+
+**Via Environment Variable:**
+
+```shell
+DOSAIC_HOST_ADDITIONALCONFIGPATHS=/path/to/configs,/another/path
+```
+
+**Via Command Line:**
+
+```shell
+dotnet run --additional-config-paths "/path/to/configs,/another/path"
+```
+
+Features:
+- Scans subfolders for `appsettings.*` files
+- Supports JSON, YAML, and YML formats
+- Uses absolute or relative paths
+- Non-existent paths are ignored
+- Secrets files load last
+
 Example:
 
-1. appsettings.yaml
-2. appsettings.api.yaml
-3. appsettings.api.host.yaml
-4. appsettings.secrets.yaml
-5. apssettings.api.secrets.yaml
-6. appsettings.api.host.secrets.yaml
-7. ENV Variables
-
+1. appsettings.yaml (from extra paths)
+2. appsettings.api.yaml (from extra paths)
+3. appsettings.api.host.yaml (from extra paths)
+4. appsettings.secrets.yaml (from extra paths)
+5. appsettings.yaml (from main app)
+6. appsettings.api.yaml (from main app)
+7. appsettings.api.host.yaml (from main app)
+8. appsettings.*.secrets.yaml (all locations)
+9. ENV Variables
 
 File names must always start with `appsettings` or they will be ignored!
 
@@ -75,6 +100,7 @@ becomes
 
 ```shell
 HOST_URLS=http://+:5300 # optional, default is 8080;separate multiple urls with ","
+```
 ```
 
 ## General settings
