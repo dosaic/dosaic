@@ -17,8 +17,6 @@
     <PackageReference Include="Newtonsoft.Json" />
     <PackageReference Include="OpenTelemetry.Extensions.Hosting" />
     <PackageReference Include="SSH.NET" />
-    <PackageReference Include="System.Net.Http" />
-    <PackageReference Include="System.Text.RegularExpressions" />
   </ItemGroup>
 
   <ItemGroup>
