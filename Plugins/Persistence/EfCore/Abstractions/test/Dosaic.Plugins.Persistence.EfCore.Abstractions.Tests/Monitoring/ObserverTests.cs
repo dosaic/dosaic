@@ -22,7 +22,6 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests.Monitoring
             "efcore_connection_errors_total")]
         public void IncrementMetricWorks(string key, string expectedCounterName)
         {
-
             using var metricsCollector = new TestMetricsCollector(expectedCounterName);
             metricsCollector.CollectedMetrics.Should().BeEmpty();
             var observer = new MetricsObserver();
@@ -58,7 +57,6 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests.Monitoring
             observer.OnNext(keyValuePair);
             metricsCollector.CollectedMetrics.Should().ContainsMetric(1, "label", expectedLabelTag);
             metricsCollector.Instruments.Should().Contain(expectedCounterName);
-
         }
 
         [TestCase("Microsoft.EntityFrameworkCore.Database.Transaction.TransactionCommitted",
@@ -116,8 +114,10 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests.Monitoring
 
             var keyValuePair =
                 new KeyValuePair<string, object>("Microsoft.EntityFrameworkCore.Database.Command.CommandExecuted",
-                    new CommandExecutedEventData(null!, null!, null!, null!, null!, DbCommandMethod.ExecuteNonQuery,
-                        Guid.Empty, Guid.Empty, null!, false, false, DateTimeOffset.Now, TimeSpan.FromSeconds(10),
+                    new CommandExecutedEventData(null!, null!, null!, null!,
+                        null!, null!, DbCommandMethod.ExecuteNonQuery,
+                        Guid.Empty, Guid.Empty, null!, false,
+                        false, DateTimeOffset.Now, TimeSpan.FromSeconds(10),
                         CommandSource.Unknown));
             observer.OnNext(keyValuePair);
             metricsCollector.CollectedMetrics.Should().ContainsMetric(10);

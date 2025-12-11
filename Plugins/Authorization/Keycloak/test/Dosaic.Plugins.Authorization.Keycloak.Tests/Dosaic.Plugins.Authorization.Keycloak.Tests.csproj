@@ -12,9 +12,6 @@
 
     <ItemGroup>
       <PackageReference Include="jose-jwt" />
-      <PackageReference Include="Microsoft.Extensions.Caching.Abstractions" />
-      <PackageReference Include="Microsoft.Extensions.Configuration" />
-      <PackageReference Include="Microsoft.Extensions.Http" />
       <PackageReference Include="RichardSzalay.MockHttp" />
     </ItemGroup>
 

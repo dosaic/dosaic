@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Abstractions;
 using Microsoft.AspNetCore.Mvc.ApiExplorer;
-using Microsoft.OpenApi.Models;
+using Microsoft.OpenApi;
 using NUnit.Framework;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
@@ -23,7 +23,11 @@ namespace Dosaic.Api.OpenApi.Tests.Filters.Operation
         {
             var openApiSchema = new OpenApiOperation();
             var schemaGenerator = DefaultSchemaGenerator(out var schemaRepository, out var description);
-            var schemaContext = new OperationFilterContext(description, schemaGenerator, schemaRepository,
+            var schemaContext = new OperationFilterContext(
+                description,
+                schemaGenerator,
+                schemaRepository,
+                new OpenApiDocument(),
                 typeof(FormFileFilterTests).GetMethod(nameof(TestMethodWithFormFile),
                     BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Static));
 
@@ -31,20 +35,23 @@ namespace Dosaic.Api.OpenApi.Tests.Filters.Operation
             openApiSchema.RequestBody.Content.Should().NotBeEmpty();
             openApiSchema.RequestBody.Content["multipart/form-data"].Should().BeOfType(typeof(OpenApiMediaType));
         }
+
         [Test]
         public void SetFormFilterWithoutFormFile()
         {
             var openApiSchema = new OpenApiOperation();
             var schemaGenerator = DefaultSchemaGenerator(out var schemaRepository, out var description);
             var schemaContext = new OperationFilterContext(description, schemaGenerator, schemaRepository,
+                new OpenApiDocument(),
                 typeof(FormFileFilterTests).GetMethod(nameof(TestMethodWithout),
                     BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Static));
 
             _filter.Apply(openApiSchema, schemaContext);
             openApiSchema.RequestBody.Should().BeNull();
-
         }
-        private static SchemaGenerator DefaultSchemaGenerator(out SchemaRepository schemaRepository, out ApiDescription description)
+
+        private static SchemaGenerator DefaultSchemaGenerator(out SchemaRepository schemaRepository,
+            out ApiDescription description)
         {
             var schemaGenerator = new SchemaGenerator(new SchemaGeneratorOptions(),
                 new JsonSerializerDataContractResolver(new JsonSerializerOptions()));
@@ -52,6 +59,7 @@ namespace Dosaic.Api.OpenApi.Tests.Filters.Operation
             description = new ApiDescription() { ActionDescriptor = new ActionDescriptor() };
             return schemaGenerator;
         }
+
         private static void TestMethodWithFormFile([FromBody] IFormFile testFile)
         {
             if (testFile == null) throw new ArgumentNullException(nameof(testFile));

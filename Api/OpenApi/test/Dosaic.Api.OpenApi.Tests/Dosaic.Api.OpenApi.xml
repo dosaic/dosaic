@@ -2157,6 +2157,22 @@
             <param name = "value">The primitive value.</param>
             <returns>A <see cref = "T:Vogen.ValueObjectOrError`1"/> containing either the value object, or an error.</returns>
         </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectGuid.TryParse(System.ReadOnlySpan{System.Byte},Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectGuid@)">
+            <inheritdoc cref = "M:System.Guid.TryParse(System.ReadOnlySpan{System.Byte},System.Guid@)"/>
+            <summary>
+            </summary>
+            <returns>
+            True if the value could a) be parsed by the underlying type, and b) passes any validation (after running any optional normalization).
+            </returns>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectGuid.TryParse(System.ReadOnlySpan{System.Byte},System.IFormatProvider,Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectGuid@)">
+            <inheritdoc cref = "M:System.Guid.TryParse(System.ReadOnlySpan{System.Byte},System.IFormatProvider,System.Guid@)"/>
+            <summary>
+            </summary>
+            <returns>
+            True if the value could a) be parsed by the underlying type, and b) passes any validation (after running any optional normalization).
+            </returns>
+        </member>
         <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectGuid.TryParse(System.ReadOnlySpan{System.Char},Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectGuid@)">
             <inheritdoc cref = "M:System.Guid.TryParse(System.ReadOnlySpan{System.Char},System.Guid@)"/>
             <summary>
@@ -2188,6 +2204,24 @@
             <returns>
             True if the value could a) be parsed by the underlying type, and b) passes any validation (after running any optional normalization).
             </returns>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectGuid.Parse(System.ReadOnlySpan{System.Byte})">
+            <inheritdoc cref = "M:System.Guid.Parse(System.ReadOnlySpan{System.Byte})"/>
+            <summary>
+            </summary>
+            <returns>
+            The value created by calling the Parse method on the primitive.
+            </returns>
+            <exception cref = "T:Vogen.ValueObjectValidationException">Thrown when the value can be parsed, but is not valid.</exception>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectGuid.Parse(System.ReadOnlySpan{System.Byte},System.IFormatProvider)">
+            <inheritdoc cref = "M:System.Guid.Parse(System.ReadOnlySpan{System.Byte},System.IFormatProvider)"/>
+            <summary>
+            </summary>
+            <returns>
+            The value created by calling the Parse method on the primitive.
+            </returns>
+            <exception cref = "T:Vogen.ValueObjectValidationException">Thrown when the value can be parsed, but is not valid.</exception>
         </member>
         <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectGuid.Parse(System.ReadOnlySpan{System.Char})">
             <inheritdoc cref = "M:System.Guid.Parse(System.ReadOnlySpan{System.Char})"/>
