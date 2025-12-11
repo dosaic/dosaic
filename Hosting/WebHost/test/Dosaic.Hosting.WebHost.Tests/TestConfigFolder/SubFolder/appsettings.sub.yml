@@ -1,4 +1,6 @@
-subfolder:
-  config: "loaded from subfolder"
-  level: 2
+host:
+  additionalconfigpaths: "/anysubfolder"
 
+testconfig:
+  testValue: "loaded from sub folder"
+  subonly: "subonly"

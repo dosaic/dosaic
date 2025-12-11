@@ -2,6 +2,8 @@ using AwesomeAssertions;
 using Dosaic.Hosting.Abstractions.Configuration;
 using Dosaic.Hosting.WebHost.Configurators;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Configuration.CommandLine;
+using Microsoft.Extensions.Configuration.Json;
 using NetEscapades.Configuration.Yaml;
 using NUnit.Framework;
 
@@ -9,56 +11,56 @@ namespace Dosaic.Hosting.WebHost.Tests.Configurators
 {
     public class AdditionalConfigPathsTests
     {
+        private const string AdditionalconfigTestvalue = "TESTCONFIG_TESTVALUE";
         private string _testConfigFolder = null!;
 
         [SetUp]
         public void Setup()
         {
             _testConfigFolder = Path.Combine(TestContext.CurrentContext.TestDirectory, "TestConfigFolder");
-            Environment.SetEnvironmentVariable("DOSAIC_HOST_ADDITIONALCONFIGPATHS", null);
+            Environment.SetEnvironmentVariable(HostConfigurator.HostAdditionalconfigpathsEnvVarName, null);
         }
 
         [TearDown]
         public void TearDown()
         {
-            Environment.SetEnvironmentVariable("DOSAIC_HOST_ADDITIONALCONFIGPATHS", null);
+            Environment.SetEnvironmentVariable(HostConfigurator.HostAdditionalconfigpathsEnvVarName, null);
+            Environment.SetEnvironmentVariable(AdditionalconfigTestvalue, null);
         }
 
         private static IConfiguration BuildConfiguration()
         {
             var configManager = new ConfigurationManager();
 
-            HostConfigurator.ConfigureAppConfiguration(configManager);
+            HostConfigurator.ConfigureAppConfiguration(configManager, []);
 
             return configManager;
         }
 
         [Test]
-        public void ShouldLoadConfigFromAdditionalFolderViaEnvironmentVariable()
+        public void ShouldLoadConfigFromSublFolderViaEnvironmentVariable()
         {
-            Environment.SetEnvironmentVariable("DOSAIC_HOST_ADDITIONALCONFIGPATHS", _testConfigFolder);
+            Environment.SetEnvironmentVariable(HostConfigurator.HostAdditionalconfigpathsEnvVarName, _testConfigFolder);
 
             var configuration = BuildConfiguration();
 
-            configuration.GetValue<string>("additionalConfig:testValue").Should().Be("loaded from additional folder");
-            configuration.GetValue<bool>("additionalConfig:featureFlag").Should().BeTrue();
+            configuration.GetValue<string>("testconfig:testValue").Should().Be("loaded from sub folder");
         }
 
         [Test]
         public void ShouldLoadConfigFromSubfoldersRecursively()
         {
-            Environment.SetEnvironmentVariable("DOSAIC_HOST_ADDITIONALCONFIGPATHS", _testConfigFolder);
+            Environment.SetEnvironmentVariable(HostConfigurator.HostAdditionalconfigpathsEnvVarName, _testConfigFolder);
 
             var configuration = BuildConfiguration();
 
-            configuration.GetValue<string>("subfolder:config").Should().Be("loaded from subfolder");
-            configuration.GetValue<int>("subfolder:level").Should().Be(2);
+            configuration.GetValue<string>("testconfig:testValue").Should().Be("loaded from sub folder");
         }
 
         [Test]
         public void ShouldLoadJsonFilesFromAdditionalFolders()
         {
-            Environment.SetEnvironmentVariable("DOSAIC_HOST_ADDITIONALCONFIGPATHS", _testConfigFolder);
+            Environment.SetEnvironmentVariable(HostConfigurator.HostAdditionalconfigpathsEnvVarName, _testConfigFolder);
 
             var configuration = BuildConfiguration();
 
@@ -71,12 +73,12 @@ namespace Dosaic.Hosting.WebHost.Tests.Configurators
         {
             var folder1 = Path.Combine(_testConfigFolder, "SubFolder");
             var paths = $"{_testConfigFolder},{folder1}";
-            Environment.SetEnvironmentVariable("DOSAIC_HOST_ADDITIONALCONFIGPATHS", paths);
+            Environment.SetEnvironmentVariable(HostConfigurator.HostAdditionalconfigpathsEnvVarName, paths);
 
             var configuration = BuildConfiguration();
 
-            configuration.GetValue<string>("additionalConfig:testValue").Should().Be("loaded from additional folder");
-            configuration.GetValue<string>("subfolder:config").Should().Be("loaded from subfolder");
+            configuration.GetValue<string>("testconfig:additionalOnly").Should().Be("additionalOnly");
+            configuration.GetValue<string>("testconfig:subonly").Should().Be("subonly");
         }
 
         [Test]
@@ -84,23 +86,23 @@ namespace Dosaic.Hosting.WebHost.Tests.Configurators
         {
             var folder1 = Path.Combine(_testConfigFolder, "SubFolder");
             var paths = $"{_testConfigFolder};{folder1}";
-            Environment.SetEnvironmentVariable("DOSAIC_HOST_ADDITIONALCONFIGPATHS", paths);
+            Environment.SetEnvironmentVariable(HostConfigurator.HostAdditionalconfigpathsEnvVarName, paths);
 
             var configuration = BuildConfiguration();
 
-            configuration.GetValue<string>("additionalConfig:testValue").Should().Be("loaded from additional folder");
-            configuration.GetValue<string>("subfolder:config").Should().Be("loaded from subfolder");
+            configuration.GetValue<string>("testconfig:additionalOnly").Should().Be("additionalOnly");
+            configuration.GetValue<string>("testconfig:subonly").Should().Be("subonly");
         }
 
         [Test]
         public void ShouldHandleNonExistentPaths()
         {
             var nonExistentPath = "/nonexistent/folder/path";
-            Environment.SetEnvironmentVariable("DOSAIC_HOST_ADDITIONALCONFIGPATHS", $"{_testConfigFolder},{nonExistentPath}");
+            Environment.SetEnvironmentVariable(HostConfigurator.HostAdditionalconfigpathsEnvVarName,
+                $"{_testConfigFolder},{nonExistentPath}");
 
-            var configuration = BuildConfiguration();
-
-            configuration.GetValue<string>("additionalConfig:testValue").Should().Be("loaded from additional folder");
+            var act = () => { BuildConfiguration(); };
+            act.Should().Throw<DirectoryNotFoundException>();
         }
 
         [Test]
@@ -109,11 +111,35 @@ namespace Dosaic.Hosting.WebHost.Tests.Configurators
             var currentDir = Directory.GetCurrentDirectory();
             var relativePath = Path.GetRelativePath(currentDir, _testConfigFolder);
 
-            Environment.SetEnvironmentVariable("DOSAIC_HOST_ADDITIONALCONFIGPATHS", relativePath);
+            Environment.SetEnvironmentVariable(HostConfigurator.HostAdditionalconfigpathsEnvVarName, relativePath);
 
             var configuration = BuildConfiguration();
 
-            configuration.GetValue<string>("additionalConfig:testValue").Should().Be("loaded from additional folder");
+            configuration.GetValue<string>("testconfig:testValue").Should().Be("loaded from sub folder");
+        }
+
+        [Test]
+        public void EnvShouldOverwriteAnyOtherConfigValues()
+        {
+            var currentDir = Directory.GetCurrentDirectory();
+            var relativePath = Path.GetRelativePath(currentDir, _testConfigFolder);
+
+            Environment.SetEnvironmentVariable(HostConfigurator.HostAdditionalconfigpathsEnvVarName, relativePath);
+            Environment.SetEnvironmentVariable(AdditionalconfigTestvalue, "loaded from env var");
+
+            var configuration = BuildConfiguration();
+
+            configuration.GetValue<string>("testconfig:testValue").Should().Be("loaded from env var");
+        }
+
+        [Test]
+        public void ShouldReadAdditionalConfigFolderPathFromSettings()
+        {
+            var configuration = BuildConfiguration();
+
+            configuration.GetValue<string>(HostConfigurator.HostAdditionalconfigpathsEnvVarName).Should()
+                .Be("/anysubfolder");
+            configuration.GetValue<string>("testconfig:testValue").Should().Be("loaded from sub folder");
         }
 
         [Test]
@@ -125,9 +151,13 @@ namespace Dosaic.Hosting.WebHost.Tests.Configurators
             configurationRoot.Should().NotBeNull();
             var providers = configurationRoot!.Providers.ToList();
 
-            providers[0].Should().BeOfType<YamlConfigurationProvider>();
-            providers[^1].Should().BeOfType<EnvConfigurationProvider>();
+            var orderedProviders = providers.Select(p => p.GetType()).ToList();
+            orderedProviders.Should().ContainInOrder(
+                typeof(CommandLineConfigurationProvider),
+                typeof(YamlConfigurationProvider),
+                typeof(JsonConfigurationProvider),
+                typeof(EnvConfigurationProvider)
+            );
         }
     }
 }
-

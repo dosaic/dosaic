@@ -1,4 +1,4 @@
-additionalConfig:
+testconfig:
   testValue: "loaded from additional folder"
-  featureFlag: true
+  additionalOnly: "additionalOnly"
 

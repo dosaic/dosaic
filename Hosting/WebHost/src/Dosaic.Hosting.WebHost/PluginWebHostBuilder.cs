@@ -29,7 +29,7 @@ namespace Dosaic.Hosting.WebHost
         {
             SystemExtensions.SetDefaultCultureInfo();
             _webApplicationBuilder = WebApplication.CreateBuilder(args);
-            HostConfigurator.ConfigureAppConfiguration(_webApplicationBuilder.Configuration);
+            HostConfigurator.ConfigureAppConfiguration(_webApplicationBuilder.Configuration, args);
             StructuredLoggingExtensions.CreateBootstrapLogger(
                 _webApplicationBuilder.Configuration.GetValue<LogEventLevel?>("serilog:minimumLevel")
                 ?? LogEventLevel.Information);
