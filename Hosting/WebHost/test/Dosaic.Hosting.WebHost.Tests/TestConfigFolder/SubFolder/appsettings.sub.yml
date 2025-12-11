@@ -1,0 +1,6 @@
+host:
+  additionalconfigpaths: "/anysubfolder"
+
+testconfig:
+  testValue: "loaded from sub folder"
+  subonly: "subonly"

@@ -1,6 +1,9 @@
 serilog:
   minimumLevel: Debug
 
+host:
+  additionalconfigpaths: "./TestConfigFolder"
+
 tracing:
   host: http://127.0.0.1:4317
 

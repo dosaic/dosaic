@@ -1,0 +1,4 @@
+testconfig:
+  testValue: "loaded from additional folder"
+  additionalOnly: "additionalOnly"
+

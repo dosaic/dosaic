@@ -14,6 +14,7 @@ using Microsoft.AspNetCore.Mvc.Abstractions;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Configuration.CommandLine;
 using Microsoft.Extensions.Configuration.Json;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
@@ -29,10 +30,12 @@ namespace Dosaic.Hosting.WebHost.Tests
 {
     public class PluginWebHostBuilderTests
     {
-        [Test]
+        [Test, Parallelizable(ParallelScope.None)]
         public async Task ShouldWork()
         {
-            var pluginWebHostBuilder = PluginWebHostBuilder.Create(new Type[] { typeof(TypeImplementationResolverTests.UnitTestPluginConfig) });
+            var pluginWebHostBuilder = PluginWebHostBuilder.Create([
+                typeof(TypeImplementationResolverTests.UnitTestPluginConfig)
+            ]);
             var host = pluginWebHostBuilder.Build();
 
             var cultureInfo = CultureInfo.InvariantCulture;
@@ -45,16 +48,31 @@ namespace Dosaic.Hosting.WebHost.Tests
             webApplication.Logger.GetType().Name.Should().Be("SerilogLogger");
             var configurationProviders = webApplication.Configuration.As<IConfigurationRoot>().Providers.ToList();
 
-            configurationProviders[0].Should().BeOfType<YamlConfigurationProvider>();
-            configurationProviders[0].As<YamlConfigurationProvider>().Source.Path.Should().Be("appsettings.yml");
+            configurationProviders[0].Should().BeOfType<CommandLineConfigurationProvider>();
 
             configurationProviders[1].Should().BeOfType<YamlConfigurationProvider>();
-            configurationProviders[1].As<YamlConfigurationProvider>().Source.Path.Should().Be("appsettings.test.yml");
+            configurationProviders[1].As<YamlConfigurationProvider>().Source.Path.Should().Be("appsettings.yml");
 
             configurationProviders[2].Should().BeOfType<JsonConfigurationProvider>();
-            configurationProviders[2].As<JsonConfigurationProvider>().Source.Path.Should().Be("appsettings.test.secrets.json");
+            configurationProviders[2].As<JsonConfigurationProvider>().Source.Path.Should()
+                .Be("./TestConfigFolder/appsettings.json");
 
-            configurationProviders[3].Should().BeOfType<EnvConfigurationProvider>();
+            configurationProviders[3].Should().BeOfType<YamlConfigurationProvider>();
+            configurationProviders[3].As<YamlConfigurationProvider>().Source.Path.Should().Be("appsettings.test.yml");
+
+            configurationProviders[4].Should().BeOfType<YamlConfigurationProvider>();
+            configurationProviders[4].As<YamlConfigurationProvider>().Source.Path.Should()
+                .Be("./TestConfigFolder/appsettings.additional.yml");
+
+            configurationProviders[5].Should().BeOfType<YamlConfigurationProvider>();
+            configurationProviders[5].As<YamlConfigurationProvider>().Source.Path.Should()
+                .Be("./TestConfigFolder/SubFolder/appsettings.sub.yml");
+
+            configurationProviders[6].Should().BeOfType<JsonConfigurationProvider>();
+            configurationProviders[6].As<JsonConfigurationProvider>().Source.Path.Should()
+                .Be("appsettings.test.secrets.json");
+
+            configurationProviders[7].Should().BeOfType<EnvConfigurationProvider>();
 
             var logLevel = webApplication.Configuration.GetValue<string>("serilog:minimumLevel");
             logLevel.Should().Be("Information"); // overriden from appsettings.test.secrets.json
@@ -85,7 +103,8 @@ namespace Dosaic.Hosting.WebHost.Tests
             ipRateLimitOptions.GeneralRules[3].Limit.Should().Be(10000.0);
             ipRateLimitOptions.GeneralRules[3].Period.Should().Be("7d");
 
-            var ipRateLimitPolicies = webApplication.Configuration.BindToSection<IpRateLimitPolicies>("IpRateLimitPolicies");
+            var ipRateLimitPolicies =
+                webApplication.Configuration.BindToSection<IpRateLimitPolicies>("IpRateLimitPolicies");
             ipRateLimitPolicies.IpRules.Should().NotBeNullOrEmpty();
             ipRateLimitPolicies.IpRules[0].Ip.Should().Be("84.247.85.224");
             ipRateLimitPolicies.IpRules[0].Rules[0].Endpoint.Should().Be("*");
@@ -94,8 +113,10 @@ namespace Dosaic.Hosting.WebHost.Tests
 
             var endpointDataSources = webApplication.As<IEndpointRouteBuilder>().DataSources.ToList();
             endpointDataSources.Should().HaveCount(2);
-            endpointDataSources[0].Endpoints[0].As<RouteEndpoint>().RoutePattern.RawText.Should().Be("/health/liveness");
-            endpointDataSources[0].Endpoints[1].As<RouteEndpoint>().RoutePattern.RawText.Should().Be("/health/readiness");
+            endpointDataSources[0].Endpoints[0].As<RouteEndpoint>().RoutePattern.RawText.Should()
+                .Be("/health/liveness");
+            endpointDataSources[0].Endpoints[1].As<RouteEndpoint>().RoutePattern.RawText.Should()
+                .Be("/health/readiness");
             endpointDataSources[1].GetType().Name.Should().Be("ControllerActionEndpointDataSource");
 
             var logger = host.Services.GetRequiredService<ILogger>();
@@ -103,11 +124,13 @@ namespace Dosaic.Hosting.WebHost.Tests
             var logEventSink = host.Services.GetService<ILogEventSink>();
             logEventSink.Should().BeOfType<WebHost.Logging.LoggingMetricSink>();
 
-            var corsPolicy = webApplication.Configuration.BindToSection<CorsPolicy>(DosaicWebHostDefaults.CorsConfigSectionName);
+            var corsPolicy =
+                webApplication.Configuration.BindToSection<CorsPolicy>(DosaicWebHostDefaults.CorsConfigSectionName);
             AssertCorsPolicy(corsPolicy, false);
 
             var corsPolicyProvider = host.Services.GetRequiredService<ICorsPolicyProvider>();
-            var policy = await corsPolicyProvider.GetPolicyAsync(new DefaultHttpContext(), DosaicWebHostDefaults.CorsPolicyName);
+            var policy =
+                await corsPolicyProvider.GetPolicyAsync(new DefaultHttpContext(), DosaicWebHostDefaults.CorsPolicyName);
             AssertCorsPolicy(policy!, true);
 
             var apiBehaviourOptions = host.Services.GetRequiredService<IOptions<ApiBehaviorOptions>>().Value;
@@ -116,9 +139,12 @@ namespace Dosaic.Hosting.WebHost.Tests
             var modelStateResponseFactory = ServiceConfigurator.WriteValidationErrorResponse;
             apiBehaviourOptions.InvalidModelStateResponseFactory.Should().Be(modelStateResponseFactory);
 
-            var sampleConfig = webApplication.Configuration.BindToSection<TypeImplementationResolverTests.UnitTestPluginConfig>("sampleConfig");
+            var sampleConfig =
+                webApplication.Configuration.BindToSection<TypeImplementationResolverTests.UnitTestPluginConfig>(
+                    "sampleConfig");
             sampleConfig.Name.Should().Be("example1"); // overridden from appsettings.test.yml
-            var unitTestPluginConfig = host.Services.GetRequiredService<TypeImplementationResolverTests.UnitTestPluginConfig>();
+            var unitTestPluginConfig =
+                host.Services.GetRequiredService<TypeImplementationResolverTests.UnitTestPluginConfig>();
             unitTestPluginConfig.Should().NotBeNull();
 
             var hostedServices = host.Services.GetServices<IHostedService>();
@@ -142,10 +168,15 @@ namespace Dosaic.Hosting.WebHost.Tests
             var modelState = new ModelStateDictionary();
             modelState.AddModelError("test", "test is invalid");
             modelState.SetModelValue("test2", new ValueProviderResult());
-            modelState.SetModelValue("test3", new ValueProviderResult()); ;
+            modelState.SetModelValue("test3", new ValueProviderResult());
+            ;
             modelState.MarkFieldValid("test3");
             modelState.TryAddModelException("test4", new Vogen.ValueObjectValidationException("vogen is invalid"));
-            var httpContext = new DefaultHttpContext { TraceIdentifier = "request-1", RequestServices = TestingDefaults.ServiceCollection().BuildServiceProvider() };
+            var httpContext = new DefaultHttpContext
+            {
+                TraceIdentifier = "request-1",
+                RequestServices = TestingDefaults.ServiceCollection().BuildServiceProvider()
+            };
             var actionContext = new ActionContext(httpContext, new RouteData(), new ActionDescriptor(), modelState);
             var mappedResult = ServiceConfigurator.WriteValidationErrorResponse(actionContext);
             mappedResult.Should().NotBeNull();
