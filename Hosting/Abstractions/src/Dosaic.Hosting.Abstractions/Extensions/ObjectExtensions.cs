@@ -18,7 +18,6 @@ namespace Dosaic.Hosting.Abstractions.Extensions
 
     public static class ObjectExtensions
     {
-
         /// <summary>
         /// Patches non-null properties from <paramref name="patch"/> into <paramref name="value"/>.
         /// If a property is a list, new items will be added to the existing list or overriden (see PatchMode>.
@@ -52,6 +51,9 @@ namespace Dosaic.Hosting.Abstractions.Extensions
                 var oldValue = prop.GetValue(value);
                 if (newValue is null || newValue.Equals(oldValue))
                     continue;
+                var isObject = prop.PropertyType.IsClass
+                               && prop.PropertyType != typeof(string)
+                               && prop.PropertyType.GetProperties().Any(x => filter(type, x));
                 if (prop.PropertyType.IsEnumerable())
                 {
                     if (ignoreLists) continue;
@@ -60,7 +62,7 @@ namespace Dosaic.Hosting.Abstractions.Extensions
                         newValue = GetListValue(prop.PropertyType.GenericTypeArguments[0], oldValue, newValue);
                     }
                 }
-                else if (prop.PropertyType.IsClass && prop.PropertyType != typeof(string))
+                else if (isObject)
                 {
                     if (ignoreObjects) continue;
                     newValue = DeepPatchInternal(oldValue, newValue, mode, filter);

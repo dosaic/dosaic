@@ -44,7 +44,7 @@ namespace Dosaic.Extensions.NanoIds
     [Serializable]
     [JsonConverter(typeof(NanoIdJsonConverter))]
     [YamlTypeConverter(typeof(NanoIdYamlConverter))]
-    public readonly struct NanoId(string value) :
+    public class NanoId(string value) :
         IComparable,
         IComparable<NanoId>,
         IEquatable<NanoId>
@@ -59,12 +59,13 @@ namespace Dosaic.Extensions.NanoIds
 
         public int CompareTo(NanoId other)
         {
-            return string.Compare(Value, other.Value, StringComparison.Ordinal);
+            return other?.Value is null ? 1 : string.Compare(Value, other.Value, StringComparison.Ordinal);
         }
 
         public bool Equals(NanoId other)
         {
-            return Value == other.Value;
+            return ReferenceEquals(this, other)
+                || Value == other?.Value;
         }
 
         public static NanoId NewId<T>() where T : INanoId
@@ -126,9 +127,9 @@ namespace Dosaic.Extensions.NanoIds
             return value.Value;
         }
 
-        public static NanoId? Parse(string value)
+        public static NanoId Parse(string value)
         {
-            return value is null ? (NanoId?)null : new NanoId(value);
+            return value is null ? null : new NanoId(value);
         }
     }
 

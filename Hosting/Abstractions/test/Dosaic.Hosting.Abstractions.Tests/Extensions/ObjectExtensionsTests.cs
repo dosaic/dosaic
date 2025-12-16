@@ -91,7 +91,7 @@ namespace Dosaic.Hosting.Abstractions.Tests.Extensions
         [Test]
         public void PatchWorksWithObjects()
         {
-            var patch = new BigClass { Age = 25, Nested = new BigClassNested { Id = "patched-id", Name = "patched-nested" } };
+            var patch = new BigClass { Age = 25, Nested = new BigClassNested { Id = "patched-id", Name = "patched-nested", Value = new("TEST") } };
             _source.DeepPatch(patch);
             _source.Id.Should().Be("123");
             _source.Name.Should().Be("test");
@@ -101,6 +101,8 @@ namespace Dosaic.Hosting.Abstractions.Tests.Extensions
             _source.Nested.Name.Should().Be("patched-nested");
             _source.Tags.Should().HaveCount(3);
             _source.NestedList.Should().HaveCount(2);
+            _source.Nested.Value.Should().NotBeNull();
+            _source.Nested.Value.Value.Should().Be("TEST");
         }
 
         [Test]
@@ -127,6 +129,30 @@ namespace Dosaic.Hosting.Abstractions.Tests.Extensions
         {
             public string Id { get; set; }
             public string Name { get; set; }
+            public ValueObjectClass Value { get; set; }
+        }
+
+        private class ValueObjectClass(string value)
+        {
+            public string Value { get; } = value;
+
+            public bool Equals(ValueObjectClass other)
+            {
+                return Value == other.Value;
+            }
+
+            public override bool Equals(object obj)
+            {
+                if (obj is null) return false;
+                if (ReferenceEquals(this, obj)) return true;
+                if (obj.GetType() != GetType()) return false;
+                return Equals((ValueObjectClass)obj);
+            }
+
+            public override int GetHashCode()
+            {
+                return (Value != null ? Value.GetHashCode() : 0);
+            }
         }
     }
 }
