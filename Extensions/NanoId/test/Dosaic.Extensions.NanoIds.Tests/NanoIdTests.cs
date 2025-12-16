@@ -103,7 +103,7 @@ public class NanoIdTests
     public void EqualsShouldThrowNullExceptionForNullValue()
     {
         var nanoId1 = new NanoId("value");
-        nanoId1.Equals((NanoId?)null).Should().BeFalse();
+        nanoId1.Equals(null).Should().BeFalse();
 
         var act = () => { _ = new NanoId(null!); };
         act.Should().Throw<ArgumentException>();
@@ -231,7 +231,7 @@ public class NanoIdTests
     {
         var nanoId = new NanoId("testvalue");
 
-        nanoId.Equals((NanoId?)null).Should().BeFalse();
+        nanoId.Equals(null).Should().BeFalse();
     }
 
     [Test]
@@ -239,7 +239,7 @@ public class NanoIdTests
     {
         var nanoId = new NanoId("testvalue");
 
-        nanoId.CompareTo((NanoId?)null).Should().Be(1);
+        nanoId.CompareTo(null).Should().Be(1);
     }
 
     [Test]
@@ -274,7 +274,7 @@ public class NanoIdTests
     [Test]
     public void EqualityOperatorShouldReturnFalseForNullLeft()
     {
-        NanoId? nanoId = null;
+        NanoId nanoId = null;
         var other = new NanoId("testvalue");
 
         // ReSharper disable once ConditionIsAlwaysTrueOrFalse
@@ -292,7 +292,7 @@ public class NanoIdTests
     [Test]
     public void SerializesAsString()
     {
-        var id = NanoId.Parse("123456789")!.Value;
+        var id = NanoId.Parse("123456789");
         var instance = new SomeTest { Id = id };
         var json = instance.Serialize();
         json.Should().Be("{\"id\":\"123456789\"}");
@@ -354,7 +354,7 @@ public class NanoIdTests
     public void CompareToObjectNullShouldReturnOne()
     {
         var nanoId = new NanoId("test123");
-        NanoId? nullObj = null;
+        NanoId nullObj = null;
 
         // ReSharper disable once ExpressionIsAlwaysNull
         nanoId.CompareTo(nullObj).Should().Be(1);

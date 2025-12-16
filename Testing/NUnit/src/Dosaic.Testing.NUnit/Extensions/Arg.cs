@@ -23,7 +23,7 @@ public static class ArgExt
         public bool IsSatisfiedBy(T argument)
         {
             using var scope = new AssertionScope();
-            _assertion((T)argument);
+            _assertion(argument);
 
             var failures = scope.Discard().ToList();
 
