@@ -89,7 +89,7 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Models
                 entityTypeBuilder.Property<string>(nameof(History.ChangeSet))
                     .HasColumnType("jsonb").IsRequired();
                 entityTypeBuilder.Property<DateTime>(nameof(History.ModifiedUtc)).IsRequired();
-                entityTypeBuilder.Property<NanoId>(nameof(History.ModifiedBy)).IsRequired(false);
+                entityTypeBuilder.Property<NanoId>(nameof(History.ModifiedBy));
 
                 entityTypeBuilder.HasOne("Model")
                     .WithMany()
@@ -116,7 +116,7 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Models
                 entityTypeBuilder.Property<bool>(nameof(AggregateEvent.IsDeleted)).IsRequired();
                 entityTypeBuilder.Property<DateTime>(nameof(AggregateEvent.ValidFrom)).IsRequired();
                 entityTypeBuilder.Property<DateTime>(nameof(AggregateEvent.ModifiedUtc)).IsRequired();
-                entityTypeBuilder.Property<NanoId>(nameof(AggregateEvent.ModifiedBy)).IsRequired(false);
+                entityTypeBuilder.Property<NanoId>(nameof(AggregateEvent.ModifiedBy));
 
                 entityTypeBuilder.HasOne(modifiedByForeignKeyModel)
                     .WithMany()

@@ -1,5 +1,7 @@
+using System.Globalization;
 using System.Reflection;
 using AwesomeAssertions;
+using Dosaic.Hosting.Abstractions.Extensions;
 using NSubstitute;
 using NUnit.Framework;
 
@@ -101,7 +103,7 @@ public class NanoIdTests
     public void EqualsShouldThrowNullExceptionForNullValue()
     {
         var nanoId1 = new NanoId("value");
-        nanoId1.Equals(null).Should().BeFalse();
+        nanoId1.Equals((NanoId?)null).Should().BeFalse();
 
         var act = () => { _ = new NanoId(null!); };
         act.Should().Throw<ArgumentException>();
@@ -150,7 +152,10 @@ public class NanoIdTests
         var value = "testvalue";
         var nanoId = new NanoId(value);
 
+#pragma warning disable CA1305
         nanoId.ToString().Should().Be(value);
+#pragma warning restore CA1305
+        nanoId.ToString(CultureInfo.InvariantCulture).Should().Be($"Value: {value}");
     }
 
     [Test]
@@ -189,7 +194,7 @@ public class NanoIdTests
         var nanoId = new NanoId(value);
         var formatProvider = Substitute.For<IFormatProvider>();
 
-        var result = nanoId.ToString(null, formatProvider);
+        var result = nanoId.ToString(formatProvider);
 
         result.Should().Be($"Value: {value}");
     }
@@ -226,7 +231,7 @@ public class NanoIdTests
     {
         var nanoId = new NanoId("testvalue");
 
-        nanoId.Equals(null).Should().BeFalse();
+        nanoId.Equals((NanoId?)null).Should().BeFalse();
     }
 
     [Test]
@@ -234,7 +239,7 @@ public class NanoIdTests
     {
         var nanoId = new NanoId("testvalue");
 
-        nanoId.CompareTo((NanoId)null).Should().Be(1);
+        nanoId.CompareTo((NanoId?)null).Should().Be(1);
     }
 
     [Test]
@@ -269,7 +274,7 @@ public class NanoIdTests
     [Test]
     public void EqualityOperatorShouldReturnFalseForNullLeft()
     {
-        NanoId nanoId = null;
+        NanoId? nanoId = null;
         var other = new NanoId("testvalue");
 
         // ReSharper disable once ConditionIsAlwaysTrueOrFalse
@@ -277,6 +282,27 @@ public class NanoIdTests
 
         // ReSharper disable once ConditionIsAlwaysTrueOrFalse
         result.Should().BeFalse();
+    }
+
+    private class SomeTest
+    {
+        public NanoId Id { get; init; }
+    }
+
+    [Test]
+    public void SerializesAsString()
+    {
+        var id = NanoId.Parse("123456789")!.Value;
+        var instance = new SomeTest { Id = id };
+        var json = instance.Serialize();
+        json.Should().Be("{\"id\":\"123456789\"}");
+        var output = json.Deserialize<SomeTest>();
+        output.Id.Should().Be(id);
+
+        var yaml = instance.Serialize(SerializationMethod.Yaml);
+        yaml.Should().Be("id: 123456789\n");
+        var outputYaml = yaml.Deserialize<SomeTest>(SerializationMethod.Yaml);
+        outputYaml.Id.Should().Be(id);
     }
 
     [Test]
@@ -307,15 +333,6 @@ public class NanoIdTests
     }
 
     [Test]
-    public void EqualsWithDerivedTypeShouldReturnFalse()
-    {
-        var nanoId = new NanoId("test123");
-        object derived = new DerivedNanoId("test123");
-
-        nanoId.Equals(derived).Should().BeFalse();
-    }
-
-    [Test]
     public void EqualsWithStringOfSameValueShouldReturnFalse()
     {
         var nanoId = new NanoId("test123");
@@ -333,18 +350,11 @@ public class NanoIdTests
         nanoId.Equals(num).Should().BeFalse();
     }
 
-    private class DerivedNanoId : NanoId
-    {
-        public DerivedNanoId(string value) : base(value)
-        {
-        }
-    }
-
     [Test]
     public void CompareToObjectNullShouldReturnOne()
     {
         var nanoId = new NanoId("test123");
-        object nullObj = null;
+        NanoId? nullObj = null;
 
         // ReSharper disable once ExpressionIsAlwaysNull
         nanoId.CompareTo(nullObj).Should().Be(1);

@@ -6,11 +6,11 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Audit
     {
         public required NanoId Id { get; set; }
         [ExcludeFromHistory]
-        public NanoId CreatedBy { get; set; } = null!;
+        public NanoId CreatedBy { get; set; }
         [ExcludeFromHistory]
         public DateTime CreatedUtc { get; set; }
         [ExcludeFromHistory]
-        public NanoId ModifiedBy { get; set; }
+        public NanoId? ModifiedBy { get; set; }
         [ExcludeFromHistory]
         public DateTime? ModifiedUtc { get; set; }
     }

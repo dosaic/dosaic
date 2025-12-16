@@ -19,7 +19,7 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Audit
             return new History<T>
             {
                 Id = NanoId.NewId<History<T>>(),
-                ForeignId = (context.Entity?.Id ?? context.PreviousEntity?.Id)!,
+                ForeignId = (context.Entity?.Id ?? context.PreviousEntity?.Id)!.Value,
                 ChangeSet = changes.ToJson(),
                 ModifiedBy = userIdProvider.IsUserInteraction ? userIdProvider.UserId : userIdProvider.FallbackUserId,
                 ModifiedUtc = dateTimeProvider.UtcNow,
