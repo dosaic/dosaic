@@ -120,17 +120,11 @@ namespace Dosaic.Extensions.NanoIds
         }
 
         public static implicit operator NanoId(string value) => new(value);
-        // public static implicit operator NanoId?(string value) => Parse(value);
 
         public static implicit operator string(NanoId value)
         {
             return value.Value;
         }
-
-        // public static implicit operator string(NanoId? value)
-        // {
-        //     return value?.Value;
-        // }
 
         public static NanoId? Parse(string value)
         {
