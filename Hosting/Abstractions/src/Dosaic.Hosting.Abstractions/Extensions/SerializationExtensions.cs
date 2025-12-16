@@ -4,6 +4,7 @@ using System.Reflection;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Dosaic.Hosting.Abstractions.Attributes;
 using Vogen;
 using YamlDotNet.Core;
 using YamlDotNet.Core.Events;
@@ -31,15 +32,18 @@ namespace Dosaic.Hosting.Abstractions.Extensions
             .WithNamingConvention(CamelCaseNamingConvention.Instance)
             .IgnoreUnmatchedProperties()
             .WithDuplicateKeyChecking()
+            .EnablePrivateConstructors()
             .WithTypeConverter(new ValueObjectYamlTypeConverter())
-            .WithTypeConverter(new KindSpecifierYamlTypeConverter());
+            .WithTypeConverter(new KindSpecifierYamlTypeConverter())
+            .WithTypeConverter(new TypeAttributeYamlTypeConverter());
 
         private static readonly IDeserializer _deserializer = GetYamlDeserializerBuilder().Build();
 
         internal static SerializerBuilder GetYamlSerializerBuilder() => new SerializerBuilder()
             .WithNamingConvention(CamelCaseNamingConvention.Instance)
             .WithTypeConverter(new ValueObjectYamlTypeConverter())
-            .WithTypeConverter(new KindSpecifierYamlTypeConverter());
+            .WithTypeConverter(new KindSpecifierYamlTypeConverter())
+            .WithTypeConverter(new TypeAttributeYamlTypeConverter());
 
         private static readonly ISerializer _serializer = GetYamlSerializerBuilder().Build();
 
@@ -100,6 +104,29 @@ namespace Dosaic.Hosting.Abstractions.Extensions
                 .Invoke(value, [])!
                 .ToString()!;
             emitter.Emit(new Scalar(null, null, val, ScalarStyle.Plain, true, false));
+        }
+    }
+
+    internal class TypeAttributeYamlTypeConverter : IYamlTypeConverter
+    {
+        private readonly ConcurrentDictionary<Type, IYamlConverter> _converters = new();
+        public bool Accepts(Type type)
+        {
+            return type.GetCustomAttributes().Any(attr => attr.GetType() == typeof(YamlTypeConverterAttribute));
+        }
+
+        public object ReadYaml(IParser parser, Type type, ObjectDeserializer rootDeserializer)
+        {
+            var converterType = type.GetAttribute<YamlTypeConverterAttribute>()!.Converter;
+            var converter = _converters.GetOrAdd(converterType, ct => Activator.CreateInstance(ct) as IYamlConverter);
+            return converter.ReadYaml(parser, type, rootDeserializer);
+        }
+
+        public void WriteYaml(IEmitter emitter, object value, Type type, ObjectSerializer serializer)
+        {
+            var converterType = type.GetAttribute<YamlTypeConverterAttribute>()!.Converter;
+            var converter = _converters.GetOrAdd(converterType, ct => Activator.CreateInstance(ct) as IYamlConverter);
+            converter.WriteYaml(emitter, value, type, serializer);
         }
     }
 

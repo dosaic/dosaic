@@ -1,40 +1,69 @@
 using System.Reflection;
+using System.Text.Json.Serialization;
+using Dosaic.Hosting.Abstractions.Attributes;
 using NanoidDotNet;
+using YamlDotNet.Core;
+using YamlDotNet.Core.Events;
+using YamlDotNet.Serialization;
 
 namespace Dosaic.Extensions.NanoIds
 {
+    public class NanoIdJsonConverter : JsonConverter<NanoId>
+    {
+        public override NanoId Read(ref System.Text.Json.Utf8JsonReader reader, Type typeToConvert,
+            System.Text.Json.JsonSerializerOptions options)
+        {
+            var value = reader.GetString();
+            return new NanoId(value!);
+        }
+
+        public override void Write(System.Text.Json.Utf8JsonWriter writer, NanoId value,
+            System.Text.Json.JsonSerializerOptions options)
+        {
+            writer.WriteStringValue(value.Value);
+        }
+    }
+
+    public class NanoIdYamlConverter : IYamlConverter
+    {
+        public object ReadYaml(IParser parser, Type type, ObjectDeserializer rootDeserializer)
+        {
+            var scalar = parser.Consume<Scalar>();
+            return new NanoId(scalar.Value);
+        }
+
+        public void WriteYaml(IEmitter emitter, object value, Type type, ObjectSerializer serializer)
+        {
+            if (value is NanoId nanoId)
+            {
+                emitter.Emit(new Scalar(nanoId.Value));
+            }
+        }
+    }
+
     [Serializable]
-    public class NanoId :
+    [JsonConverter(typeof(NanoIdJsonConverter))]
+    [YamlTypeConverter(typeof(NanoIdYamlConverter))]
+    public readonly struct NanoId(string value) :
         IComparable,
         IComparable<NanoId>,
         IEquatable<NanoId>
     {
-        public NanoId(string value)
-        {
-            Value = value ?? throw new ArgumentNullException(nameof(value));
-        }
-
-        public string Value { get; }
+        public string Value { get; } = value ?? throw new ArgumentNullException(nameof(value));
 
         public int CompareTo(object obj)
         {
-            if (obj == null) return 1;
-            if (obj is not NanoId id)
-                throw new ArgumentException("Object is not a NanoId");
-            return CompareTo(id);
+            if (obj is null) return 1;
+            return obj is not NanoId id ? throw new ArgumentException("Object is not a NanoId") : CompareTo(id);
         }
 
         public int CompareTo(NanoId other)
         {
-            return other == null
-                ? 1
-                : string.Compare(Value, other.Value, StringComparison.Ordinal);
+            return string.Compare(Value, other.Value, StringComparison.Ordinal);
         }
 
         public bool Equals(NanoId other)
         {
-            if (other == null)
-                return false;
             return Value == other.Value;
         }
 
@@ -54,9 +83,7 @@ namespace Dosaic.Extensions.NanoIds
 
         public override bool Equals(object obj)
         {
-            if (obj == null || GetType() != obj.GetType())
-                return false;
-            return Equals((NanoId)obj);
+            return obj is NanoId id && Equals(id);
         }
 
         public override int GetHashCode()
@@ -66,19 +93,15 @@ namespace Dosaic.Extensions.NanoIds
 
         public static bool operator ==(NanoId left, NanoId right)
         {
-            if (ReferenceEquals(left, right))
-                return true;
-            if (ReferenceEquals(left, null))
-                return false;
-            return !ReferenceEquals(right, null) && left.Equals(right);
+            return Equals(left, right);
         }
 
         public static bool operator !=(NanoId left, NanoId right)
         {
-            return !(left == right);
+            return !Equals(left, right);
         }
 
-        public string ToString(string format, IFormatProvider formatProvider)
+        public string ToString(IFormatProvider formatProvider)
         {
             FormattableString formatedString = $"{nameof(Value)}: {Value}";
             return formatedString.ToString(formatProvider);
@@ -96,19 +119,22 @@ namespace Dosaic.Extensions.NanoIds
                 out charsWritten);
         }
 
-        public static implicit operator NanoId(string value)
-        {
-            return new NanoId(value);
-        }
+        public static implicit operator NanoId(string value) => new(value);
+        // public static implicit operator NanoId?(string value) => Parse(value);
 
         public static implicit operator string(NanoId value)
         {
             return value.Value;
         }
 
-        public static NanoId Parse(string value)
+        // public static implicit operator string(NanoId? value)
+        // {
+        //     return value?.Value;
+        // }
+
+        public static NanoId? Parse(string value)
         {
-            return value == null ? null : new NanoId(value);
+            return value is null ? (NanoId?)null : new NanoId(value);
         }
     }
 

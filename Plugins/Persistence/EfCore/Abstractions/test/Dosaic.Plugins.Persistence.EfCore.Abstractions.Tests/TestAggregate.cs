@@ -38,27 +38,21 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests
 
         public string TestProperty { get; set; }
 
-        public static TestAggregate Init(DateTime validFrom, string groupId, NanoId id = null,
+        public static TestAggregate Init(DateTime validFrom, string groupId, NanoId? id = null,
             string eventData = "test data",
-            NanoId modifiedBy = null,
+            NanoId? modifiedBy = null,
             string testPropertyValue = "test", TestEventType eventType = TestEventType.Update, bool isDeleted = false)
         {
-            if (id == null)
-                id = NanoId.NewId<TestAggregate>();
-
-            if (modifiedBy == null)
-                modifiedBy = NanoId.NewId<TestAggregate>();
-
             return new TestAggregate
             {
-                Id = id,
+                Id = id ?? NanoId.NewId<TestAggregate>(),
                 GroupId = groupId,
                 EventData = eventData,
                 ValidFrom = validFrom,
-                ModifiedBy = modifiedBy,
+                ModifiedBy = modifiedBy ?? NanoId.NewId<TestAggregate>(),
                 TestProperty = testPropertyValue,
                 EventType = eventType,
-                IsDeleted = isDeleted
+                IsDeleted = isDeleted,
             };
         }
     }

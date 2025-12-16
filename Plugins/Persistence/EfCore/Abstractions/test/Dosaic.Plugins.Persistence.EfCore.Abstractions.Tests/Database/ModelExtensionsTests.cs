@@ -36,8 +36,8 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests.Database
         {
             var grm1 = Activator.CreateInstance<SubTestModel>();
             var grm2 = Activator.CreateInstance<SubTestModel>();
-            var target = new TestAuditModel { Id = "1", Name = "test", Subs = [grm1] };
-            var source = new TestAuditModel { Id = "1", Name = "test", Subs = [grm1, grm2] };
+            var target = new TestAuditModel { Id = "1", Name = "test", Subs = [grm1], CreatedBy = "test" };
+            var source = new TestAuditModel { Id = "1", Name = "test", Subs = [grm1, grm2], CreatedBy = "test" };
 
             target.PatchModel(source);
             target.Subs.Should().HaveCount(2);
@@ -51,7 +51,7 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests.Database
 
             target.PatchModel(null);
 
-            target.Id.Should().Be(NanoId.Parse("1")!);
+            target.Id.Should().Be(NanoId.Parse("1")!.Value);
             target.Name.Should().Be("Name");
         }
 
@@ -70,8 +70,8 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests.Database
         [Test]
         public void CanPatchModelsWithOwnedObjects()
         {
-            var m = new TestModelWithObjectProp { Id = NanoId.Parse("123"), Object = new TestObject { Name = "test" } };
-            var m2 = new TestModelWithObjectProp { Id = NanoId.Parse("123"), Object = new TestObject { Name = "test 123" } };
+            var m = new TestModelWithObjectProp { Id = "123", Object = new TestObject { Name = "test" } };
+            var m2 = new TestModelWithObjectProp { Id = "123", Object = new TestObject { Name = "test 123" } };
             m.PatchModel(m2);
             m.Object.Name.Should().Be("test 123");
         }

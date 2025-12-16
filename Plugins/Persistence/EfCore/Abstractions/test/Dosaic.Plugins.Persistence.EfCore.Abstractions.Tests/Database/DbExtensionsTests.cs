@@ -33,7 +33,8 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests.Database
                     EventType = TestEventType.Create,
                     GroupId = "A",
                     IsDeleted = false,
-                    ValidFrom = new DateTime(2022, 1, 1)
+                    ValidFrom = new DateTime(2022, 1, 1),
+                    ModifiedBy = "test"
                 },
                 new TestAggregate
                 {
@@ -42,7 +43,8 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests.Database
                     EventType = TestEventType.Create,
                     GroupId = "A",
                     IsDeleted = false,
-                    ValidFrom = new DateTime(2022, 6, 1)
+                    ValidFrom = new DateTime(2022, 6, 1),
+                    ModifiedBy = "test"
                 },
                 new TestAggregate
                 {
@@ -51,7 +53,8 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests.Database
                     EventType = TestEventType.Create,
                     GroupId = "B",
                     IsDeleted = false,
-                    ValidFrom = new DateTime(2022, 1, 1)
+                    ValidFrom = new DateTime(2022, 1, 1),
+                    ModifiedBy = "test"
                 },
                 new TestAggregate
                 {
@@ -60,7 +63,8 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests.Database
                     EventType = TestEventType.Create,
                     GroupId = "A",
                     IsDeleted = true,
-                    ValidFrom = new DateTime(2022, 1, 1)
+                    ValidFrom = new DateTime(2022, 1, 1),
+                    ModifiedBy = "test"
                 },
                 new TestAggregate
                 {
@@ -69,7 +73,8 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests.Database
                     EventType = TestEventType.Create,
                     GroupId = "A",
                     IsDeleted = false,
-                    ValidFrom = new DateTime(2023, 2, 1)
+                    ValidFrom = new DateTime(2023, 2, 1),
+                    ModifiedBy = "test"
                 }
             );
 
@@ -80,7 +85,8 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests.Database
                     EventData = "test",
                     GroupId = "Y",
                     IsDeleted = false,
-                    ValidFrom = new DateTime(2022, 1, 1)
+                    ValidFrom = new DateTime(2022, 1, 1),
+                    ModifiedBy = "test"
                 }
             );
 

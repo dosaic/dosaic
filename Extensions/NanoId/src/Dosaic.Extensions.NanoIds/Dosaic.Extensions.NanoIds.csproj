@@ -9,5 +9,9 @@
     <PackageReference Include="Nanoid" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\..\Hosting\Abstractions\src\Dosaic.Hosting.Abstractions\Dosaic.Hosting.Abstractions.csproj" />
+  </ItemGroup>
+
 
 </Project>

@@ -1,3 +1,4 @@
+using Dosaic.Extensions.NanoIds;
 using Dosaic.Plugins.Persistence.EfCore.Abstractions.Database;
 using Microsoft.EntityFrameworkCore;
 
@@ -75,7 +76,7 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests.Database
             _db.ChangeTracker.Entries<TestAuditModel>().Single().State.Should().Be(EntityState.Modified);
             _db.ChangeTracker.Entries<SubTestModel>().Should().AllSatisfy(x => x.State.Should().Be(EntityState.Modified));
             model.ModifiedUtc.Should().BeWithin(TimeSpan.FromSeconds(1));
-            model.ModifiedBy.Should().Be("test");
+            model.ModifiedBy.Should().Be(new NanoId("test"));
             model.Subs.Add(new SubTestModel { Id = "33", DeepName = "33" });
             await _db.UpdateGraphAsync(model, m => m.Id == model.Id);
             _db.ChangeTracker.Entries<SubTestModel>().Should().Contain(x => x.State == EntityState.Added);
