@@ -98,7 +98,7 @@
     From version 6.0 the NUnit3TestAdapter will support MTP 2.0, and stop supporting .net core 3. Lowest version will be .net 8.0.
     This causes some problems (exact problem is unknown) with the assembly file loading at this point, no solution was found so far.
     DO NOT UPDATE NUnit3TestAdapter TO V6!!! -->
-    <PackageVersion Include="NUnit3TestAdapter" Version="5.2.0" />
+    <PackageVersion Include="NUnit3TestAdapter" Version="6.0.0" />
     <PackageVersion Include="ODataQueryHelper.Core" Version="1.51.91" />
     <PackageVersion Include="OpenTelemetry" Version="1.14.0" />
     <PackageVersion Include="OpenTelemetry.Exporter.InMemory" Version="1.14.0" />
