@@ -16,7 +16,7 @@
     <PackageVersion Include="AwesomeAssertions" Version="9.3.0" />
     <PackageVersion Include="Bogus" Version="35.6.5" />
     <PackageVersion Include="BouncyCastle.NetCore" Version="2.2.1" />
-    <PackageVersion Include="Buildalyzer.Workspaces" Version="7.1.0" />
+    <PackageVersion Include="Buildalyzer.Workspaces" Version="8.0.0" />
     <PackageVersion Include="Chronos.Abstractions" Version="2.0.24" />
     <PackageVersion Include="Chronos.Net" Version="2.0.24" />
     <PackageVersion Include="DynamicExpresso.Core" Version="2.19.3" />
