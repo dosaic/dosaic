@@ -17,4 +17,22 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Eventsourcing
     {
         public required TModel EventType { get; set; }
     }
+
+    /// <summary>
+    /// The aggregate root decorator.
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
+    [AttributeUsage(AttributeTargets.Class, Inherited = false, AllowMultiple = false)]
+    public class AggregateRootAttribute<T> : Attribute where T : AggregateEvent;
+
+    /// <summary>
+    /// Indicates that the class is an aggregate child of the specified aggregate root. The NavigationProperty is used to find the next child till a root is found. The root is the one with the AggregateRootAttribute.
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
+    /// <param name="NavigationProperty">Navigation Property</param>
+    [AttributeUsage(AttributeTargets.Class, Inherited = false, AllowMultiple = false)]
+    public class AggregateChildAttribute<T>(string NavigationProperty) : Attribute where T : AggregateEvent
+    {
+        public string NavigationProperty { get; } = NavigationProperty;
+    }
 }

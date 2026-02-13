@@ -1,6 +1,5 @@
 {
     "svg.preview.background": "dark-transparent",
-    "dotrush.roslyn.projectOrSolutionFiles": [
-        "../Dosaic.sln"
-    ]
+    "dotnet.solution.autoOpen": "Dosaic.sln",
+    "dotnet.preferCSharpExtension": false
 }
