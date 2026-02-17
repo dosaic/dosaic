@@ -78,6 +78,23 @@ public class AggregatePatchTests
     }
 
     [Test]
+    public void IsAggregateRootMatchesCorrectTypes()
+    {
+        typeof(TestResult).IsAggregateRoot().Should().BeTrue();
+        typeof(TestResultChild).IsAggregateRoot().Should().BeFalse();
+        typeof(TestResultOneToOneUnrelated).IsAggregateRoot().Should().BeFalse();
+    }
+
+    [Test]
+    public void IsAggregateChildMatchesCorrectTypes()
+    {
+        typeof(TestResultChild).IsAggregateChild().Should().BeTrue();
+        typeof(TestResultChildChild).IsAggregateChild().Should().BeTrue();
+        typeof(TestResult).IsAggregateChild().Should().BeFalse();
+        typeof(TestResultOneToOneUnrelated).IsAggregateChild().Should().BeFalse();
+    }
+
+    [Test]
     public void GetAggregateInfoForRootReturnsEmptySegments()
     {
         var info = AggregatePatchExtensions.GetAggregateInfo(typeof(TestResult));
@@ -820,6 +837,38 @@ public class AggregatePatchTests
         deserialized.Data.Should().Be(patch.Data);
         deserialized.EntityId.Should().Be(patch.EntityId);
         deserialized.EntityType.Should().Be(patch.EntityType);
+    }
+
+    [Test]
+    public async Task FullLifecycleAddUpdateDeleteForChildEntity()
+    {
+        var newChild = new TestResultChild { Id = "child-lifecycle", Name = "Created", TestResultId = "root-1" };
+        SetupQuery<TestResultChild>();
+
+        var addPatch = await _db.GetAggregateChangesAsync(newChild, PatchOperation.Add, CancellationToken.None);
+        _testResult.ApplyAggregateChanges(addPatch);
+
+        _testResult.TestResultChildren.Should().HaveCount(3);
+        var added = _testResult.TestResultChildren.First(c => c.Id == (NanoId)"child-lifecycle");
+        added.Name.Should().Be("Created");
+        added.Id.Should().Be((NanoId)"child-lifecycle");
+        added.TestResultId.Should().Be((NanoId)"root-1");
+
+        var updatedChild = new TestResultChild { Id = "child-lifecycle", Name = "Updated", TestResultId = "root-1" };
+        SetupQuery(newChild);
+        var updatePatch = await _db.GetAggregateChangesAsync(updatedChild, PatchOperation.Update, CancellationToken.None);
+        _testResult.ApplyAggregateChanges(updatePatch);
+
+        _testResult.TestResultChildren.Should().HaveCount(3);
+        var updated = _testResult.TestResultChildren.First(c => c.Id == (NanoId)"child-lifecycle");
+        updated.Name.Should().Be("Updated");
+
+        SetupQuery(updatedChild);
+        var deletePatch = await _db.GetAggregateChangesAsync(updatedChild, PatchOperation.Delete, CancellationToken.None);
+        _testResult.ApplyAggregateChanges(deletePatch);
+
+        _testResult.TestResultChildren.Should().HaveCount(2);
+        _testResult.TestResultChildren.Should().NotContain(c => c.Id == (NanoId)"child-lifecycle");
     }
 
     private void SetupQuery<T>(params T[] items) where T : class, IModel

@@ -58,6 +58,24 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Eventsourcing
             return InfoCache.GetOrAdd(changeType, BuildAggregateInfo);
         }
 
+        public static bool IsAggregateRoot(this Type type)
+        {
+            return type.GetCustomAttributes(false).Any(a =>
+            {
+                var attrType = a.GetType();
+                return attrType.IsGenericType && attrType.GetGenericTypeDefinition() == typeof(AggregateRootAttribute<>);
+            });
+        }
+
+        public static bool IsAggregateChild(this Type type)
+        {
+            return type.GetCustomAttributes(false).Any(a =>
+            {
+                var attrType = a.GetType();
+                return attrType.IsGenericType && attrType.GetGenericTypeDefinition() == typeof(AggregateChildAttribute<>);
+            });
+        }
+
         public static async Task<AggregatePatch> GetAggregateChangesAsync<TChange>(
             this IDb db,
             TChange change,
@@ -405,7 +423,6 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Eventsourcing
         {
             return type.GetProperties(BindingFlags.Public | BindingFlags.Instance)
                 .Where(p => p.CanRead && p.CanWrite)
-                .Where(p => p.Name != nameof(IModel.Id))
                 .Where(p => !p.PropertyType.Implements(typeof(IModel)))
                 .Where(p => !p.PropertyType.IsEnumerable() || p.PropertyType == typeof(string));
         }
