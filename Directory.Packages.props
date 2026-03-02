@@ -120,7 +120,7 @@
     <PackageVersion Include="Serilog.AspNetCore" Version="10.0.0" />
     <PackageVersion Include="Serilog.Enrichers.Span" Version="3.1.0" />
     <PackageVersion Include="Serilog.Enrichers.Thread" Version="4.0.0" />
-    <PackageVersion Include="Sqids" Version="3.2.0" />
+    <PackageVersion Include="Sqids" Version="3.2.1" />
     <PackageVersion Include="SSH.NET" Version="2025.1.0" />
     <PackageVersion Include="Swashbuckle.AspNetCore.Annotations" Version="10.1.4" />
     <PackageVersion Include="Swashbuckle.AspNetCore.SwaggerUI" Version="10.1.4" />
