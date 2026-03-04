@@ -5,7 +5,7 @@ namespace Dosaic.Plugins.Validations.AttributeValidation.Validators;
 public partial class Validations
 {
     [AttributeUsage(AttributeTargets.Property | AttributeTargets.Field | AttributeTargets.Class | AttributeTargets.Parameter)]
-    public class RequiredAttribute : SyncValidationAttribute
+    public class RequiredAttribute : ValidationAttribute
     {
         public override string Code => ValidationCodes.Required;
         public override object Arguments => new { };

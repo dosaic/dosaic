@@ -236,7 +236,7 @@ public class ThrowDto
     public required string Field { get; set; }
 }
 
-public class ThrowAttribute : SyncValidationAttribute
+public class ThrowAttribute : ValidationAttribute
 {
     public override string ErrorMessage => "Always throws";
     public override string Code => "Throw";

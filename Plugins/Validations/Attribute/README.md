@@ -179,14 +179,14 @@ The validator recursively walks nested objects and collections. Error paths use 
 
 ### Custom validators
 
-Extend `SyncValidationAttribute` (or `AsyncValidationAttribute` for async logic) to create reusable validation attributes:
+Extend `ValidationAttribute` (or `AsyncValidationAttribute` for async logic) to create reusable validation attributes:
 
 ```csharp
 using Dosaic.Plugins.Validations.Abstractions;
 using Dosaic.Plugins.Validations.AttributeValidation;
 
 [AttributeUsage(AttributeTargets.Property | AttributeTargets.Field)]
-public class MustBePositiveEvenAttribute : SyncValidationAttribute
+public class MustBePositiveEvenAttribute : ValidationAttribute
 {
     public override string ErrorMessage => "Value must be a positive even number";
     public override string Code => "Custom.PositiveEven";
@@ -226,17 +226,17 @@ public class UniqueEmailAttribute : AsyncValidationAttribute
 
 ### `Validations.Required`
 
-| Attribute | Arguments | Validation Code | Description |
-|---|---|---|---|
-| `[Validations.Required]` | — | `Required` | Value must not be `null`; strings must not be empty or whitespace. `TreatNullAsValid` is `false` — a `null` value triggers failure. |
+| Attribute                  | Arguments | Validation Code | Description                                                                                                                                  |
+| -------------------------- | --------- | --------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `[Validations.Required]` | —        | `Required`    | Value must not be `null`; strings must not be empty or whitespace. `TreatNullAsValid` is `false` — a `null` value triggers failure. |
 
 ---
 
 ### `Validations.Expression`
 
-| Attribute | Arguments | Validation Code | Description |
-|---|---|---|---|
-| `[Validations.Expression(string expression)]` | `expression` | `Expression` | Evaluates a DynamicExpresso expression. Reference the property value via `Value`. Returns `false` if the expression throws. |
+| Attribute                                       | Arguments      | Validation Code | Description                                                                                                                     |
+| ----------------------------------------------- | -------------- | --------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `[Validations.Expression(string expression)]` | `expression` | `Expression`  | Evaluates a DynamicExpresso expression. Reference the property value via `Value`. Returns `false` if the expression throws. |
 
 ---
 
@@ -244,20 +244,20 @@ public class UniqueEmailAttribute : AsyncValidationAttribute
 
 Applicable to any `IEnumerable` property (excluding strings).
 
-| Attribute | Arguments | Validation Code | Description |
-|---|---|---|---|
-| `[Validations.Array.Length(int minimum, int maximum)]` | `minimum`, `maximum` | `Array.Length` | Element count must be ≥ minimum and ≤ maximum. |
-| `[Validations.Array.MinLength(int minimum)]` | `minimum` | `Array.MinLength` | Element count must be ≥ minimum. |
-| `[Validations.Array.MaxLength(int maximum)]` | `maximum` | `Array.MaxLength` | Element count must be ≤ maximum. |
+| Attribute                                                | Arguments                | Validation Code     | Description                                      |
+| -------------------------------------------------------- | ------------------------ | ------------------- | ------------------------------------------------ |
+| `[Validations.Array.Length(int minimum, int maximum)]` | `minimum`, `maximum` | `Array.Length`    | Element count must be ≥ minimum and ≤ maximum. |
+| `[Validations.Array.MinLength(int minimum)]`           | `minimum`              | `Array.MinLength` | Element count must be ≥ minimum.                |
+| `[Validations.Array.MaxLength(int maximum)]`           | `maximum`              | `Array.MaxLength` | Element count must be ≤ maximum.                |
 
 ---
 
 ### `Validations.Bool`
 
-| Attribute | Arguments | Validation Code | Description |
-|---|---|---|---|
-| `[Validations.Bool.True]` | — | `Bool.True` | Value must be `true`. |
-| `[Validations.Bool.False]` | — | `Bool.False` | Value must be `false`. |
+| Attribute                    | Arguments | Validation Code | Description              |
+| ---------------------------- | --------- | --------------- | ------------------------ |
+| `[Validations.Bool.True]`  | —        | `Bool.True`   | Value must be `true`.  |
+| `[Validations.Bool.False]` | —        | `Bool.False`  | Value must be `false`. |
 
 ---
 
@@ -265,13 +265,13 @@ Applicable to any `IEnumerable` property (excluding strings).
 
 Age-based validators resolve the current UTC time from `IDateTimeProvider` (Chronos).
 
-| Attribute | Arguments | Validation Code | Description |
-|---|---|---|---|
-| `[Validations.Date.Before(int year, int month = 1, int day = 1)]` | `date` | `Date.Before` | `DateTime` value must be on or before the specified date. |
-| `[Validations.Date.After(int year, int month = 1, int day = 1)]` | `date` | `Date.After` | `DateTime` value must be on or after the specified date. |
-| `[Validations.Date.Age(int minAge, int maxAge)]` | `minAge`, `maxAge` | `Date.Age` | Age derived from the `DateTime` must be between minAge and maxAge years. |
-| `[Validations.Date.MinAge(int age)]` | `age` | `Date.MinAge` | Date must be at least `age` years ago. |
-| `[Validations.Date.MaxAge(int age)]` | `age` | `Date.MaxAge` | Date must be at most `age` years ago. |
+| Attribute                                                           | Arguments              | Validation Code | Description                                                                |
+| ------------------------------------------------------------------- | ---------------------- | --------------- | -------------------------------------------------------------------------- |
+| `[Validations.Date.Before(int year, int month = 1, int day = 1)]` | `date`               | `Date.Before` | `DateTime` value must be on or before the specified date.                |
+| `[Validations.Date.After(int year, int month = 1, int day = 1)]`  | `date`               | `Date.After`  | `DateTime` value must be on or after the specified date.                 |
+| `[Validations.Date.Age(int minAge, int maxAge)]`                  | `minAge`, `maxAge` | `Date.Age`    | Age derived from the `DateTime` must be between minAge and maxAge years. |
+| `[Validations.Date.MinAge(int age)]`                              | `age`                | `Date.MinAge` | Date must be at least `age` years ago.                                   |
+| `[Validations.Date.MaxAge(int age)]`                              | `age`                | `Date.MaxAge` | Date must be at most `age` years ago.                                    |
 
 ---
 
@@ -279,13 +279,13 @@ Age-based validators resolve the current UTC time from `IDateTimeProvider` (Chro
 
 Applies to `int` values.
 
-| Attribute | Arguments | Validation Code | Description |
-|---|---|---|---|
-| `[Validations.Int.Range(int minimum, int maximum)]` | `minimum`, `maximum` | `Number.Range` | Value must be ≥ minimum and ≤ maximum. |
-| `[Validations.Int.Min(int minimum)]` | `minimum` | `Number.Min` | Value must be ≥ minimum. |
-| `[Validations.Int.Max(int maximum)]` | `maximum` | `Number.Max` | Value must be ≤ maximum. |
-| `[Validations.Int.Positive]` | — | `Number.Positive` | Value must be > 0. |
-| `[Validations.Int.Negative]` | — | `Number.Negative` | Value must be < 0. |
+| Attribute                                             | Arguments                | Validation Code     | Description                              |
+| ----------------------------------------------------- | ------------------------ | ------------------- | ---------------------------------------- |
+| `[Validations.Int.Range(int minimum, int maximum)]` | `minimum`, `maximum` | `Number.Range`    | Value must be ≥ minimum and ≤ maximum. |
+| `[Validations.Int.Min(int minimum)]`                | `minimum`              | `Number.Min`      | Value must be ≥ minimum.                |
+| `[Validations.Int.Max(int maximum)]`                | `maximum`              | `Number.Max`      | Value must be ≤ maximum.                |
+| `[Validations.Int.Positive]`                        | —                       | `Number.Positive` | Value must be > 0.                       |
+| `[Validations.Int.Negative]`                        | —                       | `Number.Negative` | Value must be < 0.                       |
 
 ---
 
@@ -293,14 +293,14 @@ Applies to `int` values.
 
 Applies to `string` values.
 
-| Attribute | Arguments | Validation Code | Description |
-|---|---|---|---|
-| `[Validations.String.Length(int minimum, int maximum)]` | `minimum`, `maximum` | `String.Length` | String length must be ≥ minimum and ≤ maximum characters. |
-| `[Validations.String.MinLength(int length)]` | `length` | `String.MinLength` | String must be at least `length` characters long. |
-| `[Validations.String.MaxLength(int length)]` | `length` | `String.MaxLength` | String must be at most `length` characters long. |
-| `[Validations.String.Email]` | — | `String.Email` | String must be a valid email address (RFC-compliant, IDN-aware). |
-| `[Validations.String.Url]` | — | `String.Url` | String must be a valid absolute URI. |
-| `[Validations.String.Regex(string pattern)]` | `pattern` | `String.Regex` | String must match the specified regular expression. |
+| Attribute                                                 | Arguments                | Validation Code      | Description                                                      |
+| --------------------------------------------------------- | ------------------------ | -------------------- | ---------------------------------------------------------------- |
+| `[Validations.String.Length(int minimum, int maximum)]` | `minimum`, `maximum` | `String.Length`    | String length must be ≥ minimum and ≤ maximum characters.      |
+| `[Validations.String.MinLength(int length)]`            | `length`               | `String.MinLength` | String must be at least `length` characters long.              |
+| `[Validations.String.MaxLength(int length)]`            | `length`               | `String.MaxLength` | String must be at most `length` characters long.               |
+| `[Validations.String.Email]`                            | —                       | `String.Email`     | String must be a valid email address (RFC-compliant, IDN-aware). |
+| `[Validations.String.Url]`                              | —                       | `String.Url`       | String must be a valid absolute URI.                             |
+| `[Validations.String.Regex(string pattern)]`            | `pattern`              | `String.Regex`     | String must match the specified regular expression.              |
 
 ---
 
@@ -308,18 +308,16 @@ Applies to `string` values.
 
 Each `ValidationError` in `ValidationResult.Errors` exposes the following properties:
 
-| Property | Type | Description |
-|---|---|---|
-| `Path` | `string` | `/`-separated path to the failing property (e.g. `"Addresses/0/City"`). Empty string for root-level validation. |
-| `Code` | `string` | Machine-readable validation code (see tables above). |
-| `Message` | `string` | Human-readable error message. |
-| `Validator` | `string` | Short name of the validator attribute (e.g. `"MinLength"`, `"Required"`). |
-| `Arguments` | `IDictionary<string, object>` | Attribute constructor arguments as a dictionary (e.g. `{ "length": 5 }`). |
+| Property      | Type                            | Description                                                                                                         |
+| ------------- | ------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `Path`      | `string`                      | `/`-separated path to the failing property (e.g. `"Addresses/0/City"`). Empty string for root-level validation. |
+| `Code`      | `string`                      | Machine-readable validation code (see tables above).                                                                |
+| `Message`   | `string`                      | Human-readable error message.                                                                                       |
+| `Validator` | `string`                      | Short name of the validator attribute (e.g.`"MinLength"`, `"Required"`).                                        |
+| `Arguments` | `IDictionary<string, object>` | Attribute constructor arguments as a dictionary (e.g.`{ "length": 5 }`).                                          |
 
 `ValidationResult.IsValid` returns `true` when `Errors` is empty.
 
 ## Null Handling
 
 By default all built-in validators set `TreatNullAsValid = true`, meaning a `null` property value is skipped unless `[Validations.Required]` is also present. This lets you distinguish truly optional fields from required ones without cluttering annotations.
-
-
