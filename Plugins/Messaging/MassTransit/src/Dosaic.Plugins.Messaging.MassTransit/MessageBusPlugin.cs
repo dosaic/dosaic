@@ -70,35 +70,45 @@ public class MessageBusPlugin(IImplementationResolver implementationResolver, Me
             opts.DisableUsageTelemetry();
             foreach (var mt in messageTypes)
                 opts.AddConsumer(consumerType.MakeGenericType(mt));
-            opts.UsingRabbitMq((context, config) =>
+            if (configuration.UseInMemory)
             {
-                config.Host(configuration.Host, configuration.Port, configuration.VHost, h =>
+                opts.UsingInMemory((context, config) =>
                 {
-                    h.Heartbeat(TimeSpan.FromSeconds(30));
-                    h.PublisherConfirmation = true;
-                    if (configuration.Username is not null && configuration.Password is not null)
-                    {
-                        h.Username(configuration.Username);
-                        h.Password(configuration.Password);
-                    }
+                    config.ConfigureEndpoints(context);
                 });
-                foreach (var queueGroup in queueGroups)
+            }
+            else
+            {
+                opts.UsingRabbitMq((context, config) =>
                 {
-                    config.ReceiveEndpoint(queueGroup.Queue.PathAndQuery, configurator =>
+                    config.Host(configuration.Host, configuration.Port, configuration.VHost, h =>
                     {
-                        configurators.ForEach(x => x.ConfigureReceiveEndpoint(context, queueGroup.Queue, configurator));
-                        if (configuration.UseRetry)
+                        h.Heartbeat(TimeSpan.FromSeconds(30));
+                        h.PublisherConfirmation = true;
+                        if (configuration.Username is not null && configuration.Password is not null)
                         {
-                            configurator.UseMessageRetry(r => r.Interval(configuration.MaxRetryCount, TimeSpan.FromSeconds(configuration.RetryDelaySeconds)));
+                            h.Username(configuration.Username);
+                            h.Password(configuration.Password);
                         }
-                        configurator.UseDelayedRedelivery(r => r.Interval(configuration.MaxRedeliveryCount, TimeSpan.FromSeconds(configuration.RedeliveryDelaySeconds)));
-                        foreach (var messageType in queueGroup.MessageTypes)
-                            configurator.ConfigureConsumer(context, consumerType.MakeGenericType(messageType));
                     });
-                }
-                configurators.ForEach(x => x.ConfigureRabbitMq(context, config));
-                config.ConfigureEndpoints(context);
-            });
+                    foreach (var queueGroup in queueGroups)
+                    {
+                        config.ReceiveEndpoint(queueGroup.Queue.PathAndQuery, configurator =>
+                        {
+                            configurators.ForEach(x => x.ConfigureReceiveEndpoint(context, queueGroup.Queue, configurator));
+                            if (configuration.UseRetry)
+                            {
+                                configurator.UseMessageRetry(r => r.Interval(configuration.MaxRetryCount, TimeSpan.FromSeconds(configuration.RetryDelaySeconds)));
+                            }
+                            configurator.UseDelayedRedelivery(r => r.Interval(configuration.MaxRedeliveryCount, TimeSpan.FromSeconds(configuration.RedeliveryDelaySeconds)));
+                            foreach (var messageType in queueGroup.MessageTypes)
+                                configurator.ConfigureConsumer(context, consumerType.MakeGenericType(messageType));
+                        });
+                    }
+                    configurators.ForEach(x => x.ConfigureRabbitMq(context, config));
+                    config.ConfigureEndpoints(context);
+                });
+            }
             opts.AddHealthChecks();
             opts.ConfigureHealthCheckOptions(o =>
             {

@@ -7,7 +7,7 @@ public partial class Validations
     public class Int
     {
         [AttributeUsage(AttributeTargets.Property | AttributeTargets.Field | AttributeTargets.Parameter)]
-        public class RangeAttribute(int minimum, int maximum) : SyncValidationAttribute
+        public class RangeAttribute(int minimum, int maximum) : ValidationAttribute
         {
             public override string Code => ValidationCodes.Int.Range;
             public override object Arguments => new { minimum, maximum };
@@ -37,7 +37,7 @@ public partial class Validations
         }
 
         [AttributeUsage(AttributeTargets.Property | AttributeTargets.Field | AttributeTargets.Parameter)]
-        public class PositiveAttribute : SyncValidationAttribute
+        public class PositiveAttribute : ValidationAttribute
         {
             public override string Code => ValidationCodes.Int.Positive;
             public override object Arguments => new { };
@@ -49,7 +49,7 @@ public partial class Validations
         }
 
         [AttributeUsage(AttributeTargets.Property | AttributeTargets.Field | AttributeTargets.Parameter)]
-        public class NegativeAttribute : SyncValidationAttribute
+        public class NegativeAttribute : ValidationAttribute
         {
             public override string Code => ValidationCodes.Int.Negative;
             public override object Arguments => new { };

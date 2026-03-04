@@ -1,54 +1,101 @@
 # Dosaic.Extensions.RestEase
 
-Dosaic.Extensions.RestEase is an extension library that simplifies HTTP API client creation using RestEase with built-in authentication and retry policies.
+`Dosaic.Extensions.RestEase` is an extension library that simplifies typed HTTP API client creation using [RestEase](https://github.com/canton7/RestEase). It provides a static `RestClientFactory` with built-in OAuth2 authentication and Polly-based retry policies out of the box.
 
 ## Installation
-
-To install the nuget package follow these steps:
 
 ```shell
 dotnet add package Dosaic.Extensions.RestEase
 ```
 
-or add as package reference to your .csproj
+or add as a package reference to your `.csproj`:
 
 ```xml
 <PackageReference Include="Dosaic.Extensions.RestEase" Version="" />
 ```
 
+## Features
+
+- **Typed HTTP clients** — define an interface with RestEase attributes and get a fully functional client
+- **OAuth2 authentication** — automatic token acquisition (password, client credentials, authorization code grants)
+- **Automatic token refresh** — transparently refreshes the access token using the refresh token before it expires
+- **Polly retry policy** — configurable retry; defaults to 2 retries (3 total attempts) on HTTP 5xx responses
+- **Custom JSON serialisation** — defaults to Newtonsoft.Json with `StringEnumConverter`; fully replaceable
+- **All overloads composable** — use only the features you need; everything beyond `baseAddress` is optional
+
+## Configuration
+
+`AuthenticationConfig` can be populated from `appsettings.json` / `appsettings.yaml` via the standard `IConfiguration` binding:
+
+```json
+{
+  "MyApi": {
+    "Auth": {
+      "Enabled": true,
+      "BaseUrl": "https://auth.example.com",
+      "TokenUrlPath": "realms/myrealm/protocol/openid-connect/token",
+      "GrantType": "ClientCredentials",
+      "ClientId": "my-client",
+      "ClientSecret": "s3cr3t"
+    }
+  }
+}
+```
+
+```yaml
+MyApi:
+  Auth:
+    Enabled: true
+    BaseUrl: https://auth.example.com
+    TokenUrlPath: realms/myrealm/protocol/openid-connect/token
+    GrantType: ClientCredentials
+    ClientId: my-client
+    ClientSecret: s3cr3t
+```
+
+Bind to `AuthenticationConfig` in your plugin or startup code:
+
+```csharp
+var authConfig = configuration.GetSection("MyApi:Auth").Get<AuthenticationConfig>();
+```
+
 ## Usage
 
-The extension provides a factory for creating typed API clients with minimal configuration.
+### Basic Client
 
-### Basic Client Creation
-
-Create a simple API client interface:
+Define an interface using RestEase attributes:
 
 ```csharp
 using RestEase;
 
-public interface IMyApi
+public interface IUserApi
 {
     [Get("users/{userId}")]
-    Task<User> GetUserAsync([Path] string userId);
+    Task<User> GetUserAsync([Path] Guid userId, CancellationToken cancellationToken);
 
     [Post("users")]
-    Task<User> CreateUserAsync([Body] User user);
+    Task<User> CreateUserAsync([Body] User user, CancellationToken cancellationToken);
+
+    [Put("users/{userId}")]
+    Task UpdateUserAsync([Path] Guid userId, [Body] User user, CancellationToken cancellationToken);
+
+    [Delete("users/{userId}")]
+    Task DeleteUserAsync([Path] Guid userId, CancellationToken cancellationToken);
 }
 ```
 
-Then create a client instance:
+Create a client instance with just a base address:
 
 ```csharp
 using Dosaic.Extensions.RestEase;
 
-IMyApi apiClient = RestClientFactory.Create<IMyApi>("https://api.example.com");
-User user = await apiClient.GetUserAsync("123");
+IUserApi api = RestClientFactory.Create<IUserApi>("https://api.example.com");
+var user = await api.GetUserAsync(userId, CancellationToken.None);
 ```
 
-### Authentication Support
+### Authentication
 
-Create a client with OAuth2 authentication:
+Pass an `AuthenticationConfig` to enable OAuth2. The `AuthHandler` acquires a token on the first request and automatically refreshes it when the access token expires (as long as the refresh token is still valid):
 
 ```csharp
 using Dosaic.Extensions.RestEase;
@@ -58,18 +105,40 @@ var authConfig = new AuthenticationConfig
 {
     Enabled = true,
     BaseUrl = "https://auth.example.com",
-    TokenUrlPath = "oauth/token",
+    TokenUrlPath = "realms/myrealm/protocol/openid-connect/token",
     GrantType = GrantType.ClientCredentials,
-    ClientId = "myclientid",
-    ClientSecret = "myclientsecret"
+    ClientId = "my-client",
+    ClientSecret = "s3cr3t"
 };
 
-IMyApi apiClient = RestClientFactory.Create<IMyApi>("https://api.example.com", authConfig);
+IUserApi api = RestClientFactory.Create<IUserApi>("https://api.example.com", authConfig);
+```
+
+#### Supported Grant Types
+
+| `GrantType` | OAuth2 `grant_type` value | Required fields |
+|---|---|---|
+| `ClientCredentials` | `client_credentials` | `ClientId`, `ClientSecret` |
+| `Password` | `password` | `ClientId`, `Username`, `Password` |
+| `Code` | `code` | `ClientId`, `ClientSecret` |
+
+```csharp
+// Password grant
+var authConfig = new AuthenticationConfig
+{
+    Enabled = true,
+    BaseUrl = "https://auth.example.com",
+    TokenUrlPath = "oauth/token",
+    GrantType = GrantType.Password,
+    ClientId = "my-client",
+    Username = "alice",
+    Password = "s3cr3t"
+};
 ```
 
 ### Custom Retry Policy
 
-You can specify a custom Polly retry policy:
+Supply any `IAsyncPolicy<HttpResponseMessage>` from Polly:
 
 ```csharp
 using Dosaic.Extensions.RestEase;
@@ -77,15 +146,13 @@ using Polly;
 using System.Net.Http;
 
 var retryPolicy = Policy
-    .HandleResult<HttpResponseMessage>(r => !r.IsSuccessStatusCode)
-    .WaitAndRetryAsync(3, retry => TimeSpan.FromSeconds(Math.Pow(2, retry)));
+    .HandleResult<HttpResponseMessage>(r => r.StatusCode == System.Net.HttpStatusCode.Conflict)
+    .RetryAsync(2);
 
-IMyApi apiClient = RestClientFactory.Create<IMyApi>("https://api.example.com", retryPolicy);
+IUserApi api = RestClientFactory.Create<IUserApi>("https://api.example.com", retryPolicy);
 ```
 
-### Advanced Configuration
-
-For complete customization, use all parameters:
+### Advanced — All Options
 
 ```csharp
 using Dosaic.Extensions.RestEase;
@@ -98,9 +165,9 @@ var authConfig = new AuthenticationConfig
     Enabled = true,
     BaseUrl = "https://auth.example.com",
     TokenUrlPath = "oauth/token",
-    GrantType = GrantType.Password,
-    Username = "myusername",
-    Password = "mypassword"
+    GrantType = GrantType.ClientCredentials,
+    ClientId = "my-client",
+    ClientSecret = "s3cr3t"
 };
 
 var retryPolicy = Policy
@@ -112,7 +179,7 @@ var jsonSettings = new JsonSerializerSettings
     NullValueHandling = NullValueHandling.Ignore
 };
 
-IMyApi apiClient = RestClientFactory.Create<IMyApi>(
+IUserApi api = RestClientFactory.Create<IUserApi>(
     "https://api.example.com",
     authConfig,
     retryPolicy,
@@ -120,38 +187,35 @@ IMyApi apiClient = RestClientFactory.Create<IMyApi>(
 );
 ```
 
-## Authentication Types
+## API Reference
 
-The extension supports these OAuth2 grant types:
+### `RestClientFactory`
 
-- Password - username and password authentication
-- ClientCredentials - client ID and secret authentication
-- Code - authorization code flow
+| Method | Description |
+|---|---|
+| `Create<T>(string baseAddress)` | Creates a client with default retry and no auth |
+| `Create<T>(string baseAddress, AuthenticationConfig auth)` | Adds OAuth2 authentication |
+| `Create<T>(string baseAddress, IAsyncPolicy<HttpResponseMessage> policy)` | Replaces the default retry policy |
+| `Create<T>(string baseAddress, AuthenticationConfig auth, IAsyncPolicy<HttpResponseMessage> policy)` | Auth + custom retry |
+| `Create<T>(string baseAddress, AuthenticationConfig auth, IAsyncPolicy<HttpResponseMessage> policy, JsonSerializerSettings json)` | Full control |
+| `DefaultJsonSerializerSettings` | Static default — Newtonsoft.Json with `StringEnumConverter` |
 
-```csharp
-// Password grant
-var passwordAuth = new AuthenticationConfig
-{
-    Enabled = true,
-    GrantType = GrantType.Password,
-    Username = "user",
-    Password = "pass"
-};
+### `AuthenticationConfig`
 
-// Client credentials
-var clientAuth = new AuthenticationConfig
-{
-    Enabled = true,
-    GrantType = GrantType.ClientCredentials,
-    ClientId = "client123",
-    ClientSecret = "secret456"
-};
-```
+| Property | Type | Description |
+|---|---|---|
+| `Enabled` | `bool` | Enables OAuth2 token injection |
+| `BaseUrl` | `string` | Base URL of the OAuth2 token endpoint |
+| `TokenUrlPath` | `string` | Path to the token endpoint (appended to `BaseUrl`) |
+| `GrantType` | `GrantType` | OAuth2 grant type |
+| `ClientId` | `string` | OAuth2 client identifier |
+| `ClientSecret` | `string` | OAuth2 client secret |
+| `Username` | `string` | Resource owner username (password grant) |
+| `Password` | `string` | Resource owner password (password grant) |
 
-## Default Behavior
+## Default Behaviour
 
-By default, the extension uses:
-
-- JSON serialization with string enum conversion
-- A retry policy that retries 2 times for HTTP 5xx errors
-- Automatic token refresh for authenticated requests
+- **JSON** — Newtonsoft.Json with `StringEnumConverter` (enums serialised as strings)
+- **Retry** — `RetryAsync(2)` on HTTP 5xx (500–599), meaning 3 total attempts
+- **Auth** — disabled by default; no `Authorization` header is added unless `AuthenticationConfig.Enabled = true`
+- **Token refresh** — when the access token is expired but the refresh token is still valid, the library uses the `refresh_token` grant automatically; when both are expired a new token is acquired

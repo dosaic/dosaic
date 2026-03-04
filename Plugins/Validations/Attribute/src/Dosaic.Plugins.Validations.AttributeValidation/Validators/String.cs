@@ -10,7 +10,7 @@ public partial class Validations
     public class String
     {
         [AttributeUsage(AttributeTargets.Property | AttributeTargets.Field | AttributeTargets.Parameter)]
-        public class LengthAttribute(int minimum, int maximum) : SyncValidationAttribute
+        public class LengthAttribute(int minimum, int maximum) : ValidationAttribute
         {
             public override string Code => ValidationCodes.String.Length;
             public override object Arguments => new { minimum, maximum };
@@ -40,7 +40,7 @@ public partial class Validations
         }
 
         [AttributeUsage(AttributeTargets.Property | AttributeTargets.Field | AttributeTargets.Parameter)]
-        public class EmailAttribute : SyncValidationAttribute
+        public class EmailAttribute : ValidationAttribute
         {
             public override string Code => ValidationCodes.String.Email;
             public override object Arguments => new { };
@@ -75,7 +75,7 @@ public partial class Validations
         }
 
         [AttributeUsage(AttributeTargets.Property | AttributeTargets.Field | AttributeTargets.Parameter)]
-        public class UrlAttribute : SyncValidationAttribute
+        public class UrlAttribute : ValidationAttribute
         {
             public override string Code => ValidationCodes.String.Url;
             public override object Arguments => new { };
@@ -96,7 +96,7 @@ public partial class Validations
         }
 
         [AttributeUsage(AttributeTargets.Property | AttributeTargets.Field | AttributeTargets.Parameter)]
-        public class RegexAttribute([StringSyntax(StringSyntaxAttribute.Regex)] string pattern) : SyncValidationAttribute
+        public class RegexAttribute([StringSyntax(StringSyntaxAttribute.Regex)] string pattern) : ValidationAttribute
         {
             public override string Code => ValidationCodes.String.Regex;
             public override object Arguments => new { pattern };

@@ -11,7 +11,7 @@ public abstract class AsyncValidationAttribute : Attribute, IValueValidator
     public abstract Task<bool> IsValidAsync(ValidationContext context, CancellationToken cancellationToken = default);
 }
 
-public abstract class SyncValidationAttribute : AsyncValidationAttribute
+public abstract class ValidationAttribute : AsyncValidationAttribute
 {
     protected abstract bool IsValid(ValidationContext context);
     public override Task<bool> IsValidAsync(ValidationContext context, CancellationToken cancellationToken = default)

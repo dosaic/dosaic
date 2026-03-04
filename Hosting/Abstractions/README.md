@@ -1,389 +1,680 @@
 # Dosaic.Hosting.Abstractions
 
-
-
-Dosaic.Hosting.Abstractions is the `core abstraction/interface package` that allows `dotnet dev's` to `develop their own plugins`.
+Dosaic.Hosting.Abstractions is the `core abstraction/interface package` that allows `.NET developers` to `build their own Dosaic plugins`. Every plugin in the Dosaic ecosystem depends on this package.
 
 ## Installation
-
-To install the nuget package follow these steps:
 
 ```shell
 dotnet add package Dosaic.Hosting.Abstractions
 ```
 
-or add as package reference to your .csproj
+or add as a package reference to your `.csproj`:
 
 ```xml
 <PackageReference Include="Dosaic.Hosting.Abstractions" Version="" />
 ```
 
-## ConfigurationAttribute
+## Usage
 
-The configuration attribute can be used to easily create an configuration class for your plugin. The class decorated with the attribute is automatically bound on startup to the their corresponding setting values from appsettings files or ENV variables.
+### Creating a Plugin
+
+A plugin is any `public`, non-`abstract` class that implements one or more of the plugin interfaces below. The source generator in `Dosaic.Hosting.Generator` automatically discovers all such classes at compile time — no runtime reflection or manual registration needed.
 
 ```csharp
-example:
-  mykey: "myvalue"
+using Dosaic.Hosting.Abstractions.Plugins;
+using Microsoft.Extensions.DependencyInjection;
+
+namespace MyCompany.MyPlugin
+{
+    public class MyPlugin : IPluginServiceConfiguration, IPluginApplicationConfiguration
+    {
+        public void ConfigureServices(IServiceCollection serviceCollection)
+        {
+            serviceCollection.AddTransient<IMyService, MyService>();
+        }
+
+        public void ConfigureApplication(IApplicationBuilder applicationBuilder)
+        {
+            applicationBuilder.UseMyMiddleware();
+        }
+    }
+}
+```
+
+---
+
+## Plugin Interfaces
+
+All plugin interfaces live in `Dosaic.Hosting.Abstractions.Plugins` and extend `IPluginActivateable`.
+
+| Interface | Method | Purpose |
+|---|---|---|
+| `IPluginActivateable` | — | Marker interface — **all plugins must implement this** (directly or via one of the interfaces below) |
+| `IPluginServiceConfiguration` | `ConfigureServices(IServiceCollection)` | DI registrations, called during the service-configuration phase |
+| `IPluginApplicationConfiguration` | `ConfigureApplication(IApplicationBuilder)` | Middleware pipeline setup, called after `Build()` |
+| `IPluginEndpointsConfiguration` | `ConfigureEndpoints(IEndpointRouteBuilder, IServiceProvider)` | Minimal API endpoint registration |
+| `IPluginHealthChecksConfiguration` | `ConfigureHealthChecks(IHealthChecksBuilder)` | Custom health check registration |
+| `IPluginControllerConfiguration` | `ConfigureControllers(IMvcBuilder)` | MVC/controller configuration |
+| `IPluginConfigurator` | — | Marker for sub-configurator objects injected as `IPluginConfigurator[]` collections into plugins |
+
+### Plugin execution order
+
+| Plugin namespace | Execution order |
+|---|---|
+| `Dosaic.*` namespace | First (`sbyte.MinValue`) |
+| Third-party plugins | Middle (`0`) |
+| Host assembly plugins | Last (`sbyte.MaxValue`) |
+
+### IPluginServiceConfiguration
+
+Called during service-collection setup. Use this for DI registrations.
+
+```csharp
+public class MyPlugin : IPluginServiceConfiguration
+{
+    public void ConfigureServices(IServiceCollection serviceCollection)
+    {
+        serviceCollection.AddTransient<IMyService, MyService>();
+        serviceCollection.AddSingleton<MyOptions>();
+    }
+}
+```
+
+### IPluginApplicationConfiguration
+
+Called after `WebApplication.Build()`. Use this for `UseXyz()` pipeline calls.
+
+```csharp
+public class MyPlugin : IPluginApplicationConfiguration
+{
+    public void ConfigureApplication(IApplicationBuilder applicationBuilder)
+    {
+        applicationBuilder.UseRouting();
+        applicationBuilder.UseAuthentication();
+    }
+}
+```
+
+### IPluginEndpointsConfiguration
+
+Registers minimal API endpoints. Called during endpoint routing setup.
+
+```csharp
+public class MyPlugin : IPluginEndpointsConfiguration
+{
+    public void ConfigureEndpoints(IEndpointRouteBuilder endpointRouteBuilder, IServiceProvider serviceProvider)
+    {
+        endpointRouteBuilder.MapGet("/hello", () => "Hello, World!")
+            .RequireAuthorization();
+    }
+}
+```
+
+### IPluginHealthChecksConfiguration
+
+Registers health checks programmatically. See also the health check attributes for declarative registration.
+
+```csharp
+public class MyPlugin : IPluginHealthChecksConfiguration
+{
+    public void ConfigureHealthChecks(IHealthChecksBuilder healthChecksBuilder)
+    {
+        healthChecksBuilder.AddUrlGroup(
+            new Uri("https://my-dependency/health"),
+            "my-dependency",
+            HealthStatus.Unhealthy,
+            new[] { HealthCheckTag.Readiness });
+    }
+}
+```
+
+### IPluginControllerConfiguration
+
+Configures the MVC builder (e.g. options, formatters, assemblies).
+
+```csharp
+public class MyPlugin : IPluginControllerConfiguration
+{
+    public void ConfigureControllers(IMvcBuilder controllerBuilder)
+    {
+        controllerBuilder.AddMvcOptions(options => options.RespectBrowserAcceptHeader = true);
+        controllerBuilder.AddApplicationPart(typeof(MyPlugin).Assembly);
+    }
+}
+```
+
+### IPluginConfigurator
+
+A sub-configurator is a small, focused configuration object that is automatically collected and injected as an array into plugins that declare a constructor parameter of type `IPluginConfigurator[]` (or `IEnumerable<IPluginConfigurator>`).
+
+```csharp
+// Sub-configurator defined anywhere in the application
+public class MyFeatureConfigurator : IPluginConfigurator
+{
+    public string ConnectionString { get; set; } = "...";
+}
+
+// Plugin that receives all configurators
+public class MyPlugin : IPluginServiceConfiguration
+{
+    private readonly MyFeatureConfigurator[] _configurators;
+
+    public MyPlugin(MyFeatureConfigurator[] configurators)
+    {
+        _configurators = configurators;
+    }
+
+    public void ConfigureServices(IServiceCollection serviceCollection) { ... }
+}
+```
+
+---
+
+## Attributes
+
+### `[Configuration]`
+
+Decorating a class with `[Configuration("section")]` causes the web host to automatically bind the class to the corresponding section in `appsettings.*` files or environment variables. The bound instance is then injectable as a constructor parameter in any plugin.
+
+```yaml
+# appsettings.yaml
+myFeature:
+  connectionString: "Server=localhost"
+  timeout: 30
 ```
 
 ```csharp
 using Dosaic.Hosting.Abstractions.Attributes;
-[Configuration("example")]
-public class ExampleConfiguration
-{
-    public string MyKey { get; set; };
 
+[Configuration("myFeature")]
+public class MyFeatureConfiguration
+{
+    public string ConnectionString { get; set; }
+    public int Timeout { get; set; }
+}
+
+// Consume in any plugin via constructor injection
+public class MyPlugin : IPluginServiceConfiguration
+{
+    private readonly MyFeatureConfiguration _config;
+
+    public MyPlugin(MyFeatureConfiguration config)
+    {
+        _config = config;
+    }
+
+    public void ConfigureServices(IServiceCollection serviceCollection) { ... }
 }
 ```
 
-the class then can be consumed in any plugin via their constructor
+Nested sections are supported using `:` as the delimiter:
 
 ```csharp
-public class WebHostSamplePlugin
-{
-    private readonly ExampleConfiguration _exampleConfiguration;
+[Configuration("database:primary")]
+public class PrimaryDbConfig { ... }
+```
 
-    public WebHostSamplePlugin(ExampleConfiguration exampleConfiguration)
+### `[Middleware]`
+
+Marks an `ApiMiddleware` subclass for automatic registration in the middleware pipeline. The optional `order` parameter controls execution order (default: `int.MaxValue` — runs last). Lower values run earlier.
+
+```csharp
+using Dosaic.Hosting.Abstractions.Attributes;
+
+[Middleware(order: 100)]
+public class MyMiddleware : ApiMiddleware
+{
+    public MyMiddleware(RequestDelegate next, IDateTimeProvider dateTimeProvider)
+        : base(next, dateTimeProvider) { }
+
+    public override async Task Invoke(HttpContext context)
     {
-        _exampleConfiguration = exampleConfiguration;
+        // before
+        await Next.Invoke(context);
+        // after
     }
 }
 ```
 
-## Plugin application configuration
+Built-in middlewares and their order:
 
-This allows you in instruct the web host to execute certain methods on the application builder while the web host is starting. This is mainly used for `UseXYZ` extensions methods which usually are required by other 3rd party nuget packages.
+| Middleware | Order | Behaviour |
+|---|---|---|
+| `ExceptionMiddleware` | `int.MinValue` (first) | Catches all exceptions; maps `DosaicException` subtypes to HTTP status codes |
+| `EnrichRequestMetricsMiddleware` | `int.MaxValue` (last) | Adds `azp` claim as a metrics tag on every request |
+| `RequestContentLengthLimitMiddleware` | `int.MaxValue` (last) | Returns `413` when `Content-Length` exceeds the Kestrel limit |
+
+### `[ReadinessCheckAttribute]`
+
+Registers an `IHealthCheck` implementation as a **readiness** health check (tags it with `HealthCheckTag.Readiness`).
 
 ```csharp
-public class WebHostSamplePlugin : IPluginApplicationConfiguration
+using Dosaic.Hosting.Abstractions.Attributes;
+
+[ReadinessCheck("database")]
+public class DatabaseHealthCheck : IHealthCheck
 {
-    public void ConfigureApplication(IApplicationBuilder applicationBuilder)
+    public async Task<HealthCheckResult> CheckHealthAsync(
+        HealthCheckContext context,
+        CancellationToken cancellationToken = default)
     {
-        // register stuff on the application builder which should be executed if your plugin is loaded and used by an webhost
-        // for example
-        applicationBuilder.UseRouting();
+        // check connectivity ...
+        return HealthCheckResult.Healthy("Database is reachable.");
     }
 }
 ```
 
-## Plugin service configuration
+### `[LivenessCheckAttribute]`
 
-This allows you in instruct the web host to execute certain methods on the service collection while the web host is starting This is mainly used for IoC/DI registrations or other service setup methods.
+Registers an `IHealthCheck` implementation as a **liveness** health check (tags it with `HealthCheckTag.Liveness`).
 
 ```csharp
-public class WebHostSamplePlugin : IPluginServiceConfiguration
+[LivenessCheck("application")]
+public class ApplicationLivenessCheck : IHealthCheck
 {
-    public void ConfigureServices(IServiceCollection serviceCollection)
-    {
-        // register stuff on the serviceCollcection which should be executed if your plugin is loaded and used by an webhost
-        // for example
-        serviceCollection.AddTransient<IMyClass, MyClass>();
-    }
+    public Task<HealthCheckResult> CheckHealthAsync(
+        HealthCheckContext context,
+        CancellationToken cancellationToken = default)
+        => Task.FromResult(HealthCheckResult.Healthy());
 }
 ```
 
-## Plugin health checks configuration & health check attribute
-
-this enables the registration of health checks for which are exposed by the web host. The usage follows the documentation of the asp.net core health checks.
-
-```csharp
-public class WebHostSamplePlugin : IPluginServiceConfiguration
-{
-    public void ConfigureHealthChecks(IHealthChecksBuilder healthChecksBuilder)
-    {
-        // for example
-        var uriBuilder = new UriBuilder("baseUri") { Path = $"/checkTHIS" };
-        var uri = uriBuilder.Uri;
-        healthChecksBuilder.AddUrlGroup(uri, "mycheck", HealthStatus.Unhealthy, new[] { HealthCheckTags.Readiness });
-    }
-}
-```
-
-the same can be achieved by decorating an health implemented class with the attributes
+Both attributes can be combined on the same class, and additional tags can be passed via the overloaded constructors:
 
 ```csharp
 [ReadinessCheck("kafka")]
-[LiveinessCheck("kafka")]
+[LivenessCheck("kafka")]
 public class KafkaHealthCheck : IHealthCheck
 {
-        private readonly ClientConfig _clientConfig;
-        private readonly ILogger<KafkaHealthCheck> _logger;
-
-        public KafkaHealthCheck(ClientConfig clientConfig, ILogger<KafkaHealthCheck> logger)
-        {
-            _clientConfig = clientConfig;
-            _logger = logger;
-        }
-
-        public Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context, CancellationToken cancellationToken = new CancellationToken())
-        {
-            if (healthy == true)
-            {
-                return Task.FromResult(HealthCheckResult.Healthy("Kafka is available."));
-            }
-            return Task.FromResult(HealthCheckResult.Unhealthy($"Kafka is unavailable. All servers are down."));
-        }
-
-}
-```
-
-## Plugin endpoints configuration
-
-This enables the usage of dotnet 6 minimal apis. The official documentation of asp core minimal apis is valid and applicable
-
-```csharp
-public class WebHostSamplePlugin : IPluginEndpointsConfiguration
-{
-    public void ConfigureEndpoints(IEndpointRouteBuilder endpointRouteBuilder, IServiceProvider serviceProvider)
+    public Task<HealthCheckResult> CheckHealthAsync(
+        HealthCheckContext context,
+        CancellationToken cancellationToken = default)
     {
-        // for example
-        endpointRouteBuilder.MapGet("/hello", async () =>
-        {
-            return "Hello, World!";
-        }).RequireAuthorization();
+        // check Kafka connectivity
+        return Task.FromResult(HealthCheckResult.Healthy("Kafka is available."));
     }
 }
 ```
 
-## Plugin controller configuration
+### `[YamlTypeConverterAttribute]`
 
-This enables the configuration of the controllers of your plugin
+Attaches a custom YAML type converter to a class or struct so that it is used during `SerializationExtensions.Serialize` / `Deserialize` calls with `SerializationMethod.Yaml`. The converter type must implement `IYamlConverter`.
 
 ```csharp
-public class WebHostSamplePlugin : IPluginControllerConfiguration
+using Dosaic.Hosting.Abstractions.Attributes;
+
+[YamlTypeConverter(typeof(MyTypeConverter))]
+public class MySpecialType { ... }
+
+public class MyTypeConverter : IYamlConverter
 {
-    public void ConfigureControllers(IMvcBuilder controllerBuilder)
+    public object ReadYaml(IParser parser, Type type, ObjectDeserializer rootDeserializer) { ... }
+    public void WriteYaml(IEmitter emitter, object value, Type type, ObjectSerializer serializer) { ... }
+}
+```
+
+---
+
+## HealthCheckTag
+
+`HealthCheckTag` is a validated value object (via [Vogen](https://github.com/SteveDunn/Vogen)) with two predefined instances:
+
+| Instance | Value |
+|---|---|
+| `HealthCheckTag.Readiness` | `"readiness"` |
+| `HealthCheckTag.Liveness` | `"liveness"` |
+
+Custom tags are supported:
+
+```csharp
+var tag = HealthCheckTag.From("custom-tag");
+```
+
+---
+
+## Exceptions
+
+All domain exceptions extend `DosaicException`, which carries an `HttpStatus` property automatically used by `ExceptionMiddleware` to produce the correct HTTP response.
+
+| Exception | Default HTTP status |
+|---|---|
+| `DosaicException` | `500 Internal Server Error` (configurable via constructor) |
+| `NotFoundDosaicException` | `404 Not Found` |
+| `ConflictDosaicException` | `409 Conflict` |
+| `ValidationDosaicException` | `422 Unprocessable Entity` |
+
+```csharp
+using Dosaic.Hosting.Abstractions.Exceptions;
+
+// Simple usage
+throw new NotFoundDosaicException("Order", orderId);
+// → message: "Could not find Order with id '42'"
+
+throw new ConflictDosaicException("An order with this reference already exists.");
+
+throw new ValidationDosaicException("Validation failed", new List<FieldValidationError>
+{
+    new("email", "must be a valid email address"),
+    new("amount", "must be greater than 0")
+});
+
+// Throw with a custom HTTP status
+throw new DosaicException("Service unavailable.", StatusCodes.Status503ServiceUnavailable);
+```
+
+### Error Response Models
+
+`ExceptionMiddleware` produces JSON responses using these models from `Dosaic.Hosting.Abstractions.Middlewares.Models`:
+
+```csharp
+// Standard error response
+record ErrorResponse(DateTime Timestamp, string Message, string RequestId);
+
+// Validation error response (extends ErrorResponse)
+record ValidationErrorResponse : ErrorResponse
+{
+    IEnumerable<FieldValidationError> ValidationErrors { get; }
+}
+
+// Single field validation error
+record FieldValidationError(string Field, string ValidationMessage);
+```
+
+---
+
+## IImplementationResolver
+
+`IImplementationResolver` is the runtime service used internally by the web host to discover and instantiate plugins. It is also injectable into plugins for advanced scenarios.
+
+```csharp
+public interface IImplementationResolver
+{
+    List<Type> FindTypes();
+    List<Assembly> FindAssemblies();
+    object ResolveInstance(Type type);
+    void ClearInstances();
+}
+```
+
+Convenience extensions from `ImplementationResolverExtensions`:
+
+```csharp
+// Find all types matching a predicate
+List<Type> types = resolver.FindTypes(t => t.HasAttribute<MyAttribute>());
+
+// Find and instantiate all types matching a predicate
+List<object> instances = resolver.FindAndResolve(t => t.Implements<IMyService>());
+
+// Find and instantiate all implementations of T
+List<IMyService> services = resolver.FindAndResolve<IMyService>();
+```
+
+---
+
+## IFactory\<T\>
+
+`IFactory<TService>` is a lightweight factory abstraction for resolving services lazily or optionally from the DI container. Register using `AddFactory<T>()`.
+
+```csharp
+using Dosaic.Hosting.Abstractions.DependencyInjection;
+using Dosaic.Hosting.Abstractions.Extensions;
+
+// Registration
+serviceCollection.AddFactory<IMyService>();
+
+// Injection and usage
+public class MyConsumer
+{
+    private readonly IFactory<IMyService> _factory;
+
+    public MyConsumer(IFactory<IMyService> factory) => _factory = factory;
+
+    public void DoWork()
     {
-        // for example
-        controllerBuilder.AddMvcOptions(options => options.RespectBrowserAcceptHeader = true);
+        var service = _factory.Create();             // throws if not registered
+        var serviceOrNull = _factory.CreateOrNull(); // returns null if not registered
     }
 }
 ```
+
+---
 
 ## Metrics
 
-Dosaic uses open telemetry for it's metrics capabilities with some wrappers for better developer experience Generally speaking anything from the [open telemetry documentation](https://opentelemetry.io/docs/instrumentation/net/) should be applicable and valid.
-
-Simple metrics can be created and used like this
+Dosaic uses OpenTelemetry for metrics. The static `Metrics` class provides typed factory methods that cache instrument instances, preventing duplicate-creation errors.
 
 ```csharp
-Metrics.Meter.CreateCounter<long>($"my_metric_name_total", "calls").Add(1);
+using Dosaic.Hosting.Abstractions.Metrics;
+
+// Counter
+var counter = Metrics.CreateCounter<long>("my_requests_total", "calls", "Total number of requests");
+counter.Add(1);
+counter.Add(1, new KeyValuePair<string, object>("status", "ok"));
+
+// Histogram
+var histogram = Metrics.CreateHistogram<double>("my_request_duration_seconds", "s", "Request duration");
+histogram.Record(0.42);
+
+// Observable gauge (value polled by the metrics exporter)
+Metrics.CreateObservableGauge("queue_depth", () => GetQueueDepth(), "items", "Current queue depth");
+
+// Observable counter
+Metrics.CreateObservableCounter("processed_total", () => GetProcessedCount(), "items", "Total processed");
 ```
 
-or with tags
+Access the underlying `Meter` directly for advanced scenarios:
 
 ```csharp
-Metrics.Meter.CreateCounter<long>($"my_metric_name_total", "calls").Add(1, new KeyValuePair<string, object>("label", "custom-tag-value"));
+var upDownCounter = Metrics.Meter.CreateUpDownCounter<int>("active_connections", "connections");
 ```
 
-as pre defined field
+---
+
+## Tracing
+
+### DosaicDiagnostic
+
+`DosaicDiagnostic.CreateSource()` creates an `ActivitySource` named after the **calling class's fully-qualified name** using the call stack. Call it from a `static` field initializer.
 
 ```csharp
-private readonly Histogram<long> _commandDurationInSeconds = Metrics.Meter.CreateHistogram<long>("command_duration_seconds", "items", "description");
-...
-_commandDurationInSeconds.Add(1);
+using Dosaic.Hosting.Abstractions;
+using System.Diagnostics;
+
+public class MyService
+{
+    private static readonly ActivitySource _activitySource = DosaicDiagnostic.CreateSource();
+
+    public async Task DoWorkAsync()
+    {
+        using var activity = _activitySource.StartActivity("DoWork");
+        // ... work ...
+    }
+}
 ```
 
-Default exposed metrics
+Constants:
 
-```python
-# TYPE http_client_duration_ms histogram
-# UNIT http_client_duration_ms ms
-# HELP http_client_duration_ms Measures the duration of outbound HTTP requests.
-http_client_duration_ms_bucket{http_flavor="1.1",http_method="GET",http_scheme="https",http_status_code="200",net_peer_name="keycloak.example",le="0"} 0 1696509787492
-http_client_duration_ms_bucket{http_flavor="1.1",http_method="GET",http_scheme="https",http_status_code="200",net_peer_name="keycloak.example",le="5"} 0 1696509787492
-http_client_duration_ms_bucket{http_flavor="1.1",http_method="GET",http_scheme="https",http_status_code="200",net_peer_name="keycloak.example",le="10"} 0 1696509787492
-http_client_duration_ms_bucket{http_flavor="1.1",http_method="GET",http_scheme="https",http_status_code="200",net_peer_name="keycloak.example",le="25"} 0 1696509787492
-http_client_duration_ms_bucket{http_flavor="1.1",http_method="GET",http_scheme="https",http_status_code="200",net_peer_name="keycloak.example",le="50"} 0 1696509787492
-http_client_duration_ms_bucket{http_flavor="1.1",http_method="GET",http_scheme="https",http_status_code="200",net_peer_name="keycloak.example",le="75"} 0 1696509787492
-http_client_duration_ms_bucket{http_flavor="1.1",http_method="GET",http_scheme="https",http_status_code="200",net_peer_name="keycloak.example",le="100"} 0 1696509787492
-http_client_duration_ms_bucket{http_flavor="1.1",http_method="GET",http_scheme="https",http_status_code="200",net_peer_name="keycloak.example",le="250"} 0 1696509787492
-http_client_duration_ms_bucket{http_flavor="1.1",http_method="GET",http_scheme="https",http_status_code="200",net_peer_name="keycloak.example",le="500"} 0 1696509787492
-http_client_duration_ms_bucket{http_flavor="1.1",http_method="GET",http_scheme="https",http_status_code="200",net_peer_name="keycloak.example",le="750"} 1 1696509787492
-http_client_duration_ms_bucket{http_flavor="1.1",http_method="GET",http_scheme="https",http_status_code="200",net_peer_name="keycloak.example",le="1000"} 1 1696509787492
-http_client_duration_ms_bucket{http_flavor="1.1",http_method="GET",http_scheme="https",http_status_code="200",net_peer_name="keycloak.example",le="2500"} 1 1696509787492
-http_client_duration_ms_bucket{http_flavor="1.1",http_method="GET",http_scheme="https",http_status_code="200",net_peer_name="keycloak.example",le="5000"} 1 1696509787492
-http_client_duration_ms_bucket{http_flavor="1.1",http_method="GET",http_scheme="https",http_status_code="200",net_peer_name="keycloak.example",le="7500"} 1 1696509787492
-http_client_duration_ms_bucket{http_flavor="1.1",http_method="GET",http_scheme="https",http_status_code="200",net_peer_name="keycloak.example",le="10000"} 1 1696509787492
-http_client_duration_ms_bucket{http_flavor="1.1",http_method="GET",http_scheme="https",http_status_code="200",net_peer_name="keycloak.example",le="+Inf"} 1 1696509787492
-http_client_duration_ms_sum{http_flavor="1.1",http_method="GET",http_scheme="https",http_status_code="200",net_peer_name="keycloak.example"} 590.7966 1696509787492
-http_client_duration_ms_count{http_flavor="1.1",http_method="GET",http_scheme="https",http_status_code="200",net_peer_name="keycloak.example"} 1 1696509787492
+| Constant | Value | Purpose |
+|---|---|---|
+| `DosaicDiagnostic.DosaicActivityPrefix` | `"Dosaic."` | Prefix for all Dosaic activity sources |
+| `DosaicDiagnostic.DosaicAllActivities` | `"Dosaic.*"` | Wildcard for subscribing to all Dosaic traces in OpenTelemetry |
 
-# TYPE process_runtime_dotnet_gc_collections_count counter
-# HELP process_runtime_dotnet_gc_collections_count Number of garbage collections that have occurred since process start.
-process_runtime_dotnet_gc_collections_count{generation="gen2"} 0 1696509787492
-process_runtime_dotnet_gc_collections_count{generation="gen1"} 0 1696509787492
-process_runtime_dotnet_gc_collections_count{generation="gen0"} 0 1696509787492
+### TracingExtensions
 
-# TYPE process_runtime_dotnet_gc_objects_size_bytes gauge
-# UNIT process_runtime_dotnet_gc_objects_size_bytes bytes
-# HELP process_runtime_dotnet_gc_objects_size_bytes Count of bytes currently in use by objects in the GC heap that haven't been collected yet. Fragmentation and other GC committed memory pools are excluded.
-process_runtime_dotnet_gc_objects_size_bytes 21076568 1696509787492
+```csharp
+using Dosaic.Hosting.Abstractions.Extensions;
 
-# TYPE process_runtime_dotnet_gc_allocations_size_bytes counter
-# UNIT process_runtime_dotnet_gc_allocations_size_bytes bytes
-# HELP process_runtime_dotnet_gc_allocations_size_bytes Count of bytes allocated on the managed GC heap since the process start. .NET objects are allocated from this heap. Object allocations from unmanaged languages such as C/C++ do not use this heap.
-process_runtime_dotnet_gc_allocations_size_bytes 21031848 1696509787492
+// Wraps an async call and auto-sets Ok/Error activity status
+var result = await _activitySource.TrackStatusAsync(async activity =>
+{
+    activity?.SetTag("input", input);
+    return await _service.ProcessAsync(input);
+});
 
-# TYPE process_runtime_dotnet_jit_il_compiled_size_bytes counter
-# UNIT process_runtime_dotnet_jit_il_compiled_size_bytes bytes
-# HELP process_runtime_dotnet_jit_il_compiled_size_bytes Count of bytes of intermediate language that have been compiled since the process start.
-process_runtime_dotnet_jit_il_compiled_size_bytes 556591 1696509787492
+// Set tags in bulk with an optional prefix
+activity.SetTags(new Dictionary<string, string> { ["key"] = "value" }, prefix: "app.");
 
-# TYPE process_runtime_dotnet_jit_methods_compiled_count counter
-# HELP process_runtime_dotnet_jit_methods_compiled_count The number of times the JIT compiler compiled a method since the process start. The JIT compiler may be invoked multiple times for the same method to compile with different generic parameters, or because tiered compilation requested different optimization settings.
-process_runtime_dotnet_jit_methods_compiled_count 7699 1696509787492
-
-# TYPE process_runtime_dotnet_jit_compilation_time_ns counter
-# UNIT process_runtime_dotnet_jit_compilation_time_ns ns
-# HELP process_runtime_dotnet_jit_compilation_time_ns The amount of time the JIT compiler has spent compiling methods since the process start.
-process_runtime_dotnet_jit_compilation_time_ns 1453127800 1696509787492
-
-# TYPE process_runtime_dotnet_monitor_lock_contention_count counter
-# HELP process_runtime_dotnet_monitor_lock_contention_count The number of times there was contention when trying to acquire a monitor lock since the process start. Monitor locks are commonly acquired by using the lock keyword in C#, or by calling Monitor.Enter() and Monitor.TryEnter().
-process_runtime_dotnet_monitor_lock_contention_count 33 1696509787492
-
-# TYPE process_runtime_dotnet_thread_pool_threads_count gauge
-# HELP process_runtime_dotnet_thread_pool_threads_count The number of thread pool threads that currently exist.
-process_runtime_dotnet_thread_pool_threads_count 5 1696509787492
-
-# TYPE process_runtime_dotnet_thread_pool_completed_items_count counter
-# HELP process_runtime_dotnet_thread_pool_completed_items_count The number of work items that have been processed by the thread pool since the process start.
-process_runtime_dotnet_thread_pool_completed_items_count 53 1696509787492
-
-# TYPE process_runtime_dotnet_thread_pool_queue_length gauge
-# HELP process_runtime_dotnet_thread_pool_queue_length The number of work items that are currently queued to be processed by the thread pool.
-process_runtime_dotnet_thread_pool_queue_length 0 1696509787492
-
-# TYPE process_runtime_dotnet_timer_count gauge
-# HELP process_runtime_dotnet_timer_count The number of timer instances that are currently active. Timers can be created by many sources such as System.Threading.Timer, Task.Delay, or the timeout in a CancellationSource. An active timer is registered to tick at some point in the future and has not yet been canceled.
-process_runtime_dotnet_timer_count 5 1696509787492
-
-# TYPE process_runtime_dotnet_assemblies_count gauge
-# HELP process_runtime_dotnet_assemblies_count The number of .NET assemblies that are currently loaded.
-process_runtime_dotnet_assemblies_count 215 1696509787492
-
-# TYPE process_runtime_dotnet_exceptions_count counter
-# HELP process_runtime_dotnet_exceptions_count Count of exceptions that have been thrown in managed code, since the observation started. The value will be unavailable until an exception has been thrown after OpenTelemetry.Instrumentation.Runtime initialization.
-process_runtime_dotnet_exceptions_count 4 1696509787492
-
-# TYPE process_memory_usage_By gauge
-# UNIT process_memory_usage_By By
-# HELP process_memory_usage_By The amount of physical memory allocated for this process.
-process_memory_usage_By 147345408 1696509787492
-
-# TYPE process_memory_virtual_By gauge
-# UNIT process_memory_virtual_By By
-# HELP process_memory_virtual_By The amount of committed virtual memory for this process.
-process_memory_virtual_By 284054597632 1696509787492
-
-# TYPE process_cpu_time_s counter
-# UNIT process_cpu_time_s s
-# HELP process_cpu_time_s Total CPU seconds broken down by different states.
-process_cpu_time_s{state="user"} 2.46 1696509787492
-process_cpu_time_s{state="system"} 0.39 1696509787492
-
-# TYPE process_cpu_count__processors_ gauge
-# UNIT process_cpu_count__processors_ _processors_
-# HELP process_cpu_count__processors_ The number of processors (CPU cores) available to the current process.
-process_cpu_count__processors_ 12 1696509787492
-
-# TYPE process_threads__threads_ gauge
-# UNIT process_threads__threads_ _threads_
-# HELP process_threads__threads_ Process threads count.
-process_threads__threads_ 61 1696509787492
-
-# TYPE monitoring_logging_calls counter
-# UNIT monitoring_logging_calls calls
-# HELP monitoring_logging_calls count of logged messages
-monitoring_logging_calls{log_level="Debug"} 37 1696509787492
-monitoring_logging_calls{log_level="Information"} 6 1696509787492
-
-# TYPE http_server_duration_ms histogram
-# UNIT http_server_duration_ms ms
-# HELP http_server_duration_ms Measures the duration of inbound HTTP requests.
-http_server_duration_ms_bucket{azp="my-clientid",http_flavor="1.1",http_method="GET",http_route="/hello",http_scheme="http",http_status_code="200",net_host_name="localhost",net_host_port="5300",le="0"} 0 1696509787492
-http_server_duration_ms_bucket{azp="my-clientid",http_flavor="1.1",http_method="GET",http_route="/hello",http_scheme="http",http_status_code="200",net_host_name="localhost",net_host_port="5300",le="5"} 0 1696509787492
-http_server_duration_ms_bucket{azp="my-clientid",http_flavor="1.1",http_method="GET",http_route="/hello",http_scheme="http",http_status_code="200",net_host_name="localhost",net_host_port="5300",le="10"} 0 1696509787492
-http_server_duration_ms_bucket{azp="my-clientid",http_flavor="1.1",http_method="GET",http_route="/hello",http_scheme="http",http_status_code="200",net_host_name="localhost",net_host_port="5300",le="25"} 0 1696509787492
-http_server_duration_ms_bucket{azp="my-clientid",http_flavor="1.1",http_method="GET",http_route="/hello",http_scheme="http",http_status_code="200",net_host_name="localhost",net_host_port="5300",le="50"} 0 1696509787492
-http_server_duration_ms_bucket{azp="my-clientid",http_flavor="1.1",http_method="GET",http_route="/hello",http_scheme="http",http_status_code="200",net_host_name="localhost",net_host_port="5300",le="75"} 0 1696509787492
-http_server_duration_ms_bucket{azp="my-clientid",http_flavor="1.1",http_method="GET",http_route="/hello",http_scheme="http",http_status_code="200",net_host_name="localhost",net_host_port="5300",le="100"} 0 1696509787492
-http_server_duration_ms_bucket{azp="my-clientid",http_flavor="1.1",http_method="GET",http_route="/hello",http_scheme="http",http_status_code="200",net_host_name="localhost",net_host_port="5300",le="250"} 0 1696509787492
-http_server_duration_ms_bucket{azp="my-clientid",http_flavor="1.1",http_method="GET",http_route="/hello",http_scheme="http",http_status_code="200",net_host_name="localhost",net_host_port="5300",le="500"} 0 1696509787492
-http_server_duration_ms_bucket{azp="my-clientid",http_flavor="1.1",http_method="GET",http_route="/hello",http_scheme="http",http_status_code="200",net_host_name="localhost",net_host_port="5300",le="750"} 0 1696509787492
-http_server_duration_ms_bucket{azp="my-clientid",http_flavor="1.1",http_method="GET",http_route="/hello",http_scheme="http",http_status_code="200",net_host_name="localhost",net_host_port="5300",le="1000"} 0 1696509787492
-http_server_duration_ms_bucket{azp="my-clientid",http_flavor="1.1",http_method="GET",http_route="/hello",http_scheme="http",http_status_code="200",net_host_name="localhost",net_host_port="5300",le="2500"} 1 1696509787492
-http_server_duration_ms_bucket{azp="my-clientid",http_flavor="1.1",http_method="GET",http_route="/hello",http_scheme="http",http_status_code="200",net_host_name="localhost",net_host_port="5300",le="5000"} 1 1696509787492
-http_server_duration_ms_bucket{azp="my-clientid",http_flavor="1.1",http_method="GET",http_route="/hello",http_scheme="http",http_status_code="200",net_host_name="localhost",net_host_port="5300",le="7500"} 1 1696509787492
-http_server_duration_ms_bucket{azp="my-clientid",http_flavor="1.1",http_method="GET",http_route="/hello",http_scheme="http",http_status_code="200",net_host_name="localhost",net_host_port="5300",le="10000"} 1 1696509787492
-http_server_duration_ms_bucket{azp="my-clientid",http_flavor="1.1",http_method="GET",http_route="/hello",http_scheme="http",http_status_code="200",net_host_name="localhost",net_host_port="5300",le="+Inf"} 1 1696509787492
-http_server_duration_ms_sum{azp="my-clientid",http_flavor="1.1",http_method="GET",http_route="/hello",http_scheme="http",http_status_code="200",net_host_name="localhost",net_host_port="5300"} 1180.9743 1696509787492
-http_server_duration_ms_count{azp="my-clientid",http_flavor="1.1",http_method="GET",http_route="/hello",http_scheme="http",http_status_code="200",net_host_name="localhost",net_host_port="5300"} 1 1696509787492
-
-# TYPE hangfire_job_count_Succeeded_calls gauge
-# UNIT hangfire_job_count_Succeeded_calls calls
-# HELP hangfire_job_count_Succeeded_calls description
-hangfire_job_count_Succeeded_calls 0 1696509787492
-
-# TYPE hangfire_job_count_Failed_calls gauge
-# UNIT hangfire_job_count_Failed_calls calls
-# HELP hangfire_job_count_Failed_calls description
-hangfire_job_count_Failed_calls 0 1696509787492
-
-# TYPE hangfire_job_count_Scheduled_calls gauge
-# UNIT hangfire_job_count_Scheduled_calls calls
-# HELP hangfire_job_count_Scheduled_calls description
-hangfire_job_count_Scheduled_calls 0 1696509787492
-
-# TYPE hangfire_job_count_Processing_calls gauge
-# UNIT hangfire_job_count_Processing_calls calls
-# HELP hangfire_job_count_Processing_calls description
-hangfire_job_count_Processing_calls 0 1696509787492
-
-# TYPE hangfire_job_count_Enqueued_calls gauge
-# UNIT hangfire_job_count_Enqueued_calls calls
-# HELP hangfire_job_count_Enqueued_calls description
-hangfire_job_count_Enqueued_calls 0 1696509787492
-
-# TYPE hangfire_job_count_Deleted_calls gauge
-# UNIT hangfire_job_count_Deleted_calls calls
-# HELP hangfire_job_count_Deleted_calls description
-hangfire_job_count_Deleted_calls 0 1696509787492
-
-# TYPE hangfire_job_count_Servers_calls gauge
-# UNIT hangfire_job_count_Servers_calls calls
-# HELP hangfire_job_count_Servers_calls description
-hangfire_job_count_Servers_calls 1 1696509787492
-
-# TYPE hangfire_job_count_Queues_calls gauge
-# UNIT hangfire_job_count_Queues_calls calls
-# HELP hangfire_job_count_Queues_calls description
-hangfire_job_count_Queues_calls 0 1696509787492
-
-# TYPE hangfire_job_count_Recurring_calls gauge
-# UNIT hangfire_job_count_Recurring_calls calls
-# HELP hangfire_job_count_Recurring_calls description
-hangfire_job_count_Recurring_calls 2 1696509787492
-
-# TYPE hangfire_job_count_RetryJobs_calls gauge
-# UNIT hangfire_job_count_RetryJobs_calls calls
-# HELP hangfire_job_count_RetryJobs_calls description
-hangfire_job_count_RetryJobs_calls 0 1696509787492
-
-# TYPE authentication_keycloak_success_calls counter
-# UNIT authentication_keycloak_success_calls calls
-# HELP authentication_keycloak_success_calls total count of authentication attempts with successful result
-authentication_keycloak_success_calls 1 1696509787492
-
-# EOF
+// Manually set status
+activity.SetOkStatus();
+activity.SetErrorStatus(exception);
 ```
 
-## DosaicException
+---
 
-//TODO
+## Serialization
 
-## Date abstraction
+`SerializationExtensions` provides uniform JSON and YAML serialization.
 
-Dosaic used [chronos.net](https://github.com/vfabing/Chronos.Net) as an datetime abstraction layer to enable test ability of implementations.
+```csharp
+using Dosaic.Hosting.Abstractions.Extensions;
+
+var obj = new MyDto { Name = "hello" };
+
+// JSON (default)
+string json = obj.Serialize();
+MyDto dto = json.Deserialize<MyDto>();
+
+// YAML
+string yaml = obj.Serialize(SerializationMethod.Yaml);
+MyDto dto2 = yaml.Deserialize<MyDto>(SerializationMethod.Yaml);
+
+// Access the default JsonSerializerOptions (camelCase, enums as strings, etc.)
+var options = SerializationExtensions.DefaultOptions;
+```
+
+### IKindSpecifier — Polymorphic deserialization
+
+Implementing `IKindSpecifier` on an interface enables discriminated-union deserialization where the concrete type is selected based on a `Kind` property in the JSON/YAML payload.
+
+```csharp
+public interface IShape : IKindSpecifier { }
+
+public class Circle : IShape
+{
+    public string Kind => "circle";
+    public double Radius { get; set; }
+}
+
+public class Rectangle : IShape
+{
+    public string Kind => "rectangle";
+    public double Width { get; set; }
+    public double Height { get; set; }
+}
+
+// Deserializes to Circle or Rectangle depending on the "kind" field
+IShape shape = """{"kind":"circle","radius":5}""".Deserialize<IShape>();
+```
+
+---
+
+## Utility Extensions
+
+### ObjectExtensions — DeepPatch
+
+Applies non-null property values from a `patch` object onto a `target`, with configurable behaviour for nested objects and lists.
+
+```csharp
+using Dosaic.Hosting.Abstractions.Extensions;
+
+var original = new MyEntity { Name = "Old", Tags = new List<string> { "a" } };
+var patch    = new MyEntity { Name = "New", Tags = new List<string> { "b" } };
+
+original.DeepPatch(patch);
+// original.Name == "New", original.Tags == ["a", "b"]   (new items are merged)
+
+original.DeepPatch(patch, PatchMode.OverwriteLists);
+// original.Tags == ["b"]                                 (list is replaced)
+```
+
+`PatchMode` flags: `Full`, `IgnoreLists`, `IgnoreObjects`, `OverwriteLists`.
+
+### StringExtensions
+
+```csharp
+"MyPropertyName".ToSnakeCase();     // "my_property_name"
+"hello world".ToUrlEncoded();       // "hello%20world"
+"hello%20world".FromUrlEncoded();   // "hello world"
+```
+
+### ConfigurationExtensions
+
+```csharp
+// Bind a config section to a new instance of T
+var opts = configuration.BindToSection<MyOptions>("myFeature");
+```
+
+### TypeExtensions
+
+```csharp
+typeof(MyClass).Implements<IMyInterface>()   // true / false
+typeof(MyClass).HasAttribute<MyAttribute>()  // true / false
+typeof(MyClass).GetAttribute<MyAttribute>()  // attribute instance or null
+typeof(MyClass).CanBeInstantiated()          // !IsAbstract && !IsInterface
+typeof(MyClass).GetNormalizedName()          // human-readable generic type name
+```
+
+### EnumerableExtensions
+
+```csharp
+items.ForEach(item => Console.WriteLine(item));
+```
+
+### EnumExtensions
+
+```csharp
+PatchMode.IgnoreLists.IsFlagSet(PatchMode.IgnoreLists); // true
+```
+
+---
+
+## GlobalStatusCodeOptions
+
+Controls which HTTP status codes are automatically rewritten to the standard `ErrorResponse` JSON format by `ExceptionMiddleware`. Default codes: `401`, `403`, `404`, `406`, `415`, `500`.
+
+```csharp
+// Customise in a plugin's ConfigureServices:
+serviceCollection.Configure<GlobalStatusCodeOptions>(opts =>
+{
+    opts.Add(HttpStatusCode.ServiceUnavailable);
+    opts.Remove(HttpStatusCode.NotFound);
+    opts.Clear(); // remove all defaults
+});
+```
+
+---
+
+## ApiMiddleware
+
+`ApiMiddleware` is the abstract base class for all Dosaic middlewares. Subclass it and decorate with `[Middleware]` for automatic registration in the pipeline.
+
+```csharp
+using Dosaic.Hosting.Abstractions;
+using Dosaic.Hosting.Abstractions.Attributes;
+using Chronos.Abstractions;
+
+[Middleware(order: 50)]
+public class CorrelationIdMiddleware : ApiMiddleware
+{
+    public CorrelationIdMiddleware(RequestDelegate next, IDateTimeProvider dateTimeProvider)
+        : base(next, dateTimeProvider) { }
+
+    public override async Task Invoke(HttpContext context)
+    {
+        if (!context.Request.Headers.TryGetValue("X-Correlation-Id", out _))
+            context.Response.Headers.Append("X-Correlation-Id", Guid.NewGuid().ToString());
+
+        await Next.Invoke(context);
+    }
+}
+```
+
+Helper methods available inside `ApiMiddleware`:
+
+```csharp
+// Write a typed JSON response
+await WriteResponse(context, StatusCodes.Status200OK, new { ok = true });
+
+// Write the standard ErrorResponse JSON
+await WriteDefaultResponse(context, StatusCodes.Status400BadRequest, "Custom message");
+```

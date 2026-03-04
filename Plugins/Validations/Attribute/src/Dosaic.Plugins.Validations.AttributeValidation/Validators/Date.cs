@@ -9,7 +9,7 @@ public partial class Validations
     public class Date
     {
         [AttributeUsage(AttributeTargets.Property | AttributeTargets.Field | AttributeTargets.Parameter)]
-        public class BeforeAttribute(int year, int month = 1, int day = 1) : SyncValidationAttribute
+        public class BeforeAttribute(int year, int month = 1, int day = 1) : ValidationAttribute
         {
             private readonly DateTime _date = new(year, month, day);
             public override string ErrorMessage => $"Date must be before {_date:yyyy-MM-dd}";
@@ -22,7 +22,7 @@ public partial class Validations
         }
 
         [AttributeUsage(AttributeTargets.Property | AttributeTargets.Field | AttributeTargets.Parameter)]
-        public class AfterAttribute(int year, int month = 1, int day = 1) : SyncValidationAttribute
+        public class AfterAttribute(int year, int month = 1, int day = 1) : ValidationAttribute
         {
             private readonly DateTime _date = new(year, month, day);
             public override string ErrorMessage => $"Date must be after {_date:yyyy-MM-dd}";
@@ -35,7 +35,7 @@ public partial class Validations
         }
 
         [AttributeUsage(AttributeTargets.Property | AttributeTargets.Field | AttributeTargets.Parameter)]
-        public class AgeAttribute(int minAge, int maxAge) : SyncValidationAttribute
+        public class AgeAttribute(int minAge, int maxAge) : ValidationAttribute
         {
             public override string ErrorMessage => $"Date must be between {minAge} and {maxAge} years";
             public override string Code => ValidationCodes.Date.Age;

@@ -57,6 +57,55 @@ public class VaultPluginTests
                                                                 && h.FailureStatus == HealthStatus.Unhealthy
                                                                 && h.Factory(sp).GetType() == typeof(VaultHealthCheck)));
     }
+
+    [Test]
+    public void RegisterServicesWithLocalFileSystem()
+    {
+        var localPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+        try
+        {
+            var localConfig = new VaultConfiguration { UseLocalFileSystem = true, LocalFileSystemPath = localPath };
+            var localPlugin = new VaultSharpPlugin(localConfig);
+            var sc = new ServiceCollection();
+            localPlugin.ConfigureServices(sc);
+
+            var sp = sc.BuildServiceProvider();
+            sp.GetService<IVaultClient>().Should().BeNull();
+            sp.GetService<IKeyValueSecretsEngineV2>().Should().BeNull();
+            sp.GetService<ITOTPSecretsEngine>().Should().BeNull();
+        }
+        finally
+        {
+            if (Directory.Exists(localPath)) Directory.Delete(localPath, true);
+        }
+    }
+
+    [Test]
+    public void RegisterHealthChecksWithLocalFileSystem()
+    {
+        var localPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+        try
+        {
+            var localConfig = new VaultConfiguration { UseLocalFileSystem = true, LocalFileSystemPath = localPath };
+            var localPlugin = new VaultSharpPlugin(localConfig);
+            var hc = Substitute.For<IHealthChecksBuilder>();
+            localPlugin.ConfigureHealthChecks(hc);
+            var sp = new ServiceCollection().BuildServiceProvider();
+
+            hc.Received(1).Add(Arg.Is<HealthCheckRegistration>(h =>
+                h.Name == "vault-local-filesystem"
+                && h.FailureStatus == HealthStatus.Unhealthy));
+
+            var registration = hc.ReceivedCalls().Last().GetArguments()![0] as HealthCheckRegistration;
+            var result = registration!.Factory.Invoke(sp)
+                .CheckHealthAsync(new HealthCheckContext(), CancellationToken.None).GetAwaiter().GetResult();
+            result.Status.Should().Be(HealthStatus.Healthy);
+        }
+        finally
+        {
+            if (Directory.Exists(localPath)) Directory.Delete(localPath, true);
+        }
+    }
 }
 
 public enum SampleBucket

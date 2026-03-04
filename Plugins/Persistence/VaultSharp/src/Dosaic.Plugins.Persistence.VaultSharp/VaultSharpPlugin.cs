@@ -13,6 +13,9 @@ public class VaultSharpPlugin(VaultConfiguration configuration)
 {
     public void ConfigureServices(IServiceCollection serviceCollection)
     {
+        if (configuration.UseLocalFileSystem)
+            return;
+
         var vaultSettings = new VaultClientSettings(configuration.Url, new TokenAuthMethodInfo(configuration.Token))
         {
             SecretsEngineMountPoints = new SecretsEngineMountPoints { TOTP = "totp", KeyValueV2 = "credentials" }
@@ -24,7 +27,19 @@ public class VaultSharpPlugin(VaultConfiguration configuration)
 
     public void ConfigureHealthChecks(IHealthChecksBuilder healthChecksBuilder)
     {
-        healthChecksBuilder.AddCheck<VaultHealthCheck>("vault", HealthStatus.Unhealthy,
-            [HealthCheckTag.Readiness.Value]);
+        if (configuration.UseLocalFileSystem)
+        {
+            var localPath = configuration.LocalFileSystemPath;
+            healthChecksBuilder.Add(new HealthCheckRegistration(
+                "vault-local-filesystem",
+                _ => new LocalFileSystemVaultHealthCheck(localPath),
+                HealthStatus.Unhealthy,
+                [HealthCheckTag.Readiness.Value]));
+        }
+        else
+        {
+            healthChecksBuilder.AddCheck<VaultHealthCheck>("vault", HealthStatus.Unhealthy,
+                [HealthCheckTag.Readiness.Value]);
+        }
     }
 }

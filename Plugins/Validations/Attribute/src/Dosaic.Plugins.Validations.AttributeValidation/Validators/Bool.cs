@@ -7,7 +7,7 @@ public partial class Validations
     public class Bool
     {
         [AttributeUsage(AttributeTargets.Property | AttributeTargets.Field | AttributeTargets.Parameter)]
-        public class TrueAttribute : SyncValidationAttribute
+        public class TrueAttribute : ValidationAttribute
         {
             public override string ErrorMessage => "Value must be true";
             public override string Code => ValidationCodes.Bool.True;
@@ -19,7 +19,7 @@ public partial class Validations
         }
 
         [AttributeUsage(AttributeTargets.Property | AttributeTargets.Field | AttributeTargets.Parameter)]
-        public class FalseAttribute : SyncValidationAttribute
+        public class FalseAttribute : ValidationAttribute
         {
             public override string ErrorMessage => "Value must be false";
             public override string Code => ValidationCodes.Bool.False;

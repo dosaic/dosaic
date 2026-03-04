@@ -119,6 +119,57 @@ namespace Dosaic.Plugins.Persistence.S3.Tests
         }
 
         [Test]
+        public void PluginConfiguresServicesWithLocalFileSystem()
+        {
+            var localPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+            try
+            {
+                var localConfig = new S3Configuration { UseLocalFileSystem = true, LocalFileSystemPath = localPath };
+                var localPlugin = new S3FileStoragePlugin(localConfig);
+                var sc = TestingDefaults.ServiceCollection();
+                localPlugin.ConfigureServices(sc);
+                sc.AddFileStorage<SampleBucket>();
+                var sp = sc.BuildServiceProvider();
+
+                sp.GetRequiredService<IFileStorage>().Should().BeOfType<LocalFileSystemBlobStorage>();
+                sp.GetService<IMinioClient>().Should().BeNull();
+                sp.GetRequiredService<IFileTypeDefinitionResolver>().Should().NotBeNull();
+                sp.GetRequiredService<IFileStorage<SampleBucket>>().Should().BeOfType<FileStorage<SampleBucket>>();
+            }
+            finally
+            {
+                if (Directory.Exists(localPath)) Directory.Delete(localPath, true);
+            }
+        }
+
+        [Test]
+        public void PluginConfiguresHealthChecksWithLocalFileSystem()
+        {
+            var localPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+            try
+            {
+                var localConfig = new S3Configuration { UseLocalFileSystem = true, LocalFileSystemPath = localPath };
+                var localPlugin = new S3FileStoragePlugin(localConfig);
+                var healthChecksBuilder = Substitute.For<IHealthChecksBuilder>();
+                healthChecksBuilder.Services.Returns(new ServiceCollection());
+                localPlugin.ConfigureHealthChecks(healthChecksBuilder);
+
+                healthChecksBuilder.Received(1)
+                    .Add(Arg.Is<HealthCheckRegistration>(h => h.Name == "s3-local-filesystem"
+                                                            && h.FailureStatus == HealthStatus.Unhealthy));
+                var registration = healthChecksBuilder.ReceivedCalls().Last().GetArguments()![0] as HealthCheckRegistration;
+                registration.Should().NotBeNull();
+                var healthCheck = registration!.Factory.Invoke(new ServiceCollection().BuildServiceProvider());
+                var result = healthCheck.CheckHealthAsync(new HealthCheckContext(), CancellationToken.None).GetAwaiter().GetResult();
+                result.Status.Should().Be(HealthStatus.Healthy);
+            }
+            finally
+            {
+                if (Directory.Exists(localPath)) Directory.Delete(localPath, true);
+            }
+        }
+
+        [Test]
         public void PluginConfiguresHealthChecks()
         {
             var healthChecksBuilder = Substitute.For<IHealthChecksBuilder>();

@@ -1,5 +1,6 @@
 using Dosaic.Hosting.Abstractions;
 using Dosaic.Hosting.Abstractions.Plugins;
+using Dosaic.Plugins.Persistence.S3.File;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using MimeDetective;
@@ -12,9 +13,16 @@ public class S3FileStoragePlugin(S3Configuration configuration)
 {
     public void ConfigureServices(IServiceCollection serviceCollection)
     {
-        serviceCollection.AddSingleton(GetMinioClient());
+        if (configuration.UseLocalFileSystem)
+        {
+            serviceCollection.AddSingleton<IFileStorage>(new LocalFileSystemBlobStorage(configuration.LocalFileSystemPath));
+        }
+        else
+        {
+            serviceCollection.AddSingleton(GetMinioClient());
+            serviceCollection.AddFileStorage();
+        }
         serviceCollection.AddDefaultFileTypeDefinitionResolver();
-        serviceCollection.AddFileStorage();
         serviceCollection.AddSingleton<IContentInspector>(
             new ContentInspectorBuilder { Definitions = MimeDetective.Definitions.DefaultDefinitions.All() }
                 .Build());
@@ -22,12 +30,24 @@ public class S3FileStoragePlugin(S3Configuration configuration)
 
     public void ConfigureHealthChecks(IHealthChecksBuilder healthChecksBuilder)
     {
-        var urlScheme = configuration.UseSsl ? "https" : "http";
-        var url = $"{urlScheme}://{configuration.Endpoint}";
-        if (!string.IsNullOrEmpty(configuration.HealthCheckPath))
-            url += $"/{configuration.HealthCheckPath.TrimStart('/')}";
-        healthChecksBuilder.AddUrlGroup(new Uri(url), "s3", HealthStatus.Unhealthy,
-            [HealthCheckTag.Readiness.Value]);
+        if (configuration.UseLocalFileSystem)
+        {
+            var localPath = configuration.LocalFileSystemPath;
+            healthChecksBuilder.Add(new HealthCheckRegistration(
+                "s3-local-filesystem",
+                _ => new LocalFileSystemStorageHealthCheck(localPath),
+                HealthStatus.Unhealthy,
+                [HealthCheckTag.Readiness.Value]));
+        }
+        else
+        {
+            var urlScheme = configuration.UseSsl ? "https" : "http";
+            var url = $"{urlScheme}://{configuration.Endpoint}";
+            if (!string.IsNullOrEmpty(configuration.HealthCheckPath))
+                url += $"/{configuration.HealthCheckPath.TrimStart('/')}";
+            healthChecksBuilder.AddUrlGroup(new Uri(url), "s3", HealthStatus.Unhealthy,
+                [HealthCheckTag.Readiness.Value]);
+        }
     }
 
     private IMinioClient GetMinioClient()

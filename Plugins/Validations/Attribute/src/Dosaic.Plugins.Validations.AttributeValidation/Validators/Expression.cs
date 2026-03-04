@@ -6,7 +6,7 @@ namespace Dosaic.Plugins.Validations.AttributeValidation.Validators;
 public partial class Validations
 {
     [AttributeUsage(AttributeTargets.Property | AttributeTargets.Field | AttributeTargets.Parameter | AttributeTargets.Class)]
-    public class ExpressionAttribute(string expression) : SyncValidationAttribute
+    public class ExpressionAttribute(string expression) : ValidationAttribute
     {
         private static readonly Interpreter _interpreter = new(InterpreterOptions.DefaultCaseInsensitive | InterpreterOptions.LateBindObject);
         public override string ErrorMessage => "Expression must evaluate to true";
