@@ -6,6 +6,7 @@ namespace Dosaic.Testing.NUnit.Extensions
 {
     public class FakeDataConfig
     {
+        public int? Seed { get; set; }
         public string Locale { get; set; } = "en";
         public bool UseStrictMode { get; set; }
         internal IDictionary<Type, Delegate> TypeRules { get; } = new Dictionary<Type, Delegate>();
@@ -28,6 +29,8 @@ namespace Dosaic.Testing.NUnit.Extensions
         {
             _config = config;
             _faker = new Faker(config.Locale);
+            if (config.Seed.HasValue)
+                _faker.Random = new Randomizer(config.Seed.Value);
             _testDataSetups = AppDomain.CurrentDomain
                 .GetAssemblies()
                 .GetTypesSafely(t => t.IsClass && !t.IsAbstract && t.Implements(typeof(IFakeDataSetup<>)))
@@ -51,6 +54,8 @@ namespace Dosaic.Testing.NUnit.Extensions
         public Faker<T> CreateFaker<T>() where T : class
         {
             var typedFaker = new Faker<T>(_faker.Locale);
+            if (_config.Seed.HasValue)
+                typedFaker.UseSeed(_config.Seed.Value);
             typedFaker.StrictMode(_config.UseStrictMode);
             var ruleForTypeMethod = typeof(Faker<T>).GetMethod("RuleForType")!;
             _config.TypeRules.ForEach(x =>
