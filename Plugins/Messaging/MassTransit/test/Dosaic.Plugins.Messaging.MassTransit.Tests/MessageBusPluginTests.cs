@@ -84,6 +84,30 @@ public class MessageBusPluginTests
         _configurator.Received().ConfigureRabbitMq(Arg.Any<IBusRegistrationContext>(), Arg.Any<IRabbitMqBusFactoryConfigurator>());
     }
 
+    [Test]
+    public void ShouldRegisterServicesWithInMemoryTransport()
+    {
+        var inMemoryConfig = new MessageBusConfiguration { UseInMemory = true };
+        var plugin = new MessageBusPlugin(_implementationResolver, inMemoryConfig, [_configurator]);
+        var sc = TestingDefaults.ServiceCollection();
+        plugin.ConfigureServices(sc);
+        var sp = sc.BuildServiceProvider();
+        sp.Should().RegisterSources("MassTransit");
+        sp.GetRequiredService<IMessageBus>().Should().BeOfType<MessageSender>();
+        sp.GetRequiredService<IMessageValidator>().Should().BeOfType<MessageValidator>();
+        sp.GetRequiredService<IMessageConsumer<TestMessage>>().Should().BeOfType<TestConsumer>();
+
+        var healthOptions = sp.GetService<IOptions<MassTransitHealthCheckOptions<IBus>>>()?.Value;
+        healthOptions.Should().NotBeNull();
+        healthOptions!.Tags.Should().Contain(HealthCheckTag.Readiness.Value);
+        healthOptions.Name.Should().Be("message-bus");
+        healthOptions.MinimalFailureStatus.Should().Be(HealthStatus.Unhealthy);
+
+        _configurator.Received().ConfigureMassTransit(Arg.Any<IBusRegistrationConfigurator>());
+        _configurator.DidNotReceive().ConfigureRabbitMq(Arg.Any<IBusRegistrationContext>(), Arg.Any<IRabbitMqBusFactoryConfigurator>());
+        _configurator.DidNotReceive().ConfigureReceiveEndpoint(Arg.Any<IBusRegistrationContext>(), Arg.Any<Uri>(), Arg.Any<IRabbitMqReceiveEndpointConfigurator>());
+    }
+
     internal record TestMessage : IMessage;
 
     internal class TestConsumer : IMessageConsumer<TestMessage>

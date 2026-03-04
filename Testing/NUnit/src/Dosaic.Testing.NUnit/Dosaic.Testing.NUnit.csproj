@@ -29,5 +29,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\..\..\Hosting\Abstractions\src\Dosaic.Hosting.Abstractions\Dosaic.Hosting.Abstractions.csproj" />
+    <ProjectReference Include="..\..\..\..\DevTools\Seeding\src\Dosaic.DevTools.Seeding\Dosaic.DevTools.Seeding.csproj" />
   </ItemGroup>
 </Project>

@@ -17,5 +17,13 @@ namespace Dosaic.Plugins.Persistence.VaultSharp
         {
             return serviceCollection.AddSingleton<ISecretStorage<T>, SecretStorage<T>>();
         }
+
+        public static IServiceCollection AddLocalFileSystemSecretStorage<T>(
+            this IServiceCollection serviceCollection, VaultConfiguration configuration)
+            where T : struct, Enum
+        {
+            return serviceCollection.AddSingleton<ISecretStorage<T>>(
+                new LocalFileSystemSecretStorage<T>(configuration));
+        }
     }
 }

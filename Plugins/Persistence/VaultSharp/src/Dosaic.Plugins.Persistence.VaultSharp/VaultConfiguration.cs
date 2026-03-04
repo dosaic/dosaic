@@ -26,4 +26,15 @@ public class VaultConfiguration
     /// Defaults to 30 seconds
     /// </summary>
     public int TotpPeriodInSeconds { get; set; } = 30;
+
+    /// <summary>
+    /// When true, uses a local filesystem folder for secret storage instead of a Vault server.
+    /// </summary>
+    public bool UseLocalFileSystem { get; set; }
+
+    /// <summary>
+    /// Root folder for storing secrets when <see cref="UseLocalFileSystem"/> is true.
+    /// Defaults to "./nodep-vault".
+    /// </summary>
+    public string LocalFileSystemPath { get; set; } = "./nodep-vault";
 }
