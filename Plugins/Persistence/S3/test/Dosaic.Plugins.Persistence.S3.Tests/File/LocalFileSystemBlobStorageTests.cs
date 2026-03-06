@@ -126,4 +126,76 @@ public class LocalFileSystemBlobStorageTests
         await _storage.CreateBucketAsync("newbucket");
         Directory.Exists(Path.Combine(_tempPath, "newbucket")).Should().BeTrue();
     }
+
+    [Test]
+    public async Task ListObjectsAsyncReturnsUploadedFiles()
+    {
+        var bucket = "listbucket2";
+        await _storage.CreateBucketAsync(bucket);
+        for (var i = 0; i < 3; i++)
+        {
+            using var s = new MemoryStream([(byte)i]);
+            await _storage.SetAsync(new BlobFile(new FileId(bucket, $"file{i}.txt")), s, FileType.Any);
+        }
+
+        var result = new List<FileListItem>();
+        await foreach (var item in _storage.ListObjectsAsync(bucket, new ListObjectOptions()))
+            result.Add(item);
+
+        result.Should().HaveCount(3);
+        result.Select(x => x.FileId.Key).Should().BeEquivalentTo(["file0.txt", "file1.txt", "file2.txt"]);
+        result.All(x => x.FileId.Bucket == bucket).Should().BeTrue();
+        result.All(x => !x.IsDir).Should().BeTrue();
+    }
+
+    [Test]
+    public async Task ListObjectsAsyncWithPrefixFiltersResults()
+    {
+        var bucket = "prefixbucket";
+        await _storage.CreateBucketAsync(bucket);
+        using var s1 = new MemoryStream([1]);
+        await _storage.SetAsync(new BlobFile(new FileId(bucket, "docs/a.txt")), s1, FileType.Any);
+        using var s2 = new MemoryStream([2]);
+        await _storage.SetAsync(new BlobFile(new FileId(bucket, "docs/b.txt")), s2, FileType.Any);
+        using var s3 = new MemoryStream([3]);
+        await _storage.SetAsync(new BlobFile(new FileId(bucket, "imgs/c.png")), s3, FileType.Any);
+
+        var result = new List<FileListItem>();
+        await foreach (var item in _storage.ListObjectsAsync(bucket, new ListObjectOptions { Prefix = "docs/", Recursive = true }))
+            result.Add(item);
+
+        result.Should().HaveCount(2);
+        result.All(x => x.FileId.Key.StartsWith("docs/")).Should().BeTrue();
+    }
+
+    [Test]
+    public async Task ListObjectsAsyncWithRecursiveFindsNestedFiles()
+    {
+        var bucket = "recursbucket";
+        await _storage.CreateBucketAsync(bucket);
+        using var s1 = new MemoryStream([1]);
+        await _storage.SetAsync(new BlobFile(new FileId(bucket, "root.txt")), s1, FileType.Any);
+        using var s2 = new MemoryStream([2]);
+        await _storage.SetAsync(new BlobFile(new FileId(bucket, "sub/nested.txt")), s2, FileType.Any);
+
+        var recursive = new List<FileListItem>();
+        await foreach (var item in _storage.ListObjectsAsync(bucket, new ListObjectOptions { Recursive = true }))
+            recursive.Add(item);
+        recursive.Should().HaveCount(2);
+
+        var nonRecursive = new List<FileListItem>();
+        await foreach (var item in _storage.ListObjectsAsync(bucket, new ListObjectOptions { Recursive = false }))
+            nonRecursive.Add(item);
+        nonRecursive.Should().HaveCount(1);
+        nonRecursive[0].FileId.Key.Should().Be("root.txt");
+    }
+
+    [Test]
+    public async Task ListObjectsAsyncOnNonExistentBucketReturnsEmpty()
+    {
+        var result = new List<FileListItem>();
+        await foreach (var item in _storage.ListObjectsAsync("nonexistent", new ListObjectOptions()))
+            result.Add(item);
+        result.Should().BeEmpty();
+    }
 }

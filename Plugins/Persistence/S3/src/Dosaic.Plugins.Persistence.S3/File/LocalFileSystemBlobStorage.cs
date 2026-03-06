@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
 using System.Text.Json;
 using Dosaic.Plugins.Persistence.S3.Blob;
@@ -99,4 +100,28 @@ public class LocalFileSystemBlobStorage(string rootPath) : IFileStorage
     }
 
     public string ResolveBucketName(string bucket) => bucket;
+
+    public async IAsyncEnumerable<FileListItem> ListObjectsAsync(string bucket, ListObjectOptions options,
+        [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        var bucketPath = Path.Combine(rootPath, ResolveBucketName(bucket));
+        if (!Directory.Exists(bucketPath))
+            yield break;
+
+        var searchOption = options.Recursive ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
+        foreach (var filePath in Directory.EnumerateFiles(bucketPath, "*", searchOption))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (filePath.EndsWith(".meta.json"))
+                continue;
+
+            var key = Path.GetRelativePath(bucketPath, filePath).Replace('\\', '/');
+            if (!string.IsNullOrEmpty(options.Prefix) && !key.StartsWith(options.Prefix))
+                continue;
+
+            var info = new FileInfo(filePath);
+            yield return new FileListItem(new FileId(bucket, key), null, info.Length, info.LastWriteTimeUtc, false);
+        }
+        await Task.CompletedTask;
+    }
 }
