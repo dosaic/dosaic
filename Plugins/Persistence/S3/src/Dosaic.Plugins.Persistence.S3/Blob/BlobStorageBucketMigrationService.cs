@@ -6,12 +6,17 @@ using Minio.DataModel.Args;
 
 namespace Dosaic.Plugins.Persistence.S3.Blob;
 
-internal class BlobStorageBucketMigrationService<T>(IMinioClient minioClient, ILogger logger, IFileStorage storage)
+internal class BlobStorageBucketMigrationService<T>(S3Configuration config, IMinioClient minioClient, ILogger logger, IFileStorage storage)
     : BackgroundService where T : struct, Enum
 {
     private int _retryCount = 1;
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        if (config.UseLocalFileSystem)
+        {
+            logger.LogInformation("S3 bucket migration skipped because local file system storage is used");
+            return;
+        }
         while (!stoppingToken.IsCancellationRequested)
         {
             var bucketTypeName = typeof(T).Name;

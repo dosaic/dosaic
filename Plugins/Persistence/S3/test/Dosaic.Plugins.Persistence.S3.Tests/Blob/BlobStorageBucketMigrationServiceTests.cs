@@ -35,7 +35,7 @@ public class BlobStorageBucketMigrationServiceTests
         var fakeLogger = new FakeLogger<BlobStorageBucketMigrationService<SampleBucket>>();
         var fileStorage = Substitute.For<IFileStorage>();
         fileStorage.ResolveBucketName(Arg.Any<string>()).Returns(info => $"dev-{info.Args()[0]}");
-        var svc = new BlobStorageBucketMigrationService<SampleBucket>(mc, fakeLogger, fileStorage);
+        var svc = new BlobStorageBucketMigrationService<SampleBucket>(new S3Configuration(), mc, fakeLogger, fileStorage);
         await svc.StartAsync(CancellationToken.None);
         svc.ExecuteTask.Should().NotBeNull();
         await svc.ExecuteTask!;
@@ -68,7 +68,7 @@ public class BlobStorageBucketMigrationServiceTests
         var fakeLogger = new FakeLogger<BlobStorageBucketMigrationService<SampleBucket>>();
         var fileStorage = Substitute.For<IFileStorage>();
         fileStorage.ResolveBucketName(Arg.Any<string>()).Returns(info => $"dev-{info.Args()[0]}");
-        var svc = new BlobStorageBucketMigrationService<SampleBucket>(mc, fakeLogger, fileStorage);
+        var svc = new BlobStorageBucketMigrationService<SampleBucket>(new S3Configuration(), mc, fakeLogger, fileStorage);
         await svc.StartAsync(CancellationToken.None);
         svc.ExecuteTask.Should().NotBeNull();
         await svc.ExecuteTask!;
@@ -79,5 +79,25 @@ public class BlobStorageBucketMigrationServiceTests
         fakeLogger.Entries[2].Message.Should().Be("Could not migrate s3 buckets<SampleBucket> -> retrying");
         fakeLogger.Entries[3].Message.Should()
             .Be("Could not migrate s3 buckets<SampleBucket> after 3 attempts -> giving up");
+    }
+
+    [Test]
+    public async Task ShouldNotMigrateBucketsWhenUsingLocalFileSystem()
+    {
+        var mc = Substitute.For<IMinioClient>();
+
+        mc.ListBucketsAsync(Arg.Any<CancellationToken>())
+            .ThrowsAsyncForAnyArgs(new Exception("retry"));
+
+        var fakeLogger = new FakeLogger<BlobStorageBucketMigrationService<SampleBucket>>();
+        var fileStorage = Substitute.For<IFileStorage>();
+        fileStorage.ResolveBucketName(Arg.Any<string>()).Returns(info => $"dev-{info.Args()[0]}");
+        var svc = new BlobStorageBucketMigrationService<SampleBucket>(new S3Configuration { UseLocalFileSystem = true }, mc, fakeLogger, fileStorage);
+        await svc.StartAsync(CancellationToken.None);
+        svc.ExecuteTask.Should().NotBeNull();
+        await svc.ExecuteTask!;
+        await svc.StopAsync(CancellationToken.None);
+        await mc.Received(0).ListBucketsAsync(Arg.Any<CancellationToken>());
+        fakeLogger.Entries[0].Message.Should().Be("S3 bucket migration skipped because local file system storage is used");
     }
 }

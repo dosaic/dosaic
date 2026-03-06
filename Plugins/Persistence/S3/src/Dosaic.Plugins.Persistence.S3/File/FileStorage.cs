@@ -1,6 +1,7 @@
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Globalization;
+using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
 using Dosaic.Hosting.Abstractions;
 using Dosaic.Hosting.Abstractions.Exceptions;
@@ -59,6 +60,12 @@ public class FileStorage<BucketEnum>(
             stream, file.Id.Bucket.GetFileType(), cancellationToken);
 
         return new FileId<BucketEnum>(file.Id.Bucket, fileId.Key);
+    }
+
+    public IAsyncEnumerable<FileListItem<BucketEnum>> ListObjectsAsync(BucketEnum bucket, ListObjectOptions options, CancellationToken cancellationToken = default)
+    {
+        return fileStorage.ListObjectsAsync(bucket.GetName(), options, cancellationToken)
+            .Select(item => new FileListItem<BucketEnum>(new FileId<BucketEnum>(bucket, item.FileId.Key), item.ETag, item.Size, item.LastModified, item.IsDirectory));
     }
 }
 
@@ -213,6 +220,20 @@ public class FileStorage(
     public string ResolveBucketName(string bucket)
     {
         return $"{configuration.BucketPrefix}{bucket}";
+    }
+
+    public async IAsyncEnumerable<FileListItem> ListObjectsAsync(string bucket, ListObjectOptions options, [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        var bucketName = ResolveBucketName(bucket);
+        var args = new ListObjectsArgs()
+            .WithBucket(bucketName)
+            .WithRecursive(options.Recursive);
+        if (!string.IsNullOrEmpty(options.Prefix))
+            args = args.WithPrefix(options.Prefix);
+        await foreach (var item in minioClient.ListObjectsEnumAsync(args, cancellationToken))
+            yield return new FileListItem(new FileId(bucket, item.Key), item.ETag, (long)item.Size,
+                item.LastModifiedDateTime.HasValue ? new DateTimeOffset(item.LastModifiedDateTime.Value) : DateTimeOffset.MinValue,
+                item.IsDir);
     }
 
     private void ValidateContentType(FileType fileType, string contentType)
