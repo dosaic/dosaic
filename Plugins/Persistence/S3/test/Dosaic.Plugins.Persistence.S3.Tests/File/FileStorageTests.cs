@@ -318,6 +318,80 @@ namespace Dosaic.Plugins.Persistence.S3.Tests.File
         }
 
         [Test]
+        public async Task ListObjectsAsyncReturnsItems()
+        {
+            var item1 = new Item { Key = "logo.png", ETag = "etag1", Size = 2048, IsDir = false };
+            var item2 = new Item { Key = "sub/", IsDir = true };
+            _minioClient.ListObjectsEnumAsync(Arg.Any<ListObjectsArgs>(), Arg.Any<CancellationToken>())
+                .Returns(CreateAsyncItems(item1, item2));
+
+            var result = new List<FileListItem>();
+            await foreach (var item in _fileStorage.ListObjectsAsync("test-logos", new ListObjectOptions()))
+                result.Add(item);
+
+            result.Should().HaveCount(2);
+            result[0].FileId.Key.Should().Be("logo.png");
+            result[0].FileId.Bucket.Should().Be("test-logos");
+            result[0].ETag.Should().Be("etag1");
+            result[0].Size.Should().Be(2048);
+            result[0].IsDir.Should().BeFalse();
+            result[1].FileId.Key.Should().Be("sub/");
+            result[1].IsDir.Should().BeTrue();
+        }
+
+        [Test]
+        public async Task ListObjectsAsyncPassesOptionsToMinio()
+        {
+            _minioClient.ListObjectsEnumAsync(Arg.Any<ListObjectsArgs>(), Arg.Any<CancellationToken>())
+                .Returns(CreateAsyncItems());
+
+            await foreach (var _ in _fileStorage.ListObjectsAsync("test-logos", new ListObjectOptions { Prefix = "docs/", Recursive = true })) { }
+
+            var args = _minioClient.ReceivedCalls().First().GetArguments().OfType<ListObjectsArgs>().First();
+            args.GetInaccessibleValue<string>("Prefix").Should().Be("docs/");
+            args.GetInaccessibleValue<bool>("Recursive").Should().BeTrue();
+        }
+
+        [Test]
+        public async Task ListObjectsAsyncWithDefaultOptionsPassesNoPrefix()
+        {
+            _minioClient.ListObjectsEnumAsync(Arg.Any<ListObjectsArgs>(), Arg.Any<CancellationToken>())
+                .Returns(CreateAsyncItems());
+
+            await foreach (var _ in _fileStorage.ListObjectsAsync("test-logos")) { }
+
+            var args = _minioClient.ReceivedCalls().First().GetArguments().OfType<ListObjectsArgs>().First();
+            args.GetInaccessibleValue<string>("Prefix").Should().BeNullOrEmpty();
+            args.GetInaccessibleValue<bool>("Recursive").Should().BeFalse();
+        }
+
+        [Test]
+        public async Task ListObjectsAsyncTypedMapsItemsToBucketEnum()
+        {
+            var item = new Item { Key = "logo.png", ETag = "img-etag", Size = 512, IsDir = false };
+            _minioClient.ListObjectsEnumAsync(Arg.Any<ListObjectsArgs>(), Arg.Any<CancellationToken>())
+                .Returns(CreateAsyncItems(item));
+
+            var result = new List<FileListItem<SampleBucket>>();
+            await foreach (var i in _fileStorageSampleBucket.ListObjectsAsync(SampleBucket.Logos, new ListObjectOptions()))
+                result.Add(i);
+
+            result.Should().HaveCount(1);
+            result[0].FileId.Bucket.Should().Be(SampleBucket.Logos);
+            result[0].FileId.Key.Should().Be("logo.png");
+            result[0].ETag.Should().Be("img-etag");
+            result[0].Size.Should().Be(512);
+            result[0].IsDir.Should().BeFalse();
+        }
+
+        private static async IAsyncEnumerable<Item> CreateAsyncItems(params Item[] items)
+        {
+            foreach (var item in items)
+                yield return item;
+            await Task.CompletedTask;
+        }
+
+        [Test]
         public void GetDefinitionsForAllFileTypeReturnsAllDefinitions()
         {
             var defs = ((FileStorage)_fileStorage).GetDefinitions(FileType.All);
