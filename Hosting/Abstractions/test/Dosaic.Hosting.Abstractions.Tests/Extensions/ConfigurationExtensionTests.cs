@@ -91,6 +91,59 @@ namespace Dosaic.Hosting.Abstractions.Tests.Extensions
                 .Should().Throw<JsonException>().And.Message.Should().Contain("Unknown Type: failure");
         }
 
+        [Test]
+        public void CanGetSectionWhenSerializationProviderCannotBeResolved()
+        {
+            var configuration = new ConfigurationBuilder()
+                .AddInMemoryCollection(new Dictionary<string, string>
+                {
+                    { "other:key", "value" }
+                })
+                .Build();
+
+            var result = configuration.GetSection("conf", typeof(List<int>));
+
+            result.Should().NotBeNull()
+                .And.BeOfType<List<int>>()
+                .Which.Should().BeEmpty();
+        }
+
+        [Test]
+        public void ThrowsForUnsupportedConfigurationProvider()
+        {
+            var configuration = new ConfigurationBuilder()
+                .Add(new UnsupportedConfigurationSource())
+                .Build();
+
+            configuration.Invoking(x => x.GetSection("conf", typeof(Dictionary<string, string>)))
+                .Should().Throw<NotSupportedException>()
+                .And.Message.Should().Contain("Unsupported configuration provider");
+        }
+
+        private sealed class UnsupportedConfigurationSource : IConfigurationSource
+        {
+            public IConfigurationProvider Build(IConfigurationBuilder builder)
+                => new UnsupportedConfigurationProvider(new Dictionary<string, string>
+                {
+                    { "conf:key", "value" }
+                });
+        }
+
+        private sealed class UnsupportedConfigurationProvider : ConfigurationProvider
+        {
+            private readonly IDictionary<string, string> _seed;
+
+            public UnsupportedConfigurationProvider(IDictionary<string, string> seed)
+            {
+                _seed = seed;
+            }
+
+            public override void Load()
+            {
+                Data = new Dictionary<string, string>(_seed, StringComparer.OrdinalIgnoreCase);
+            }
+        }
+
         private class TestConfiguration
         {
             public string Key1 { get; set; }

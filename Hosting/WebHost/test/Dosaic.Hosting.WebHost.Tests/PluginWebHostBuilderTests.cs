@@ -73,6 +73,7 @@ namespace Dosaic.Hosting.WebHost.Tests
                 .Be("appsettings.test.secrets.json");
 
             configurationProviders[7].Should().BeOfType<EnvConfigurationProvider>();
+            configurationProviders[7].Set("sampleConfig:numberAsString", "48"); // set env var to override other configs
 
             var logLevel = webApplication.Configuration.GetValue<string>("serilog:minimumLevel");
             logLevel.Should().Be("Information"); // overriden from appsettings.test.secrets.json
@@ -143,6 +144,8 @@ namespace Dosaic.Hosting.WebHost.Tests
                 webApplication.Configuration.BindToSection<TypeImplementationResolverTests.UnitTestPluginConfig>(
                     "sampleConfig");
             sampleConfig.Name.Should().Be("example1"); // overridden from appsettings.test.yml
+            sampleConfig.Number.Should().Be(42); // from appsettings.yml
+            sampleConfig.NumberAsString.Should().Be("48"); // overridden from env var
             var unitTestPluginConfig =
                 host.Services.GetRequiredService<TypeImplementationResolverTests.UnitTestPluginConfig>();
             unitTestPluginConfig.Should().NotBeNull();

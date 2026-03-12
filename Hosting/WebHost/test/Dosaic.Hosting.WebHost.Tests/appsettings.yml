@@ -60,3 +60,5 @@ CorsPolicy:
 
 sampleConfig:
   name: example
+  number: 42
+  numberAsString: "42"
