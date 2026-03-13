@@ -15,8 +15,10 @@ namespace Dosaic.Hosting.Abstractions.Extensions
         public static object GetSection(this IConfiguration configuration, string sectionKey, Type type)
         {
             var section = configuration.GetSection(sectionKey);
-            return ConfigurationSectionToObject(section).Serialize().Deserialize(type);
+            return ConfigurationSectionToObject(section).Serialize(SerializationMethod.Yaml)
+                .Deserialize(type, SerializationMethod.Yaml);
         }
+
         private static object ConfigurationSectionToObject(IConfigurationSection section)
         {
             var children = section.GetChildren().ToList();
@@ -26,15 +28,20 @@ namespace Dosaic.Hosting.Abstractions.Extensions
                 {
                     return children.Select(child => ParseValue(child.Value)).ToList();
                 }
+
                 return children.OrderBy(child => int.Parse(child.Key, CultureInfo.InvariantCulture))
                     .Select(ConfigurationSectionToObject)
                     .ToList();
             }
+
             var result = new Dictionary<string, object>();
             foreach (var child in children)
             {
-                result[child.Key] = child.GetChildren().Any() ? ConfigurationSectionToObject(child) : ParseValue(child.Value);
+                result[child.Key] = child.GetChildren().Any()
+                    ? ConfigurationSectionToObject(child)
+                    : ParseValue(child.Value);
             }
+
             return result;
         }
 
@@ -46,14 +53,17 @@ namespace Dosaic.Hosting.Abstractions.Extensions
             {
                 return boolValue;
             }
+
             if (int.TryParse(value, out var intValue))
             {
                 return intValue;
             }
+
             if (decimal.TryParse(value, out var decimalValue))
             {
                 return decimalValue;
             }
+
             return value;
         }
     }

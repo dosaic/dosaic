@@ -1,4 +1,3 @@
-using System.Text.Json;
 using AwesomeAssertions;
 using Dosaic.Hosting.Abstractions.Extensions;
 using Microsoft.Extensions.Configuration;
@@ -26,7 +25,6 @@ namespace Dosaic.Hosting.Abstractions.Tests.Extensions
                     { "conf:key4:0", "1" },
                     { "conf:key4:1", "2" },
                     { "conf:key4:2", "3" },
-
                 })
                 .Build();
             var result = configuration.GetSection("conf", typeof(TestConfiguration));
@@ -39,9 +37,9 @@ namespace Dosaic.Hosting.Abstractions.Tests.Extensions
             config.Key3.Should().HaveCount(2);
             var conf1 = config.Key3[0].Should().BeOfType<TestKindConfiguration>().Which;
             var conf2 = config.Key3[1].Should().BeOfType<TestKindConfiguration>().Which;
-            conf1.Kind.Should().Be("Test");
+            conf1.Kind.Should().Be("test");
             conf1.Name.Should().Be("some-name");
-            conf2.Kind.Should().Be("Test");
+            conf2.Kind.Should().Be("test");
             conf2.Name.Should().Be("some-name2");
 
             config.Key4.Should().HaveCount(3)
@@ -63,11 +61,11 @@ namespace Dosaic.Hosting.Abstractions.Tests.Extensions
                     { "conf:key4:0", "1" },
                     { "conf:key4:1", "2" },
                     { "conf:key4:2", "3" },
-
                 })
                 .Build();
             configuration.Invoking(x => x.GetSection("conf", typeof(TestConfiguration)))
-                .Should().Throw<Exception>().And.Message.Should().Contain("Could not find property");
+                .Should().Throw<YamlDotNet.Core.YamlException>().And.Message.Should()
+                .Contain("Unknown type for kind: not set");
 
             configuration = new ConfigurationBuilder()
                 .AddInMemoryCollection(new Dictionary<string, string>
@@ -84,11 +82,25 @@ namespace Dosaic.Hosting.Abstractions.Tests.Extensions
                     { "conf:key4:0", "1" },
                     { "conf:key4:1", "2" },
                     { "conf:key4:2", "3" },
-
                 })
                 .Build();
             configuration.Invoking(x => x.GetSection("conf", typeof(TestConfiguration)))
-                .Should().Throw<JsonException>().And.Message.Should().Contain("Unknown Type: failure");
+                .Should().Throw<YamlDotNet.Core.YamlException>().And.Message.Should()
+                .Contain("Unknown type for kind: failure");
+        }
+
+        [Test]
+        public void CanGetSectionWhenSerializationProviderCannotBeResolved()
+        {
+            var configuration = new ConfigurationBuilder()
+                .AddInMemoryCollection(new Dictionary<string, string> { { "other:key", "value" } })
+                .Build();
+
+            var result = configuration.GetSection("conf", typeof(List<int>));
+
+            result.Should().NotBeNull()
+                .And.BeOfType<List<int>>()
+                .Which.Should().BeEmpty();
         }
 
         private class TestConfiguration
@@ -112,7 +124,7 @@ namespace Dosaic.Hosting.Abstractions.Tests.Extensions
 
         private class TestKindConfiguration : IInterfaceConfiguration
         {
-            public string Kind => "Test";
+            public string Kind => "test";
             public string Name { get; set; }
         }
     }

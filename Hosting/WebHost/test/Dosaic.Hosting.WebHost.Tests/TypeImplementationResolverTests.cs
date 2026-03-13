@@ -120,6 +120,11 @@ namespace Dosaic.Hosting.WebHost.Tests
         internal class UnitTestPluginConfig
         {
             public string Name { get; set; } = null!;
+
+            public int Number { get; set; }
+
+            public string NumberAsString { get; set; }
+
         }
 
         private abstract class BaseClass;

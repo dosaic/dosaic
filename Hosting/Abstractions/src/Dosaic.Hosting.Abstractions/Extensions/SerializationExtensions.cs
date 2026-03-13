@@ -79,7 +79,6 @@ namespace Dosaic.Hosting.Abstractions.Extensions
                 _ => throw new ArgumentOutOfRangeException(nameof(serializationMethod), serializationMethod, null)
             };
         }
-
     }
 
     internal class ValueObjectYamlTypeConverter : IYamlTypeConverter
@@ -88,7 +87,8 @@ namespace Dosaic.Hosting.Abstractions.Extensions
         {
             return type.GetCustomAttributes().Any(attr => attr.GetType() == typeof(ValueObjectAttribute)
                                                           || (attr.GetType().IsGenericType &&
-                                                              attr.GetType().GetGenericTypeDefinition() == typeof(ValueObjectAttribute<>)));
+                                                              attr.GetType().GetGenericTypeDefinition() ==
+                                                              typeof(ValueObjectAttribute<>)));
         }
 
         public object ReadYaml(IParser parser, Type type, ObjectDeserializer rootDeserializer)
@@ -110,6 +110,7 @@ namespace Dosaic.Hosting.Abstractions.Extensions
     internal class TypeAttributeYamlTypeConverter : IYamlTypeConverter
     {
         private readonly ConcurrentDictionary<Type, IYamlConverter> _converters = new();
+
         public bool Accepts(Type type)
         {
             return type.GetCustomAttributes().Any(attr => attr.GetType() == typeof(YamlTypeConverterAttribute));
@@ -134,8 +135,10 @@ namespace Dosaic.Hosting.Abstractions.Extensions
     {
         private static readonly IDeserializer _deserializer = SerializationExtensions.GetYamlDeserializerBuilder()
             .WithoutTypeConverter(typeof(KindSpecifierYamlTypeConverter)).Build();
+
         private static readonly ISerializer _serializer = SerializationExtensions.GetYamlSerializerBuilder()
             .WithoutTypeConverter(typeof(KindSpecifierYamlTypeConverter)).Build();
+
         private readonly IDictionary<Type, Type[]> _kindTypes = new ConcurrentDictionary<Type, Type[]>();
         private readonly IDictionary<string, Type> _kindNames = new ConcurrentDictionary<string, Type>();
 
@@ -158,9 +161,22 @@ namespace Dosaic.Hosting.Abstractions.Extensions
                 }
             }
 
-            var yamlValue = parser.Consume<Scalar>().Value;
+            string yamlValue;
+            if (parser.Current is Scalar)
+            {
+                yamlValue = parser.Consume<Scalar>().Value;
+            }
+            else
+            {
+                // needed to the memory configration provide/memory collection
+                // mapping node — re-serialize to a YAML string so existing lookup logic works
+                var raw = (Dictionary<object, object>)rootDeserializer(typeof(Dictionary<object, object>));
+                yamlValue = _serializer.Serialize(raw.ToDictionary(k => k.Key.ToString(), v => v.Value));
+            }
+
             var kindNode = _deserializer.Deserialize<Dictionary<string, object>>(yamlValue)
-                .FirstOrDefault(x => x.Key.Equals(nameof(IKindSpecifier.Kind), StringComparison.InvariantCultureIgnoreCase))
+                .FirstOrDefault(x =>
+                    x.Key.Equals(nameof(IKindSpecifier.Kind), StringComparison.InvariantCultureIgnoreCase))
                 .Value as string;
             if (string.IsNullOrEmpty(kindNode) || !_kindNames.TryGetValue(kindNode, out var kindType))
                 throw new YamlException($"Unknown type for kind: {kindNode ?? "not set"}");
@@ -178,6 +194,7 @@ namespace Dosaic.Hosting.Abstractions.Extensions
     internal class KindSpecifierConverterFactory : JsonConverterFactory
     {
         private readonly IDictionary<Type, JsonConverter> _converters = new ConcurrentDictionary<Type, JsonConverter>();
+
         public override bool CanConvert(Type typeToConvert)
         {
             return typeof(IKindSpecifier).IsAssignableFrom(typeToConvert) && typeToConvert.IsInterface;
@@ -204,6 +221,7 @@ namespace Dosaic.Hosting.Abstractions.Extensions
                     .Where(x => x is { IsClass: true, IsAbstract: false } && x.GetInterface(typeof(T).Name) != null)
                     .ToDictionary(x => ((T)Activator.CreateInstance(x)!).Kind.ToLowerInvariant(), x => x);
             }
+
             public override T Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
             {
                 using var doc = JsonDocument.ParseValue(ref reader);
@@ -218,10 +236,12 @@ namespace Dosaic.Hosting.Abstractions.Extensions
 
             private static JsonElement FindProperty(JsonElement element, string propertyName)
             {
-                foreach (var property in element.EnumerateObject().Where(property => string.Equals(property.Name, propertyName, StringComparison.InvariantCultureIgnoreCase)))
+                foreach (var property in element.EnumerateObject().Where(property =>
+                             string.Equals(property.Name, propertyName, StringComparison.InvariantCultureIgnoreCase)))
                 {
                     return property.Value;
                 }
+
                 throw new Exception("Could not find property: " + propertyName);
             }
 
