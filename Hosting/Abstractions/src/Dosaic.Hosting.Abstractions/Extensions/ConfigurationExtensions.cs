@@ -14,9 +14,16 @@ namespace Dosaic.Hosting.Abstractions.Extensions
 
         public static object GetSection(this IConfiguration configuration, string sectionKey, Type type)
         {
-            var section = configuration.GetSection(sectionKey);
-            return ConfigurationSectionToObject(section).Serialize(SerializationMethod.Yaml)
-                .Deserialize(type, SerializationMethod.Yaml);
+            try
+            {
+                var section = configuration.GetSection(sectionKey);
+                return ConfigurationSectionToObject(section).Serialize(SerializationMethod.Yaml)
+                    .Deserialize(type, SerializationMethod.Yaml);
+            }
+            catch (Exception e)
+            {
+                throw new AggregateException($"Failed to bind configuration section '{sectionKey}' to type '{type.FullName}'.", e);
+            }
         }
 
         private static object ConfigurationSectionToObject(IConfigurationSection section)

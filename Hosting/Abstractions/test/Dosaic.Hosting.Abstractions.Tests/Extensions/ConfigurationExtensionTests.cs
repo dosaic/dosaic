@@ -90,6 +90,24 @@ namespace Dosaic.Hosting.Abstractions.Tests.Extensions
         }
 
         [Test]
+        public void GetSectionWrapsExceptionInAggregateException()
+        {
+            var configuration = new ConfigurationBuilder()
+                .AddInMemoryCollection(new Dictionary<string, string>
+                {
+                    { "conf:key3:0:kind", "failure" },
+                    { "conf:key3:0:name", "some-name" },
+                })
+                .Build();
+
+            var act = () => configuration.GetSection("conf", typeof(TestConfiguration));
+
+            var exception = act.Should().Throw<AggregateException>().Which;
+            exception.Message.Should().Contain("conf").And.Contain(typeof(TestConfiguration).FullName);
+            exception.InnerException.Should().NotBeNull();
+        }
+
+        [Test]
         public void CanGetSectionWhenSerializationProviderCannotBeResolved()
         {
             var configuration = new ConfigurationBuilder()

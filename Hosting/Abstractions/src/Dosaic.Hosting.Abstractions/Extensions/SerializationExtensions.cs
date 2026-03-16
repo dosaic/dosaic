@@ -152,7 +152,7 @@ namespace Dosaic.Hosting.Abstractions.Extensions
             if (!_kindTypes.TryGetValue(type, out var possibleTypes))
             {
                 var types = AppDomain.CurrentDomain.GetAssemblies().GetTypesSafely();
-                possibleTypes = types.Where(x => x.IsClass && type.IsAssignableFrom(x)).ToArray();
+                possibleTypes = types.Where(x => x is { IsClass: true, IsAbstract: false } && x.GetInterface(nameof(IKindSpecifier)) != null).ToArray();
                 _kindTypes[type] = possibleTypes;
                 foreach (var pt in possibleTypes)
                 {
