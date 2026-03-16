@@ -89,5 +89,167 @@ namespace Dosaic.Hosting.Abstractions.Tests.Extensions
         {
             public IList<ISample> Samples { get; set; }
         }
+
+        private interface IMixedCaseKind : IKindSpecifier
+        {
+            string Value { get; }
+        }
+
+        private class MixedCaseConf : IMixedCaseKind
+        {
+            public string Kind => "Expression";
+            public string Value { get; set; }
+        }
+
+        private class MixedCaseContainer
+        {
+            public IList<IMixedCaseKind> Items { get; set; }
+        }
+
+        [Test]
+        public void KindSpecifierWithMixedCaseKindWorksForJson()
+        {
+            var sample = new MixedCaseContainer
+            {
+                Items = [new MixedCaseConf { Value = "hello" }]
+            };
+            var serialized = sample.Serialize();
+            var deserialized = serialized.Deserialize<MixedCaseContainer>();
+            deserialized.Items.Should().HaveCount(1);
+            deserialized.Items[0].Value.Should().Be("hello");
+            deserialized.Items[0].Kind.Should().Be("Expression");
+        }
+
+        [Test]
+        public void KindSpecifierWithMixedCaseKindWorksForYaml()
+        {
+            var sample = new MixedCaseContainer
+            {
+                Items = [new MixedCaseConf { Value = "hello" }]
+            };
+            var serialized = sample.Serialize(SerializationMethod.Yaml);
+            var deserialized = serialized.Deserialize<MixedCaseContainer>(SerializationMethod.Yaml);
+            deserialized.Items.Should().HaveCount(1);
+            deserialized.Items[0].Value.Should().Be("hello");
+            deserialized.Items[0].Kind.Should().Be("Expression");
+        }
+
+        // #2 - JSON CanConvert only matches interfaces; YAML Accepts matches all IKindSpecifier types
+        private class ConcreteKindContainer
+        {
+            public SampleConf Item { get; set; }
+        }
+
+        [Test]
+        public void ConcreteKindSpecifierPropertyWorksForJson()
+        {
+            var sample = new ConcreteKindContainer { Item = new SampleConf { Name = "test" } };
+            var serialized = sample.Serialize();
+            var deserialized = serialized.Deserialize<ConcreteKindContainer>();
+            deserialized.Item.Name.Should().Be("test");
+            deserialized.Item.Kind.Should().Be("one");
+        }
+
+        [Test]
+        public void ConcreteKindSpecifierPropertyWorksForYaml()
+        {
+            var sample = new ConcreteKindContainer { Item = new SampleConf { Name = "test" } };
+            var serialized = sample.Serialize(SerializationMethod.Yaml);
+            var deserialized = serialized.Deserialize<ConcreteKindContainer>(SerializationMethod.Yaml);
+            deserialized.Item.Name.Should().Be("test");
+            deserialized.Item.Kind.Should().Be("one");
+        }
+
+        // #3 - JSON scopes type discovery per interface; YAML uses one global dictionary
+        private interface IAlpha : IKindSpecifier
+        {
+            string AlphaValue { get; }
+        }
+
+        private interface IBeta : IKindSpecifier
+        {
+            string BetaValue { get; }
+        }
+
+        private class AlphaImpl : IAlpha
+        {
+            public string Kind => "shared";
+            public string AlphaValue { get; set; }
+        }
+
+        private class BetaImpl : IBeta
+        {
+            public string Kind => "shared";
+            public string BetaValue { get; set; }
+        }
+
+        private class OverlapContainer
+        {
+            public IList<IAlpha> Alphas { get; set; }
+            public IList<IBeta> Betas { get; set; }
+        }
+
+        [Test]
+        public void OverlappingKindNamesAcrossInterfacesWorksForJson()
+        {
+            var sample = new OverlapContainer
+            {
+                Alphas = [new AlphaImpl { AlphaValue = "a" }],
+                Betas = [new BetaImpl { BetaValue = "b" }]
+            };
+            var serialized = sample.Serialize();
+            var deserialized = serialized.Deserialize<OverlapContainer>();
+            deserialized.Alphas.Should().HaveCount(1);
+            deserialized.Alphas[0].Should().BeOfType<AlphaImpl>();
+            deserialized.Alphas[0].AlphaValue.Should().Be("a");
+            deserialized.Betas.Should().HaveCount(1);
+            deserialized.Betas[0].Should().BeOfType<BetaImpl>();
+            deserialized.Betas[0].BetaValue.Should().Be("b");
+        }
+
+        [Test]
+        public void OverlappingKindNamesAcrossInterfacesWorksForYaml()
+        {
+            var sample = new OverlapContainer
+            {
+                Alphas = [new AlphaImpl { AlphaValue = "a" }],
+                Betas = [new BetaImpl { BetaValue = "b" }]
+            };
+            var serialized = sample.Serialize(SerializationMethod.Yaml);
+            var deserialized = serialized.Deserialize<OverlapContainer>(SerializationMethod.Yaml);
+            deserialized.Alphas.Should().HaveCount(1);
+            deserialized.Alphas[0].Should().BeOfType<AlphaImpl>();
+            deserialized.Alphas[0].AlphaValue.Should().Be("a");
+            deserialized.Betas.Should().HaveCount(1);
+            deserialized.Betas[0].Should().BeOfType<BetaImpl>();
+            deserialized.Betas[0].BetaValue.Should().Be("b");
+        }
+
+        // #4 - JSON writes proper objects; YAML writes KindSpecifiers as scalar strings
+        [Test]
+        public void KindSpecifierJsonOutputIsStructuredObject()
+        {
+            var sample = new SampleWithKindSpecifiers
+            {
+                Samples = [new SampleConf { Name = "one" }]
+            };
+            var serialized = sample.Serialize();
+            var generic = serialized.Deserialize<Dictionary<string, List<Dictionary<string, object>>>>();
+            generic["samples"][0].Should().ContainKey("kind");
+            generic["samples"][0].Should().ContainKey("name");
+        }
+
+        [Test]
+        public void KindSpecifierYamlOutputIsStructuredMapping()
+        {
+            var sample = new SampleWithKindSpecifiers
+            {
+                Samples = [new SampleConf { Name = "one" }]
+            };
+            var serialized = sample.Serialize(SerializationMethod.Yaml);
+            var generic = serialized.Deserialize<Dictionary<string, List<Dictionary<string, string>>>>(SerializationMethod.Yaml);
+            generic["samples"][0].Should().ContainKey("kind");
+            generic["samples"][0].Should().ContainKey("name");
+        }
     }
 }
