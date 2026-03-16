@@ -251,5 +251,29 @@ namespace Dosaic.Hosting.Abstractions.Tests.Extensions
             generic["samples"][0].Should().ContainKey("kind");
             generic["samples"][0].Should().ContainKey("name");
         }
+
+        // Mimics the ConfigurationExtensions.GetSection path: dict → YAML → typed object
+        [Test]
+        public void KindSpecifierFromDictionaryViaYamlWorks()
+        {
+            var dict = new Dictionary<string, object>
+            {
+                {
+                    "items", new List<object>
+                    {
+                        new Dictionary<string, object>
+                        {
+                            { "kind", "Expression" },
+                            { "value", "hello" }
+                        }
+                    }
+                }
+            };
+            var yaml = dict.Serialize(SerializationMethod.Yaml);
+            var result = yaml.Deserialize<MixedCaseContainer>(SerializationMethod.Yaml);
+            result.Items.Should().HaveCount(1);
+            result.Items[0].Value.Should().Be("hello");
+            result.Items[0].Kind.Should().Be("Expression");
+        }
     }
 }
