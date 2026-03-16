@@ -2,7 +2,7 @@
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <MicrosoftExtensionsVersion>10.0.3</MicrosoftExtensionsVersion>
-    <MicrosoftAspNetCoreVersion>10.0.3</MicrosoftAspNetCoreVersion>
+    <MicrosoftAspNetCoreVersion>10.0.5</MicrosoftAspNetCoreVersion>
     <MicrosoftEfCoreVersion>10.0.3</MicrosoftEfCoreVersion>
   </PropertyGroup>
   <ItemGroup>
