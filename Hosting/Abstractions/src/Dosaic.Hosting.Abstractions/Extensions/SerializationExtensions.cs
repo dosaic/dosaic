@@ -151,20 +151,11 @@ namespace Dosaic.Hosting.Abstractions.Extensions
             return _kindNamesByType.GetOrAdd(type, t =>
             {
                 var types = AppDomain.CurrentDomain.GetAssemblies().GetTypesSafely();
-                var result = new Dictionary<string, Type>();
-                foreach (var x in types.Where(x => x is { IsClass: true, IsAbstract: false } && t.IsAssignableFrom(x)))
-                {
-                    try
-                    {
-                        var kindName = ((IKindSpecifier)Activator.CreateInstance(x)!).Kind.ToLowerInvariant();
-                        result[kindName] = x;
-                    }
-                    catch
-                    {
-                        // Type cannot be instantiated (e.g. required properties) — skip
-                    }
-                }
-                return result;
+                return types
+                    .Where(x => x is { IsClass: true, IsAbstract: false } && t.IsAssignableFrom(x))
+                    .ToDictionary(
+                        x => ((IKindSpecifier)Activator.CreateInstance(x)!).Kind.ToLowerInvariant(),
+                        x => x);
             });
         }
 
@@ -188,10 +179,7 @@ namespace Dosaic.Hosting.Abstractions.Extensions
                     x.Key.Equals(nameof(IKindSpecifier.Kind), StringComparison.InvariantCultureIgnoreCase))
                 .Value as string;
             if (string.IsNullOrEmpty(kindNode) || !kindNames.TryGetValue(kindNode.ToLowerInvariant(), out var kindType))
-            {
-                var available = string.Join(", ", kindNames.Keys);
-                throw new YamlException($"Unknown type for kind: {kindNode ?? "not set"}. Available kinds for {type.Name}: [{available}]");
-            }
+                throw new YamlException($"Unknown type for kind: {kindNode ?? "not set"}");
 
             return _deserializer.Deserialize(yamlValue, kindType);
         }
