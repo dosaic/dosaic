@@ -139,27 +139,29 @@ namespace Dosaic.Hosting.Abstractions.Extensions
         private static readonly ISerializer _serializer = SerializationExtensions.GetYamlSerializerBuilder()
             .WithoutTypeConverter(typeof(KindSpecifierYamlTypeConverter)).Build();
 
-        private readonly IDictionary<Type, Type[]> _kindTypes = new ConcurrentDictionary<Type, Type[]>();
-        private readonly IDictionary<string, Type> _kindNames = new ConcurrentDictionary<string, Type>();
+        private readonly ConcurrentDictionary<Type, IDictionary<string, Type>> _kindNamesByType = new();
 
         public bool Accepts(Type type)
         {
-            return typeof(IKindSpecifier).IsAssignableFrom(type);
+            return typeof(IKindSpecifier).IsAssignableFrom(type) && type.IsInterface;
+        }
+
+        private IDictionary<string, Type> GetKindNames(Type type)
+        {
+            return _kindNamesByType.GetOrAdd(type, t =>
+            {
+                var types = AppDomain.CurrentDomain.GetAssemblies().GetTypesSafely();
+                return types
+                    .Where(x => x is { IsClass: true, IsAbstract: false } && t.IsAssignableFrom(x))
+                    .ToDictionary(
+                        x => ((IKindSpecifier)Activator.CreateInstance(x)!).Kind.ToLowerInvariant(),
+                        x => x);
+            });
         }
 
         public object ReadYaml(IParser parser, Type type, ObjectDeserializer rootDeserializer)
         {
-            if (!_kindTypes.TryGetValue(type, out var possibleTypes))
-            {
-                var types = AppDomain.CurrentDomain.GetAssemblies().GetTypesSafely();
-                possibleTypes = types.Where(x => x is { IsClass: true, IsAbstract: false } && x.GetInterface(nameof(IKindSpecifier)) != null).ToArray();
-                _kindTypes[type] = possibleTypes;
-                foreach (var pt in possibleTypes)
-                {
-                    var kindName = ((IKindSpecifier)Activator.CreateInstance(pt)!).Kind.ToLowerInvariant();
-                    _kindNames[kindName] = pt;
-                }
-            }
+            var kindNames = GetKindNames(type);
 
             string yamlValue;
             if (parser.Current is Scalar)
@@ -168,8 +170,6 @@ namespace Dosaic.Hosting.Abstractions.Extensions
             }
             else
             {
-                // needed to the memory configration provide/memory collection
-                // mapping node — re-serialize to a YAML string so existing lookup logic works
                 var raw = (Dictionary<object, object>)rootDeserializer(typeof(Dictionary<object, object>));
                 yamlValue = _serializer.Serialize(raw.ToDictionary(k => k.Key.ToString(), v => v.Value));
             }
@@ -178,7 +178,7 @@ namespace Dosaic.Hosting.Abstractions.Extensions
                 .FirstOrDefault(x =>
                     x.Key.Equals(nameof(IKindSpecifier.Kind), StringComparison.InvariantCultureIgnoreCase))
                 .Value as string;
-            if (string.IsNullOrEmpty(kindNode) || !_kindNames.TryGetValue(kindNode, out var kindType))
+            if (string.IsNullOrEmpty(kindNode) || !kindNames.TryGetValue(kindNode.ToLowerInvariant(), out var kindType))
                 throw new YamlException($"Unknown type for kind: {kindNode ?? "not set"}");
 
             return _deserializer.Deserialize(yamlValue, kindType);
@@ -186,8 +186,7 @@ namespace Dosaic.Hosting.Abstractions.Extensions
 
         public void WriteYaml(IEmitter emitter, object value, Type type, ObjectSerializer serializer)
         {
-            var yamlText = _serializer.Serialize(value);
-            emitter.Emit(new Scalar(null, null, yamlText, ScalarStyle.Plain, true, false));
+            serializer(value, value.GetType());
         }
     }
 
