@@ -123,6 +123,8 @@ endpointRouteBuilder.MapGet("/hello", () =>
 });
 ```
 
+To export traces/metrics/logs with a custom OpenTelemetry service name, configure `telemetry:name` together with `telemetry:endpoint` in your app settings.
+
 ### MVC controller with value objects
 
 `TestController` shows a standard `[ApiController]` alongside [Vogen](https://github.com/SteveDunn/Vogen) strongly-typed value objects and Swashbuckle response annotations:

@@ -1,3 +1,4 @@
+using System.Reflection;
 using AwesomeAssertions;
 using Dosaic.Hosting.Abstractions.Services;
 using Dosaic.Hosting.WebHost.Configurators;
@@ -7,6 +8,7 @@ using Dosaic.Testing.NUnit.Assertions;
 using Microsoft.Extensions.Hosting;
 using NSubstitute;
 using NUnit.Framework;
+using OpenTelemetry;
 using OpenTelemetry.Logs;
 using OpenTelemetry.Trace;
 using Serilog.Core;
@@ -28,6 +30,7 @@ namespace Dosaic.Hosting.WebHost.Tests
             serviceCollection.Should().Contain(x => x.ServiceType == typeof(IHostedService) && x.ImplementationType!.Name == "TelemetryHostedService");
             serviceCollection.Should().Contain(x => x.ServiceType == typeof(TracerProvider));
             serviceCollection.Should().Contain(x => x.ServiceType == typeof(LoggerProvider));
+            Baggage.GetBaggage("AppName").Should().Be(Assembly.GetEntryAssembly()!.GetName().Name);
         }
 
         [Test]
@@ -42,6 +45,22 @@ namespace Dosaic.Hosting.WebHost.Tests
             serviceCollection.Should().NotContain(x => x.ServiceType == typeof(ILogEventEnricher) && x.ImplementationType == typeof(OpentelemetryTraceEnricher));
             serviceCollection.Should().NotContain(x => x.ServiceType == typeof(TracerProvider));
             serviceCollection.Should().NotContain(x => x.ServiceType == typeof(LoggerProvider));
+            Baggage.GetBaggage("AppName").Should().Be(Assembly.GetEntryAssembly()!.GetName().Name);
+        }
+
+        [Test]
+        public void ConfigureTracingShouldUseConfiguredTelemetryName()
+        {
+            var configuration = CustomConfiguration.Create()
+                .Add("telemetry:name", "custom-service-name")
+                .Add("telemetry:endpoint", "http://localhost:1111")
+                .Build();
+            var serviceCollection = TestingDefaults.ServiceCollection();
+
+            var serviceConfigurator = new ServiceConfigurator(new FakeLogger<ServiceConfigurator>(), configuration, serviceCollection, Substitute.For<IImplementationResolver>());
+            serviceConfigurator.ConfigureTelemetry();
+
+            Baggage.GetBaggage("AppName").Should().Be("custom-service-name");
         }
     }
 }

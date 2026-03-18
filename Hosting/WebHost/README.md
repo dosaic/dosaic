@@ -226,18 +226,20 @@ Refer to [AspNetCoreRateLimit documentation](https://github.com/stefanprodan/Asp
 
 ### OpenTelemetry
 
-When `telemetry:host` is configured, traces, metrics, and logs are exported via OTLP. Log messages are enriched with `SpanId` and `TraceId`.
+When `telemetry:endpoint` is configured, traces, metrics, and logs are exported via OTLP. Log messages are enriched with `SpanId` and `TraceId`.
+Use `telemetry:name` to explicitly set the service name used by OpenTelemetry resources for traces, metrics, and logs.
 
 ```yaml
 telemetry:
-  host: http://localhost:4317     # OTLP endpoint
+  name: Dosaic.Example.Service    # optional OpenTelemetry service name
+  endpoint: http://localhost:4317 # OTLP endpoint
   protocol: grpc                  # grpc | http/protobuf
   headers:
     - name: Authorization
       value: "Bearer <token>"
 ```
 
-Without `telemetry:host`, only the Prometheus scraping endpoint (`/metrics`) is active.
+Without `telemetry:endpoint`, only the Prometheus scraping endpoint (`/metrics`) is active.
 
 Metrics instrumentation (always active):
 - ASP.NET Core request metrics
@@ -246,7 +248,7 @@ Metrics instrumentation (always active):
 - Process metrics
 - All custom `ActivitySource` meters (`*`)
 
-Tracing instrumentation (requires `telemetry:host`):
+Tracing instrumentation (requires `telemetry:endpoint`):
 - ASP.NET Core (Swagger paths excluded)
 - HTTP client
 - All custom `ActivitySource` sources (`*`)
