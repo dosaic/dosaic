@@ -120,7 +120,9 @@ namespace Dosaic.Hosting.WebHost.Configurators
             ActivitySource.AddActivityListener(activityListener);
             var otelConfig = _configuration.BindToSection<OtelConfiguration>("telemetry");
             var entryAssembly = Assembly.GetEntryAssembly();
-            var serviceName = entryAssembly!.GetName().Name ?? "unknown-service";
+            var serviceName = string.IsNullOrWhiteSpace(otelConfig?.Name)
+                ? entryAssembly!.GetName().Name ?? "unknown-service"
+                : otelConfig.Name;
             var serviceVersion = entryAssembly.GetName().Version?.ToString() ?? "unknown";
             var serviceInstanceId = Environment.MachineName;
             Action<OtlpExporterOptions> setExporterOptions = opts =>
@@ -310,6 +312,7 @@ namespace Dosaic.Hosting.WebHost.Configurators
 
         internal class OtelConfiguration
         {
+            public string Name { get; set; }
             public OtlpExportProtocol Protocol { get; set; } = OtlpExportProtocol.Grpc;
             public Uri Endpoint { get; set; }
             public IList<NameValuePair> Headers { get; set; } = [];
