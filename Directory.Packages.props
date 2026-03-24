@@ -94,7 +94,7 @@
     <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.0" />
     <PackageVersion Include="NSubstitute" Version="5.3.0" />
     <PackageVersion Include="NSubstitute.Analyzers.CSharp" Version="1.0.17" />
-    <PackageVersion Include="NUnit" Version="4.5.0" />
+    <PackageVersion Include="NUnit" Version="4.5.1" />
     <!-- https://github.com/nunit/nunit3-vs-adapter:
     From version 6.0 the NUnit3TestAdapter will support MTP 2.0, and stop supporting .net core 3. Lowest version will be .net 8.0.
     This causes some problems (exact problem is unknown) with the assembly file loading at this point, no solution was found so far.
