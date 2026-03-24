@@ -135,5 +135,6 @@
     <PackageVersion Include="WireMock.Net" Version="1.25.0" />
     <PackageVersion Include="YamlDotNet" Version="16.3.0" />
     <PackageVersion Include="jose-jwt" Version="5.2.0" />
+    <PackageVersion Include="Zitadel" Version="7.0.41" />
   </ItemGroup>
 </Project>
