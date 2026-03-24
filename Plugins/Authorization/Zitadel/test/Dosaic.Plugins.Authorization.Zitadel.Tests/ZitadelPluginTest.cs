@@ -115,7 +115,8 @@ namespace Dosaic.Plugins.Authorization.Zitadel.Tests
             var plugin = GetPlugin();
             var context = new AuthenticationFailedContext(new DefaultHttpContext(),
                 new AuthenticationScheme(ZitadelDefaults.AuthenticationScheme, "", typeof(OpenIdConnectHandler)),
-                new OAuth2IntrospectionOptions()) { Error = "Test error" };
+                new OAuth2IntrospectionOptions())
+            { Error = "Test error" };
 
             await plugin.OnAuthenticationFailed(context);
             // Check if the log contains the expected message

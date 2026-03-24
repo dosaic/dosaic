@@ -60,7 +60,7 @@ namespace Dosaic.Plugins.Authorization.Zitadel
             var result =
                 await client.CreateUserAsync(PrepareCreateServiceAccountRequest(userid, name));
 
-            var (key, keyContent) = await CreateServiceAccountKeyAsync(result.Id,keyExpirationTime);
+            var (key, keyContent) = await CreateServiceAccountKeyAsync(result.Id, keyExpirationTime);
 
             return new ServiceAccountCreationResult(result.Id, key.KeyId, keyContent);
         }
@@ -72,7 +72,8 @@ namespace Dosaic.Plugins.Authorization.Zitadel
             var client = Clients.UserService(GetClientOptions());
             var key = await client.AddKeyAsync(new AddKeyRequest
             {
-                UserId = userId, ExpirationDate = timestamp
+                UserId = userId,
+                ExpirationDate = timestamp
             });
 
             var keyContent = await ReadKeyContent(key);
@@ -130,7 +131,9 @@ namespace Dosaic.Plugins.Authorization.Zitadel
                 {
                     Profile = new SetHumanProfile
                     {
-                        DisplayName = displayName, GivenName = givenName, FamilyName = familyName
+                        DisplayName = displayName,
+                        GivenName = givenName,
+                        FamilyName = familyName
                     },
                     Email = new SetHumanEmail { Email = email, IsVerified = true },
                     Password = new Password { Password_ = password }
