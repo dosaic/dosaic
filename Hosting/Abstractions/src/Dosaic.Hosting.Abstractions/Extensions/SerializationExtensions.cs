@@ -30,6 +30,7 @@ namespace Dosaic.Hosting.Abstractions.Extensions
 
         internal static DeserializerBuilder GetYamlDeserializerBuilder() => new DeserializerBuilder()
             .WithNamingConvention(CamelCaseNamingConvention.Instance)
+            .WithCaseInsensitivePropertyMatching()
             .IgnoreUnmatchedProperties()
             .WithDuplicateKeyChecking()
             .EnablePrivateConstructors()
