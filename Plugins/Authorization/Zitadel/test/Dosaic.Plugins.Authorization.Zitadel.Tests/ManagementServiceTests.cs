@@ -183,5 +183,40 @@ namespace Dosaic.Plugins.Authorization.Zitadel.Tests
 
             result.Machine.Should().BeNull();
         }
+
+        [Test]
+        public void ServiceAccountCreationResult_HasCorrectProperties()
+        {
+            var userId = "user123";
+            var keyId = "key123";
+            var keyContent = "some-private-key";
+            var accountCreationResult = new ServiceAccountCreationResult(userId, keyId, keyContent);
+            accountCreationResult.KeyContent.Should().Be(keyContent);
+            accountCreationResult.KeyId.Should().Be(keyId);
+            accountCreationResult.UserId.Should().Be(userId);
+        }
+
+        [Test]
+        public void ListServiceAccountResultItem_HasCorrectProperties()
+        {
+            var userId = "user123";
+            var state = "active";
+            var name = "Test Service Account";
+            var description = "A test service account";
+            var hasSecret = true;
+            var owner = "owner123";
+            var createdAt = DateTime.UtcNow.AddDays(-1);
+            var updatedAt = DateTime.UtcNow;
+            var resultItem = new ListServiceAccountResultItem(userId, state, name, description, hasSecret, owner,
+                createdAt, updatedAt);
+            resultItem.UserId.Should().Be(userId);
+            resultItem.State.Should().Be(state);
+            resultItem.Name.Should().Be(name);
+            resultItem.Description.Should().Be(description);
+            resultItem.HasSecret.Should().Be(hasSecret);
+            resultItem.Owner.Should().Be(owner);
+            resultItem.CreatedAt.Should().BeCloseTo(createdAt, TimeSpan.FromSeconds(3));
+            resultItem.UpdatedAt.Should().BeCloseTo(updatedAt, TimeSpan.FromSeconds(3));
+        }
     }
 }
