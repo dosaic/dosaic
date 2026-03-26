@@ -121,13 +121,12 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Eventsourcing
             switch (patch.Operation)
             {
                 case PatchOperation.Add:
-                    throw new InvalidOperationException("Cannot add the aggregate root to itself.");
-                case PatchOperation.Delete:
-                    throw new InvalidOperationException("Cannot delete the aggregate root via Apply.");
                 case PatchOperation.Update:
                     var changedProps = patch.Data.Deserialize<Dictionary<string, JsonElement>>();
                     SetProperties(root, changedProps);
                     break;
+                case PatchOperation.Delete:
+                    throw new InvalidOperationException("Cannot delete the aggregate root via Apply.");
             }
         }
 

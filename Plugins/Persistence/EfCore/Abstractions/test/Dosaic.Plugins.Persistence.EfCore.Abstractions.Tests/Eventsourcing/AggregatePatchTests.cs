@@ -359,11 +359,15 @@ public class AggregatePatchTests
     {
         var patch = new AggregatePatch(
             "root-1", null, PatchOperation.Add,
-            "{}", "root-1", typeof(TestResult).AssemblyQualifiedName);
+            JsonSerializer.Serialize(new Dictionary<string, object> { ["Id"] = "NewId", ["Name"] = "New Name" }), "root-1", typeof(TestResult).AssemblyQualifiedName);
 
-        var act = () => _testResult.ApplyAggregateChanges(patch);
+        var testResult = new TestResult();
 
-        act.Should().Throw<InvalidOperationException>();
+        testResult.ApplyAggregateChanges(patch);
+
+        testResult.Id.Should().Be(NanoId.Parse("NewId"));
+        testResult.Name.Should().Be("New Name");
+
     }
 
     [Test]
