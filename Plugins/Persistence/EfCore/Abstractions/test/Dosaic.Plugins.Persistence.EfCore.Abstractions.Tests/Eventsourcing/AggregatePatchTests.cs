@@ -790,6 +790,65 @@ public class AggregatePatchTests
     }
 
     [Test]
+    public void GetAggregateInfoWithInverseNavigationPropertyResolvesCorrectProperty()
+    {
+        var info = AggregatePatchExtensions.GetAggregateInfo(typeof(MultiChildItem));
+
+        info.Segments.Should().HaveCount(1);
+        info.RootEntityType.Should().Be(typeof(MultiChildParent));
+        info.Segments[0].ParentType.Should().Be(typeof(MultiChildParent));
+        info.Segments[0].ChildType.Should().Be(typeof(MultiChildItem));
+        info.Segments[0].DownwardPropertyName.Should().Be(nameof(MultiChildParent.SecondaryItems));
+        info.Segments[0].IsCollection.Should().BeTrue();
+        info.Segments[0].FkPropertyName.Should().Be("MultiChildParentId");
+    }
+
+    [Test]
+    public void BuildAggregateInfoWithAmbiguousChildWithoutInverseThrows()
+    {
+        var act = () => AggregatePatchExtensions.BuildAggregateInfo(typeof(AmbiguousChild));
+
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("*Multiple properties*InverseNavigationProperty*disambiguate*");
+    }
+
+    [Test]
+    public async Task CalculateChangesForChildWithInverseNavigationPropertySetsCorrectPath()
+    {
+        var child = new MultiChildItem { Id = "item-1", Name = "Test Item", MultiChildParentId = "parent-1" };
+        SetupQuery<MultiChildItem>();
+
+        var patch = await _db.GetAggregateChangesAsync(child, PatchOperation.Add, CancellationToken.None);
+
+        patch.Path.Should().Be("SecondaryItems");
+        patch.AggregateId.Should().Be((NanoId)"parent-1");
+    }
+
+    [Test]
+    public void ApplyAddWithInverseNavigationPropertyAddsToCorrectCollection()
+    {
+        var parent = new MultiChildParent
+        {
+            Id = "parent-1",
+            Name = "Parent",
+            PrimaryItems = new List<MultiChildItem>(),
+            SecondaryItems = new List<MultiChildItem>()
+        };
+
+        var newItem = new MultiChildItem { Id = "item-new", Name = "New Item", MultiChildParentId = "parent-1" };
+        var patch = new AggregatePatch(
+            "parent-1", "SecondaryItems", PatchOperation.Add,
+            JsonSerializer.Serialize(newItem),
+            "item-new", typeof(MultiChildItem).AssemblyQualifiedName);
+
+        parent.ApplyAggregateChanges(patch);
+
+        parent.SecondaryItems.Should().HaveCount(1);
+        parent.SecondaryItems.First().Id.Should().Be((NanoId)"item-new");
+        parent.PrimaryItems.Should().BeEmpty();
+    }
+
+    [Test]
     public async Task CalculateChangesForChildWithMissingFkThrows()
     {
         var child = new NoFkChild { Id = "c-1" };
@@ -991,3 +1050,38 @@ internal class DeepNoFkGrandchild : IModel
     public NanoId Id { get; set; }
     public virtual DeepNoFkChild DeepNoFkChild { get; set; }
 }
+
+[AggregateRoot<TestAggregate>]
+internal class MultiChildParent : IModel
+{
+    public NanoId Id { get; set; }
+    public string Name { get; set; }
+    public virtual ICollection<MultiChildItem> PrimaryItems { get; set; }
+    public virtual ICollection<MultiChildItem> SecondaryItems { get; set; }
+}
+
+[AggregateChild<TestAggregate>(nameof(MultiChildItem.MultiChildParent), InverseNavigationProperty = nameof(MultiChildParent.SecondaryItems))]
+internal class MultiChildItem : IModel
+{
+    public NanoId Id { get; set; }
+    public NanoId MultiChildParentId { get; set; }
+    public string Name { get; set; }
+    public virtual MultiChildParent MultiChildParent { get; set; }
+}
+
+[AggregateRoot<TestAggregate>]
+internal class AmbiguousParent : IModel
+{
+    public NanoId Id { get; set; }
+    public virtual ICollection<AmbiguousChild> FirstChildren { get; set; }
+    public virtual ICollection<AmbiguousChild> SecondChildren { get; set; }
+}
+
+[AggregateChild<TestAggregate>(nameof(AmbiguousChild.AmbiguousParent))]
+internal class AmbiguousChild : IModel
+{
+    public NanoId Id { get; set; }
+    public NanoId AmbiguousParentId { get; set; }
+    public virtual AmbiguousParent AmbiguousParent { get; set; }
+}
+

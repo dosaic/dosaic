@@ -273,7 +273,7 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Eventsourcing
                     collection = Activator.CreateInstance(typeof(List<>).MakeGenericType(lastSeg.ChildType));
                     prop.SetValue(parent, collection);
                 }
-                var addMethod = collection.GetType().GetMethod("Add");
+                var addMethod = collection!.GetType().GetMethod("Add");
                 addMethod?.Invoke(collection, [entity]);
             }
             else
@@ -465,6 +465,9 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Eventsourcing
                 throw new InvalidOperationException($"{currentType.FullName} must have AggregateRootAttribute or AggregateChildAttribute.");
 
             var navPropertyName = (string)childAttr.GetType().GetProperty("NavigationProperty")?.GetValue(childAttr);
+            if (navPropertyName == null)
+                throw new InvalidOperationException($"NavigationProperty not found on AggregateChildAttribute of {currentType.FullName}.");
+            var inverseNavPropertyName = childAttr.GetType().GetProperty("InverseNavigationProperty")?.GetValue(childAttr) as string;
             var navProperty = currentType.GetProperty(navPropertyName);
             if (navProperty == null)
                 throw new InvalidOperationException($"Navigation property {navPropertyName} not found on {currentType.FullName}.");
@@ -472,21 +475,38 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Eventsourcing
             var parentType = navProperty.PropertyType;
             var fkPropertyName = navPropertyName + "Id";
 
-            var downwardProp = parentType.GetProperties(BindingFlags.Public | BindingFlags.Instance)
-                .FirstOrDefault(p =>
-                {
-                    if (p.PropertyType == currentType)
-                        return true;
-                    if (p.PropertyType.IsGenericType)
+            PropertyInfo downwardProp;
+            if (!string.IsNullOrEmpty(inverseNavPropertyName))
+            {
+                downwardProp = parentType.GetProperty(inverseNavPropertyName, BindingFlags.Public | BindingFlags.Instance);
+                if (downwardProp == null)
+                    throw new InvalidOperationException($"InverseNavigationProperty '{inverseNavPropertyName}' not found on {parentType.FullName}.");
+            }
+            else
+            {
+                var matchingProps = parentType.GetProperties(BindingFlags.Public | BindingFlags.Instance)
+                    .Where(p =>
                     {
-                        var elementType = p.PropertyType.GetGenericArguments().FirstOrDefault();
-                        return elementType == currentType;
-                    }
-                    return false;
-                });
+                        if (p.PropertyType == currentType)
+                            return true;
+                        if (p.PropertyType.IsGenericType)
+                        {
+                            var elementType = p.PropertyType.GetGenericArguments().FirstOrDefault();
+                            return elementType == currentType;
+                        }
+                        return false;
+                    })
+                    .ToList();
 
-            if (downwardProp == null)
-                throw new InvalidOperationException($"No property on {parentType.FullName} references {currentType.FullName}.");
+                if (matchingProps.Count == 0)
+                    throw new InvalidOperationException($"No property on {parentType.FullName} references {currentType.FullName}.");
+                if (matchingProps.Count > 1)
+                    throw new InvalidOperationException(
+                        $"Multiple properties on {parentType.FullName} reference {currentType.FullName}: " +
+                        $"{string.Join(", ", matchingProps.Select(p => p.Name))}. " +
+                        $"Set InverseNavigationProperty on the AggregateChildAttribute of {currentType.FullName} to disambiguate.");
+                downwardProp = matchingProps[0];
+            }
 
             var isCollection = downwardProp.PropertyType.IsGenericType &&
                 (downwardProp.PropertyType.GetGenericTypeDefinition() == typeof(ICollection<>) ||
