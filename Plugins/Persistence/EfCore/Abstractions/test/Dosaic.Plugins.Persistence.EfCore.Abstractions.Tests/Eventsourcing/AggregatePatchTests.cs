@@ -883,6 +883,125 @@ public class AggregatePatchTests
     }
 
     [Test]
+    public async Task CalculateChangesForRootAddExcludesSingleIModelNavigationProperties()
+    {
+        var root = new TestResult
+        {
+            Id = "root-new",
+            Name = "New Root",
+            UnrelatedId = "u-1",
+            Unrelated = new TestResultOneToOneUnrelated { Id = "unrel-1", Description = "Should be excluded" }
+        };
+        SetupQuery<TestResult>();
+
+        var patch = await _db.GetAggregateChangesAsync(root, PatchOperation.Add, CancellationToken.None);
+
+        var data = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(patch.Data);
+        data.Should().NotContainKey("Unrelated");
+    }
+
+    [Test]
+    public async Task CalculateChangesForRootAddExcludesNonAggregateChildIModelCollections()
+    {
+        var root = new RootWithNonAggregateCollection
+        {
+            Id = "root-1",
+            Name = "Root",
+            PlainModels = new List<PlainModel> { new() { Id = "p-1", Value = "test" } }
+        };
+        SetupQuery<RootWithNonAggregateCollection>();
+
+        var patch = await _db.GetAggregateChangesAsync(root, PatchOperation.Add, CancellationToken.None);
+
+        var data = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(patch.Data);
+        data.Should().ContainKey("Name");
+        data.Should().NotContainKey("PlainModels");
+    }
+
+    [Test]
+    public async Task CalculateChangesForRootAddIncludesAggregateChildCollections()
+    {
+        var root = new TestResult
+        {
+            Id = "root-new",
+            Name = "New Root",
+            UnrelatedId = "u-1",
+            TestResultChildren = new List<TestResultChild>
+            {
+                new() { Id = "c-1", Name = "Child 1", TestResultId = "root-new" }
+            }
+        };
+        SetupQuery<TestResult>();
+
+        var patch = await _db.GetAggregateChangesAsync(root, PatchOperation.Add, CancellationToken.None);
+
+        var data = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(patch.Data);
+        data.Should().ContainKey("TestResultChildren");
+        var children = data["TestResultChildren"].Deserialize<List<Dictionary<string, JsonElement>>>();
+        children.Should().HaveCount(1);
+    }
+
+    [Test]
+    public void ApplyAddOnRootWithAggregateChildCollectionDeserializesChildren()
+    {
+        var childList = new List<TestResultChild>
+        {
+            new() { Id = "c-1", Name = "Child A", TestResultId = "r-1" },
+            new() { Id = "c-2", Name = "Child B", TestResultId = "r-1" }
+        };
+        var payload = new Dictionary<string, object>
+        {
+            ["Id"] = "r-1",
+            ["Name"] = "Root With Children",
+            ["TestResultChildren"] = childList
+        };
+        var patch = new AggregatePatch(
+            "r-1", null, PatchOperation.Add,
+            JsonSerializer.Serialize(payload),
+            "r-1", typeof(TestResult).AssemblyQualifiedName);
+
+        var target = new TestResult();
+        target.ApplyAggregateChanges(patch);
+
+        target.Name.Should().Be("Root With Children");
+        target.TestResultChildren.Should().NotBeNull();
+        target.TestResultChildren.Should().HaveCount(2);
+    }
+
+    [Test]
+    public async Task CalculateChangesForRootUpdateIncludesChangedAggregateChildCollection()
+    {
+        var existing = new TestResult
+        {
+            Id = "root-1",
+            Name = "Root",
+            UnrelatedId = "u-1",
+            TestResultChildren = new List<TestResultChild>
+            {
+                new() { Id = "c-1", Name = "Old Child", TestResultId = "root-1" }
+            }
+        };
+        var change = new TestResult
+        {
+            Id = "root-1",
+            Name = "Root",
+            UnrelatedId = "u-1",
+            TestResultChildren = new List<TestResultChild>
+            {
+                new() { Id = "c-1", Name = "Old Child", TestResultId = "root-1" },
+                new() { Id = "c-2", Name = "New Child", TestResultId = "root-1" }
+            }
+        };
+        SetupQuery(existing);
+
+        var patch = await _db.GetAggregateChangesAsync(change, PatchOperation.Update, CancellationToken.None);
+
+        var data = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(patch.Data);
+        data.Should().ContainKey("TestResultChildren");
+        data.Should().NotContainKey("Name");
+    }
+
+    [Test]
     public void CanSerializeAndDeserialize()
     {
         var patch = new AggregatePatch(
@@ -1083,5 +1202,21 @@ internal class AmbiguousChild : IModel
     public NanoId Id { get; set; }
     public NanoId AmbiguousParentId { get; set; }
     public virtual AmbiguousParent AmbiguousParent { get; set; }
+}
+
+// Model that has a collection of IModel but NOT an aggregate child — should be excluded from serialization
+
+[AggregateRoot<TestAggregate>]
+internal class RootWithNonAggregateCollection : IModel
+{
+    public NanoId Id { get; set; }
+    public string Name { get; set; }
+    public virtual ICollection<PlainModel> PlainModels { get; set; }
+}
+
+internal class PlainModel : IModel
+{
+    public NanoId Id { get; set; }
+    public string Value { get; set; }
 }
 

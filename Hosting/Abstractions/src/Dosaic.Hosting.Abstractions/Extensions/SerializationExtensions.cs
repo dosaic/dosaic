@@ -22,10 +22,11 @@ namespace Dosaic.Hosting.Abstractions.Extensions
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
             Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
             IgnoreReadOnlyFields = true,
-            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingDefault,
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
             WriteIndented = false,
             RespectRequiredConstructorParameters = false,
             RespectNullableAnnotations = false,
+
         };
 
         internal static DeserializerBuilder GetYamlDeserializerBuilder() => new DeserializerBuilder()

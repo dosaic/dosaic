@@ -306,8 +306,21 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Eventsourcing
             {
                 var prop = targetType.GetProperty(key, BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
                 if (prop == null || !prop.CanWrite) continue;
-                if (prop.PropertyType.Implements(typeof(IModel))) continue;
-                if (prop.PropertyType.IsEnumerable() && prop.PropertyType != typeof(string)) continue;
+                if (prop.PropertyType != typeof(string))
+                {
+                    if (prop.PropertyType.IsEnumerable())
+                    {
+                        if (!prop.PropertyType.IsGenericType)
+                            continue;
+                        var elementType = prop.PropertyType.GetGenericArguments().FirstOrDefault();
+                        if (elementType == null || !elementType.IsAggregateChild())
+                            continue;
+                    }
+                    else if (prop.PropertyType.Implements(typeof(IModel)))
+                    {
+                        continue;
+                    }
+                }
 
                 var deserialized = value.GetRawText().Deserialize(prop.PropertyType);
                 prop.SetValue(target, deserialized);
@@ -422,8 +435,24 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Eventsourcing
         {
             return type.GetProperties(BindingFlags.Public | BindingFlags.Instance)
                 .Where(p => p.CanRead && p.CanWrite)
-                .Where(p => !p.PropertyType.Implements(typeof(IModel)))
-                .Where(p => !p.PropertyType.IsEnumerable() || p.PropertyType == typeof(string));
+                .Where(p =>
+                {
+                    if (p.PropertyType == typeof(string))
+                        return true;
+                    if (p.PropertyType.IsEnumerable())
+                    {
+                        if (p.PropertyType.IsGenericType)
+                        {
+                            var elementType = p.PropertyType.GetGenericArguments().FirstOrDefault();
+                            return elementType != null && elementType.IsAggregateChild();
+                        }
+                        return false;
+                    }
+                    if (p.PropertyType.Implements(typeof(IModel)))
+                        return false;
+
+                    return true;
+                });
         }
 
         private static string BuildPath(AggregateInfo info)
