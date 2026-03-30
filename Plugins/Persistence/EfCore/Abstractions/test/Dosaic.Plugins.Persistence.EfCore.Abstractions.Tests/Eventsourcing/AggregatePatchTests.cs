@@ -942,6 +942,60 @@ public class AggregatePatchTests
     }
 
     [Test]
+    public async Task CalculateChangesForRootAddIncludesSingleAggregateChildReference()
+    {
+        var root = new TestResult
+        {
+            Id = "root-new",
+            Name = "New Root",
+            UnrelatedId = "u-1",
+            TestResultChildOneToOne = new TestResultChildOneToOne
+            {
+                Id = "oto-1",
+                Name = "OneToOne",
+                Age = 5,
+                TestResultId = "root-new"
+            }
+        };
+        SetupQuery<TestResult>();
+
+        var patch = await _db.GetAggregateChangesAsync(root, PatchOperation.Add, CancellationToken.None);
+
+        var data = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(patch.Data);
+        data.Should().ContainKey("TestResultChildOneToOne");
+    }
+
+    [Test]
+    public void ApplyAddOnRootWithSingleAggregateChildReferenceDeserializesChild()
+    {
+        var oneToOne = new TestResultChildOneToOne
+        {
+            Id = "oto-1",
+            Name = "OneToOne",
+            Age = 7,
+            TestResultId = "r-1"
+        };
+        var payload = new Dictionary<string, object>
+        {
+            ["Id"] = "r-1",
+            ["Name"] = "Root With OneToOne",
+            ["TestResultChildOneToOne"] = oneToOne
+        };
+        var patch = new AggregatePatch(
+            "r-1", null, PatchOperation.Add,
+            JsonSerializer.Serialize(payload),
+            "r-1", typeof(TestResult).AssemblyQualifiedName);
+
+        var target = new TestResult();
+        target.ApplyAggregateChanges(patch);
+
+        target.Name.Should().Be("Root With OneToOne");
+        target.TestResultChildOneToOne.Should().NotBeNull();
+        target.TestResultChildOneToOne.Name.Should().Be("OneToOne");
+        target.TestResultChildOneToOne.Age.Should().Be(7);
+    }
+
+    [Test]
     public void ApplyAddOnRootWithAggregateChildCollectionDeserializesChildren()
     {
         var childList = new List<TestResultChild>

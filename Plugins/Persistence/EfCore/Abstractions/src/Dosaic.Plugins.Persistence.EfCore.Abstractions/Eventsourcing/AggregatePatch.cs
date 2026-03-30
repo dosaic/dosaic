@@ -316,7 +316,7 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Eventsourcing
                         if (elementType == null || !elementType.IsAggregateChild())
                             continue;
                     }
-                    else if (prop.PropertyType.Implements(typeof(IModel)))
+                    else if (prop.PropertyType.Implements(typeof(IModel)) && !prop.PropertyType.IsAggregateChild())
                     {
                         continue;
                     }
@@ -448,6 +448,8 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Eventsourcing
                         }
                         return false;
                     }
+                    if (p.PropertyType.IsAggregateChild())
+                        return true;
                     if (p.PropertyType.Implements(typeof(IModel)))
                         return false;
 
