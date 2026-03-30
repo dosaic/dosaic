@@ -27,6 +27,7 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Eventsourcing
 
     /// <summary>
     /// Indicates that the class is an aggregate child of the specified aggregate root. The NavigationProperty is used to find the next child till a root is found. The root is the one with the AggregateRootAttribute.
+    /// When the parent has multiple properties referencing the same child type, set <see cref="InverseNavigationProperty"/> to the name of the collection/reference property on the parent to disambiguate.
     /// </summary>
     /// <typeparam name="T"></typeparam>
     /// <param name="NavigationProperty">Navigation Property</param>
@@ -34,5 +35,11 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Eventsourcing
     public class AggregateChildAttribute<T>(string NavigationProperty) : Attribute where T : AggregateEvent
     {
         public string NavigationProperty { get; } = NavigationProperty;
+
+        /// <summary>
+        /// Optional: The name of the property on the parent type that references this child type.
+        /// Required when the parent has multiple properties of the same child type.
+        /// </summary>
+        public string InverseNavigationProperty { get; set; }
     }
 }
