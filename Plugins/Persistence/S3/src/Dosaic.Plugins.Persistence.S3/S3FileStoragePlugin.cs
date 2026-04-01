@@ -15,13 +15,15 @@ public class S3FileStoragePlugin(S3Configuration configuration)
     {
         if (configuration.UseLocalFileSystem)
         {
-            serviceCollection.AddSingleton<IFileStorage>(new LocalFileSystemBlobStorage(configuration.LocalFileSystemPath));
+            serviceCollection.AddSingleton<IFileStorage>(
+                new LocalFileSystemBlobStorage(configuration.LocalFileSystemPath, configuration.SkipFileDeletion));
         }
         else
         {
             serviceCollection.AddSingleton(GetMinioClient());
             serviceCollection.AddFileStorage();
         }
+
         serviceCollection.AddDefaultFileTypeDefinitionResolver();
         serviceCollection.AddSingleton<IContentInspector>(
             new ContentInspectorBuilder { Definitions = MimeDetective.Definitions.DefaultDefinitions.All() }

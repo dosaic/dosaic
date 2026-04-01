@@ -274,6 +274,21 @@ namespace Dosaic.Plugins.Persistence.S3.Tests.File
         {
             var action = async () => await _fileStorageSampleBucket.DeleteFileAsync(GetId("123"));
             await action.Should().NotThrowAsync();
+            await _minioClient.Received(1)
+                .RemoveObjectAsync(ArgExt.Is<RemoveObjectArgs>(r => r.WithBucket("test-logos").WithObject("123")));
+        }
+
+        [Test]
+        public async Task SkipDeleteAsyncWorks()
+        {
+            _configuration = new S3Configuration { BucketPrefix = "dev-", SkipFileDeletion = true };
+            _fileStorage = new FileStorage(_minioClient, _contentInspector,
+                new FakeLogger<FileStorage>(), _configuration, _testFileTypeDefinitionResolver);
+            _fileStorageSampleBucket = new FileStorage<SampleBucket>(_fileStorage);
+            var action = async () => await _fileStorageSampleBucket.DeleteFileAsync(GetId("123"));
+            await action.Should().NotThrowAsync();
+            await _minioClient.Received(0)
+                .RemoveObjectAsync(Arg.Any<RemoveObjectArgs>());
         }
 
         [Test]
