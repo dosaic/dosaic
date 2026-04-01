@@ -14,4 +14,6 @@ public class S3Configuration
     public string Region { get; set; } = "";
     public bool UseSsl { get; set; }
     public string HealthCheckPath { get; set; } = "";
+
+    public bool SkipFileDeletion { get; set; }
 }

@@ -1,12 +1,16 @@
 using AwesomeAssertions;
 using Dosaic.Testing.NUnit.Assertions;
+using Dosaic.Testing.NUnit.Extensions;
 using IdentityModel.AspNetCore.OAuth2Introspection;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Protocols.Configuration;
+using NSubstitute;
 using NUnit.Framework;
 using Zitadel.Authentication;
 using AuthenticationFailedContext = IdentityModel.AspNetCore.OAuth2Introspection.AuthenticationFailedContext;
@@ -61,6 +65,21 @@ namespace Dosaic.Plugins.Authorization.Zitadel.Tests
             opts.DiscoveryPolicy.RequireHttps.Should().Be(false);
             opts.DiscoveryPolicy.ValidateEndpoints.Should().Be(false);
             opts.DiscoveryPolicy.ValidateIssuerName.Should().Be(false);
+        }
+
+        [Test]
+        public void ConfigureApplicationWorks()
+        {
+            var appBuilder = Substitute.For<IApplicationBuilder>();
+            var sc = new ServiceCollection();
+            sc.AddAuthentication();
+            sc.AddAuthorization();
+            var sp = sc.BuildServiceProvider();
+            appBuilder.ApplicationServices.Returns(sp);
+            GetPlugin().ConfigureApplication(appBuilder);
+            var useCalls = appBuilder.GetReceivedMiddlewareCalls();
+            useCalls[0].AssertMiddleware<AuthenticationMiddleware>();
+            useCalls[1].AssertMiddleware<AuthorizationMiddleware>();
         }
 
         [Test]
