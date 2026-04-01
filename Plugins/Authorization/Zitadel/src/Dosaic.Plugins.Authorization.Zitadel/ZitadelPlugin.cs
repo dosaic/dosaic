@@ -1,6 +1,7 @@
 using Dosaic.Hosting.Abstractions.Plugins;
 using IdentityModel.AspNetCore.OAuth2Introspection;
 using IdentityModel.Client;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Protocols.Configuration;
