@@ -11,7 +11,7 @@ using Zitadel.Extensions;
 namespace Dosaic.Plugins.Authorization.Zitadel
 {
     public class ZitadelPlugin(ZitadelConfiguration config, ILogger<ZitadelPlugin> logger)
-        : IPluginServiceConfiguration
+        : IPluginServiceConfiguration, IPluginApplicationConfiguration
     {
         public void ConfigureServices(IServiceCollection serviceCollection)
         {
@@ -43,6 +43,12 @@ namespace Dosaic.Plugins.Authorization.Zitadel
                 });
 
             serviceCollection.AddTransient<IManagementService, ManagementService>();
+        }
+
+        public void ConfigureApplication(IApplicationBuilder applicationBuilder)
+        {
+            applicationBuilder.UseAuthentication();
+            applicationBuilder.UseAuthorization();
         }
 
         internal Task OnAuthenticationFailed(AuthenticationFailedContext context)
