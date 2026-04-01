@@ -77,7 +77,7 @@ namespace Dosaic.Plugins.Authorization.Zitadel.Tests
             var sp = sc.BuildServiceProvider();
             appBuilder.ApplicationServices.Returns(sp);
             GetPlugin().ConfigureApplication(appBuilder);
-            var useCalls = appBuilder.GetReceivedMiddlwareCalls();
+            var useCalls = appBuilder.GetReceivedMiddlewareCalls();
             useCalls[0].AssertMiddleware<AuthenticationMiddleware>();
             useCalls[1].AssertMiddleware<AuthorizationMiddleware>();
         }

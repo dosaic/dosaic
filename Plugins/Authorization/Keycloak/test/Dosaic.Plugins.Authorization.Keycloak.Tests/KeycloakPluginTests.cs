@@ -86,7 +86,7 @@ namespace Dosaic.Plugins.Authorization.Keycloak.Tests
             var sp = sc.BuildServiceProvider();
             appBuilder.ApplicationServices.Returns(sp);
             GetPlugin(new KeycloakPluginConfiguration()).ConfigureApplication(appBuilder);
-            var useCalls = appBuilder.GetReceivedMiddlwareCalls();
+            var useCalls = appBuilder.GetReceivedMiddlewareCalls();
             useCalls[0].AssertMiddleware<CookiePolicyMiddleware>();
             useCalls[1].AssertMiddleware<AuthenticationMiddleware>();
             useCalls[2].AssertMiddleware<AuthorizationMiddleware>();
