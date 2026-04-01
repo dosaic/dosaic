@@ -9,21 +9,20 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authorization.Infrastructure;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.CookiePolicy;
-using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using NSubstitute;
-using NSubstitute.Core;
 using NUnit.Framework;
 
 namespace Dosaic.Plugins.Authorization.Keycloak.Tests
 {
     public class KeycloakPluginTests
     {
-        private static KeycloakPlugin GetPlugin(KeycloakPluginConfiguration configuration) => new KeycloakPlugin(configuration, NullLogger<KeycloakPlugin>.Instance);
+        private static KeycloakPlugin GetPlugin(KeycloakPluginConfiguration configuration) =>
+            new KeycloakPlugin(configuration, NullLogger<KeycloakPlugin>.Instance);
 
         [Test]
         public async Task AuthenticationCanBeDisabled()
@@ -45,7 +44,8 @@ namespace Dosaic.Plugins.Authorization.Keycloak.Tests
         [Test]
         public void AuthenticationCanBeSetup()
         {
-            var config = new KeycloakPluginConfiguration { Enabled = true, Host = "example.com", Insecure = false, Port = 8080 };
+            var config =
+                new KeycloakPluginConfiguration { Enabled = true, Host = "example.com", Insecure = false, Port = 8080 };
             var sc = new ServiceCollection();
             GetPlugin(config).ConfigureServices(sc);
             var sp = sc.BuildServiceProvider();
@@ -53,7 +53,8 @@ namespace Dosaic.Plugins.Authorization.Keycloak.Tests
             authorizationOptions.Should().NotBeNull();
             authorizationOptions!.DefaultPolicy.Should().NotBeNull();
             authorizationOptions.DefaultPolicy.Requirements.Should().HaveCount(1);
-            authorizationOptions.DefaultPolicy.Requirements[0].Should().BeOfType<DenyAnonymousAuthorizationRequirement>();
+            authorizationOptions.DefaultPolicy.Requirements[0].Should()
+                .BeOfType<DenyAnonymousAuthorizationRequirement>();
             var memoryCacheOptions = sp.GetService<IOptions<MemoryCacheOptions>>()?.Value;
             memoryCacheOptions.Should().NotBeNull();
             memoryCacheOptions!.ExpirationScanFrequency.Should().Be(TimeSpan.FromMinutes(-3));
@@ -85,13 +86,10 @@ namespace Dosaic.Plugins.Authorization.Keycloak.Tests
             var sp = sc.BuildServiceProvider();
             appBuilder.ApplicationServices.Returns(sp);
             GetPlugin(new KeycloakPluginConfiguration()).ConfigureApplication(appBuilder);
-            var useCalls = (
-                from call in appBuilder.ReceivedCalls()
-                where call.GetMethodInfo().Name == "Use"
-                select call).ToList();
-            AssertMiddleware<CookiePolicyMiddleware>(useCalls[0]);
-            AssertMiddleware<AuthenticationMiddleware>(useCalls[1]);
-            AssertMiddleware<AuthorizationMiddleware>(useCalls[2]);
+            var useCalls = appBuilder.GetReceivedMiddlwareCalls();
+            useCalls[0].AssertMiddleware<CookiePolicyMiddleware>();
+            useCalls[1].AssertMiddleware<AuthenticationMiddleware>();
+            useCalls[2].AssertMiddleware<AuthorizationMiddleware>();
         }
 
         [Test]
@@ -99,7 +97,13 @@ namespace Dosaic.Plugins.Authorization.Keycloak.Tests
         {
             var hcBuilder = Substitute.For<IHealthChecksBuilder>();
             hcBuilder.Services.Returns(new ServiceCollection());
-            var config = new KeycloakPluginConfiguration { Enabled = true, Host = "example.com", Insecure = false, HealthCheck = new HealthCheckConfig { Host = "example.com" } };
+            var config = new KeycloakPluginConfiguration
+            {
+                Enabled = true,
+                Host = "example.com",
+                Insecure = false,
+                HealthCheck = new HealthCheckConfig { Host = "example.com" }
+            };
             GetPlugin(config).ConfigureHealthChecks(hcBuilder);
             hcBuilder.Received()
                 .Add(Arg.Is<HealthCheckRegistration>(h =>
@@ -121,12 +125,7 @@ namespace Dosaic.Plugins.Authorization.Keycloak.Tests
                 Host = "example.com",
                 Insecure = false,
                 Port = 8080,
-                HealthCheck = new HealthCheckConfig
-                {
-                    Host = "example.com",
-                    Port = 9000,
-                    Prefix = "/health/ready"
-                }
+                HealthCheck = new HealthCheckConfig { Host = "example.com", Port = 9000, Prefix = "/health/ready" }
             };
             var uriBuilder = new UriBuilder(config.GetHealthCheck()) { Path = config.HealthCheck.Prefix };
             uriBuilder.Uri.Should().Be("http://example.com:9000/health/ready");
@@ -141,12 +140,7 @@ namespace Dosaic.Plugins.Authorization.Keycloak.Tests
                 Host = "example.com",
                 Insecure = false,
                 Port = 8080,
-                HealthCheck = new HealthCheckConfig
-                {
-                    Host = "example.com",
-                    Port = 9000,
-                    Prefix = "/health/ready"
-                }
+                HealthCheck = new HealthCheckConfig { Host = "example.com", Port = 9000, Prefix = "/health/ready" }
             };
             var uriBuilder = new UriBuilder(config.GetHealthCheck()) { Path = config.HealthCheck.Prefix };
             uriBuilder.Uri.Should().Be("http://example.com:9000/health/ready");
@@ -182,10 +176,7 @@ namespace Dosaic.Plugins.Authorization.Keycloak.Tests
                 Host = "example.com",
                 Insecure = false,
                 Port = 8080,
-                HealthCheck = new HealthCheckConfig
-                {
-                    Host = "example.com"
-                }
+                HealthCheck = new HealthCheckConfig { Host = "example.com" }
             };
 
             var uriBuilder = new UriBuilder(config.GetHealthCheck()) { Path = config.HealthCheck.Prefix };
@@ -230,16 +221,6 @@ namespace Dosaic.Plugins.Authorization.Keycloak.Tests
             };
             var uriBuilder = new UriBuilder(config.GetHealthCheck()) { Path = config.HealthCheck.Prefix };
             uriBuilder.Uri.Should().Be("http://example.com:9999/something/notready");
-        }
-
-        private static void AssertMiddleware<TMiddleware>(ICall call)
-        {
-            var func = (call.GetOriginalArguments()[0] as Func<RequestDelegate, RequestDelegate>)?.Target;
-            func.Should().NotBeNull();
-            var registeredMiddleware = func!.GetInaccessibleValue<Type>("_middleware");
-            if (registeredMiddleware.BaseType == typeof(TMiddleware))
-                return;
-            registeredMiddleware.Should().Be(typeof(TMiddleware));
         }
     }
 }
