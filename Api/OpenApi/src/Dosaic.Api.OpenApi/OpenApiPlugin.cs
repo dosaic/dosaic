@@ -1,6 +1,7 @@
 using Dosaic.Api.OpenApi.Filters.Document;
 using Dosaic.Api.OpenApi.Filters.Operation;
 using Dosaic.Api.OpenApi.Filters.Schema;
+using Dosaic.Api.OpenApi.Schema;
 using Dosaic.Hosting.Abstractions.Attributes;
 using Dosaic.Hosting.Abstractions.Plugins;
 using Microsoft.AspNetCore.Builder;
@@ -61,6 +62,7 @@ namespace Dosaic.Api.OpenApi
                     options.IncludeXmlComments(file);
 
                 options.SchemaFilter<ReadOnlyPropertySchemaFilter>();
+                options.SchemaFilter<OpenApiIgnoreSchemaFilter>();
                 options.SchemaFilter<ValueObjectSchemaFilter>(new object[] { documentationFiles });
                 options.DocumentFilter<ValueObjectDocumentFilter>();
                 options.OperationFilter<FormFileFilter>();
