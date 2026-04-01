@@ -6,9 +6,9 @@ using Dosaic.Plugins.Persistence.S3.Blob;
 
 namespace Dosaic.Plugins.Persistence.S3.File;
 
-public class LocalFileSystemBlobStorage(string rootPath) : IFileStorage
+public class LocalFileSystemBlobStorage(string rootPath, bool skipFileDeletion) : IFileStorage
 {
-    private string GetFilePath(string bucket, string key) =>
+    internal string GetFilePath(string bucket, string key) =>
         Path.Combine(rootPath, ResolveBucketName(bucket), key);
 
     private static string GetMetaPath(string filePath) => filePath + ".meta.json";
@@ -84,12 +84,14 @@ public class LocalFileSystemBlobStorage(string rootPath) : IFileStorage
 
     public Task DeleteFileAsync(FileId id, CancellationToken cancellationToken = default)
     {
+        if (skipFileDeletion) return Task.CompletedTask;
         var filePath = GetFilePath(id.Bucket, id.Key);
         if (System.IO.File.Exists(filePath))
             System.IO.File.Delete(filePath);
         var metaPath = GetMetaPath(filePath);
         if (System.IO.File.Exists(metaPath))
             System.IO.File.Delete(metaPath);
+
         return Task.CompletedTask;
     }
 
@@ -122,6 +124,7 @@ public class LocalFileSystemBlobStorage(string rootPath) : IFileStorage
             var info = new FileInfo(filePath);
             yield return new FileListItem(new FileId(bucket, key), null, info.Length, info.LastWriteTimeUtc, false);
         }
+
         await Task.CompletedTask;
     }
 }

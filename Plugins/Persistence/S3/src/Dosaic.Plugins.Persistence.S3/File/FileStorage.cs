@@ -29,10 +29,7 @@ public class FileStorage<BucketEnum>(
     {
         var file = await fileStorage.GetFileAsync(id.ToFileId(), cancellationToken);
 
-        var blob = new BlobFile<BucketEnum>(id.Bucket, file.Id.Key)
-        {
-            LastModified = file.LastModified
-        };
+        var blob = new BlobFile<BucketEnum>(id.Bucket, file.Id.Key) { LastModified = file.LastModified };
 
         blob.MetaData.Set(file.MetaData.GetMetadata());
 
@@ -62,10 +59,12 @@ public class FileStorage<BucketEnum>(
         return new FileId<BucketEnum>(file.Id.Bucket, fileId.Key);
     }
 
-    public IAsyncEnumerable<FileListItem<BucketEnum>> ListObjectsAsync(BucketEnum bucket, ListObjectOptions options, CancellationToken cancellationToken = default)
+    public IAsyncEnumerable<FileListItem<BucketEnum>> ListObjectsAsync(BucketEnum bucket, ListObjectOptions options,
+        CancellationToken cancellationToken = default)
     {
         return fileStorage.ListObjectsAsync(bucket.GetName(), options, cancellationToken)
-            .Select(item => new FileListItem<BucketEnum>(new FileId<BucketEnum>(bucket, item.FileId.Key), item.ETag, item.Size, item.LastModified, item.IsDirectory));
+            .Select(item => new FileListItem<BucketEnum>(new FileId<BucketEnum>(bucket, item.FileId.Key), item.ETag,
+                item.Size, item.LastModified, item.IsDirectory));
     }
 }
 
@@ -123,6 +122,11 @@ public class FileStorage(
             activity) =>
         {
             SetFileIdTags(activity, id);
+            if (configuration.SkipFileDeletion)
+            {
+                return Task.CompletedTask;
+            }
+
             return minioClient.RemoveObjectAsync(
                 new RemoveObjectArgs().WithBucket(ResolveBucketName(id.Bucket)).WithObject(id.Key),
                 cancellationToken);
@@ -222,7 +226,8 @@ public class FileStorage(
         return $"{configuration.BucketPrefix}{bucket}";
     }
 
-    public async IAsyncEnumerable<FileListItem> ListObjectsAsync(string bucket, ListObjectOptions options, [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    public async IAsyncEnumerable<FileListItem> ListObjectsAsync(string bucket, ListObjectOptions options,
+        [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         var bucketName = ResolveBucketName(bucket);
         var args = new ListObjectsArgs()
@@ -232,7 +237,9 @@ public class FileStorage(
             args = args.WithPrefix(options.Prefix);
         await foreach (var item in minioClient.ListObjectsEnumAsync(args, cancellationToken))
             yield return new FileListItem(new FileId(bucket, item.Key), item.ETag, (long)item.Size,
-                item.LastModifiedDateTime.HasValue ? new DateTimeOffset(item.LastModifiedDateTime.Value) : DateTimeOffset.MinValue,
+                item.LastModifiedDateTime.HasValue
+                    ? new DateTimeOffset(item.LastModifiedDateTime.Value)
+                    : DateTimeOffset.MinValue,
                 item.IsDir);
     }
 

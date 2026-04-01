@@ -15,7 +15,7 @@ public class LocalFileSystemBlobStorageTests
     public void SetUp()
     {
         _tempPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
-        _storage = new LocalFileSystemBlobStorage(_tempPath);
+        _storage = new LocalFileSystemBlobStorage(_tempPath, false);
     }
 
     [TearDown]
@@ -69,6 +69,24 @@ public class LocalFileSystemBlobStorageTests
 
         var act = async () => await _storage.GetFileAsync(id);
         await act.Should().ThrowAsync<FileNotFoundException>();
+    }
+
+    [Test]
+    public async Task SkipDeleteFileWorks()
+    {
+        _tempPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+        _storage = new LocalFileSystemBlobStorage(_tempPath, true);
+        var id = new FileId("delbucket", "delkey");
+        var blob = new BlobFile(id);
+        using var stream = new MemoryStream("delete me"u8.ToArray());
+        await _storage.SetAsync(blob, stream, FileType.Any);
+
+        await _storage.DeleteFileAsync(id);
+
+        var filePath = _storage.GetFilePath("delbucket", "delkey");
+        System.IO.File.Exists(filePath).Should().BeTrue();
+        System.IO.File.Delete(filePath!);
+
     }
 
     [Test]
