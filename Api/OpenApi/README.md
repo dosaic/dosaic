@@ -109,6 +109,27 @@ public class OrderDto
 }
 ```
 
+### Omitting models and fields from schema
+
+Use `[OpenApiIgnore]` from `Dosaic.Api.OpenApi.Filters.Common` to omit elements from generated schemas.
+
+- On a property: removes that property from the containing schema.
+- On a type (`class` / `struct`): skips normal object expansion for that type.
+- On an enum: omits enum value metadata and keeps only the underlying primitive schema type.
+- On an enum member: removes that specific member from the generated enum value list.
+
+```csharp
+using Dosaic.Api.OpenApi.Filters.Common;
+
+public class CreateOrderRequest
+{
+    public string Description { get; set; }
+
+    [OpenApiIgnore]
+    public string InternalNote { get; set; }
+}
+```
+
 ## Features
 
 | Feature | Detail |
@@ -119,6 +140,7 @@ public class OrderDto
 | **XML comments** | All `*.xml` files next to the assembly are automatically included |
 | **Swashbuckle Annotations** | `[SwaggerOperation]`, `[SwaggerResponse]`, `[SwaggerSchema]`, etc. enabled out of the box |
 | **`ReadOnlyPropertySchemaFilter`** | Marks properties annotated with `[ReadOnly(true)]` as `readOnly: true` in the schema |
+| **`OpenApiIgnoreSchemaFilter`** | Applies `[OpenApiIgnore]` rules to omit properties, selected enum members, or entire type details from generated schemas |
 | **`ValueObjectSchemaFilter`** | Replaces Vogen value-object schemas with their underlying primitive type |
 | **`ValueObjectDocumentFilter`** | Removes residual value-object component schemas after the schema filter rewrites inline $refs |
 | **`FormFileFilter`** | Transforms `IFormFile` parameters into proper `multipart/form-data` request body schemas |
