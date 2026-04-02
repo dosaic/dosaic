@@ -22,7 +22,7 @@ namespace Dosaic.Plugins.Authorization.Zitadel.Tests
     {
         private readonly FakeLogger<ZitadelPlugin> _logger = new();
 
-        private ZitadelPlugin GetPlugin(Action<ZitadelConfiguration> configure = null)
+        private ZitadelPlugin GetPlugin(Action<ZitadelConfiguration> configure = null, IZitadelConfigurator[] configurators = null)
         {
             var config = new ZitadelConfiguration
             {
@@ -36,7 +36,7 @@ namespace Dosaic.Plugins.Authorization.Zitadel.Tests
                 ValidateIssuer = false,
             };
             configure?.Invoke(config);
-            return new ZitadelPlugin(config, _logger);
+            return new ZitadelPlugin(config, _logger, configurators ?? []);
         }
 
         [Test]
@@ -77,6 +77,34 @@ namespace Dosaic.Plugins.Authorization.Zitadel.Tests
             var sp = sc.BuildServiceProvider();
             appBuilder.ApplicationServices.Returns(sp);
             GetPlugin().ConfigureApplication(appBuilder);
+            var useCalls = appBuilder.GetReceivedMiddlewareCalls();
+            useCalls[0].AssertMiddleware<AuthenticationMiddleware>();
+            useCalls[1].AssertMiddleware<AuthorizationMiddleware>();
+        }
+
+        [Test]
+        public void ConfigureApplicationCallsConfiguratorsInOrder()
+        {
+            var appBuilder = Substitute.For<IApplicationBuilder>();
+            var sc = new ServiceCollection();
+            sc.AddAuthentication();
+            sc.AddAuthorization();
+            var sp = sc.BuildServiceProvider();
+            appBuilder.ApplicationServices.Returns(sp);
+            var callOrder = new List<string>();
+            var configurator = Substitute.For<IZitadelConfigurator>();
+            configurator.When(x => x.ConfigureApplicationBeforeAuthentication(Arg.Any<IApplicationBuilder>()))
+                .Do(_ => callOrder.Add("BeforeAuthentication"));
+            configurator.When(x => x.ConfigureApplicationAfterAuthentication(Arg.Any<IApplicationBuilder>()))
+                .Do(_ => callOrder.Add("AfterAuthentication"));
+            configurator.When(x => x.ConfigureApplicationBeforeAuthorization(Arg.Any<IApplicationBuilder>()))
+                .Do(_ => callOrder.Add("BeforeAuthorization"));
+            configurator.When(x => x.ConfigureApplicationAfterAuthorization(Arg.Any<IApplicationBuilder>()))
+                .Do(_ => callOrder.Add("AfterAuthorization"));
+            GetPlugin(configurators: [configurator]).ConfigureApplication(appBuilder);
+            callOrder.Should().BeEquivalentTo(
+                ["BeforeAuthentication", "AfterAuthentication", "BeforeAuthorization", "AfterAuthorization"],
+                opts => opts.WithStrictOrdering());
             var useCalls = appBuilder.GetReceivedMiddlewareCalls();
             useCalls[0].AssertMiddleware<AuthenticationMiddleware>();
             useCalls[1].AssertMiddleware<AuthorizationMiddleware>();
