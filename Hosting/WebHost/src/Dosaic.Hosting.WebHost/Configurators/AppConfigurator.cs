@@ -31,8 +31,9 @@ namespace Dosaic.Hosting.WebHost.Configurators
         public void Configure()
         {
             ConfigureWeb();
-            ConfigureMiddlewares();
+            ConfigureMiddlewares(MiddlewareMode.BeforePlugins);
             ConfigurePlugins();
+            ConfigureMiddlewares(MiddlewareMode.AfterPlugins);
             ConfigureEndpoints();
         }
 
@@ -68,11 +69,13 @@ namespace Dosaic.Hosting.WebHost.Configurators
                 });
         }
 
-        internal void ConfigureMiddlewares()
+        internal void ConfigureMiddlewares(MiddlewareMode mode)
         {
-            var middlewares = _implementationResolver.FindTypes(f => f.Implements<ApiMiddleware>()).OrderBy(x =>
-                    x.HasAttribute<MiddlewareAttribute>() ? x.GetAttribute<MiddlewareAttribute>()!.Order : int.MaxValue)
-                .Select((type, i) => new { Order = i, Value = type });
+            var middlewares = _implementationResolver.FindTypes(f => f.Implements<ApiMiddleware>())
+                .Select(x => new { Type = x, Attribute = x.GetAttribute<MiddlewareAttribute>() ?? new MiddlewareAttribute() })
+                .Where(x => x.Attribute.Mode == mode && x.Attribute.Mode != MiddlewareMode.NoRegistration)
+                .OrderBy(x => x.Attribute.Order)
+                .Select((type, i) => new { Order = i, Value = type.Type });
             foreach (var middleware in middlewares)
             {
                 _logger.LogDebug("Configured middleware {PluginMiddleware} order {Order}", middleware.Value.Name,

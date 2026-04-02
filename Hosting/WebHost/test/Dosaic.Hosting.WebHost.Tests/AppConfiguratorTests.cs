@@ -1,6 +1,7 @@
 using AwesomeAssertions;
 using Chronos.Abstractions;
 using Dosaic.Hosting.Abstractions;
+using Dosaic.Hosting.Abstractions.Attributes;
 using Dosaic.Hosting.Abstractions.Plugins;
 using Dosaic.Hosting.Abstractions.Services;
 using Dosaic.Hosting.WebHost.Configurators;
@@ -112,13 +113,53 @@ namespace Dosaic.Hosting.WebHost.Tests
             var appConfigurator = new AppConfigurator(fakeLogger, WebApplication.Create(), implementationResolver);
             implementationResolver.FindTypes().Returns(
                 new List<Type>() { typeof(TestMiddlwareWithOrder10), typeof(TestMiddlwareWithOrder3), typeof(TestMiddlwareWithOrder1), });
-            appConfigurator.ConfigureMiddlewares();
-            fakeLogger.Entries[0].Message.Should().Be("Configured middleware TestMiddlwareWithOrder10 order 0");
+            appConfigurator.ConfigureMiddlewares(MiddlewareMode.BeforePlugins);
+            fakeLogger.Entries[0].Message.Should().Be("Configured middleware TestMiddlwareWithOrder1 order 0");
             fakeLogger.Entries[1].Message.Should().Be("Configured middleware TestMiddlwareWithOrder3 order 1");
-            fakeLogger.Entries[2].Message.Should().Be("Configured middleware TestMiddlwareWithOrder1 order 2");
+            fakeLogger.Entries[2].Message.Should().Be("Configured middleware TestMiddlwareWithOrder10 order 2");
         }
 
-        [Order(1)]
+        [Test]
+        public void ConfigureMiddlewaresFiltersOnMode()
+        {
+            var implementationResolver = Substitute.For<IImplementationResolver>();
+            var fakeLogger = new FakeLogger<AppConfiguratorTests>();
+            var appConfigurator = new AppConfigurator(fakeLogger, WebApplication.Create(), implementationResolver);
+            implementationResolver.FindTypes().Returns(
+                new List<Type>() { typeof(TestMiddlwareWithOrder10), typeof(TestMiddlwareWithOrder3), typeof(TestMiddlwareWithOrder1), typeof(TestMiddlwareAfterPlugins), typeof(TestMiddlwareNoRegistration), });
+            appConfigurator.ConfigureMiddlewares(MiddlewareMode.BeforePlugins);
+            fakeLogger.Entries.Should().HaveCount(3);
+            fakeLogger.Entries[0].Message.Should().Be("Configured middleware TestMiddlwareWithOrder1 order 0");
+            fakeLogger.Entries[1].Message.Should().Be("Configured middleware TestMiddlwareWithOrder3 order 1");
+            fakeLogger.Entries[2].Message.Should().Be("Configured middleware TestMiddlwareWithOrder10 order 2");
+        }
+
+        [Test]
+        public void ConfigureMiddlewaresAfterPlugins()
+        {
+            var implementationResolver = Substitute.For<IImplementationResolver>();
+            var fakeLogger = new FakeLogger<AppConfiguratorTests>();
+            var appConfigurator = new AppConfigurator(fakeLogger, WebApplication.Create(), implementationResolver);
+            implementationResolver.FindTypes().Returns(
+                new List<Type>() { typeof(TestMiddlwareWithOrder10), typeof(TestMiddlwareAfterPlugins), typeof(TestMiddlwareNoRegistration), });
+            appConfigurator.ConfigureMiddlewares(MiddlewareMode.AfterPlugins);
+            fakeLogger.Entries.Should().HaveCount(1);
+            fakeLogger.Entries[0].Message.Should().Be("Configured middleware TestMiddlwareAfterPlugins order 0");
+        }
+
+        [Test]
+        public void ConfigureMiddlewaresExcludesNoRegistration()
+        {
+            var implementationResolver = Substitute.For<IImplementationResolver>();
+            var fakeLogger = new FakeLogger<AppConfiguratorTests>();
+            var appConfigurator = new AppConfigurator(fakeLogger, WebApplication.Create(), implementationResolver);
+            implementationResolver.FindTypes().Returns(
+                new List<Type>() { typeof(TestMiddlwareNoRegistration), });
+            appConfigurator.ConfigureMiddlewares(MiddlewareMode.BeforePlugins);
+            fakeLogger.Entries.Should().HaveCount(0);
+        }
+
+        [Middleware(1)]
         private class TestMiddlwareWithOrder1 : ApiMiddleware
         {
             public TestMiddlwareWithOrder1(RequestDelegate next, IDateTimeProvider dateTimeProvider) : base(next, dateTimeProvider)
@@ -131,7 +172,7 @@ namespace Dosaic.Hosting.WebHost.Tests
             }
         }
 
-        [Order(3)]
+        [Middleware(3)]
         private class TestMiddlwareWithOrder3 : ApiMiddleware
         {
             public TestMiddlwareWithOrder3(RequestDelegate next, IDateTimeProvider dateTimeProvider) : base(next, dateTimeProvider)
@@ -144,10 +185,36 @@ namespace Dosaic.Hosting.WebHost.Tests
             }
         }
 
-        [Order(10)]
+        [Middleware(10)]
         private class TestMiddlwareWithOrder10 : ApiMiddleware
         {
             public TestMiddlwareWithOrder10(RequestDelegate next, IDateTimeProvider dateTimeProvider) : base(next, dateTimeProvider)
+            {
+            }
+
+            public override async Task Invoke(HttpContext context)
+            {
+                await Next.Invoke(context);
+            }
+        }
+
+        [Middleware(1, MiddlewareMode.AfterPlugins)]
+        private class TestMiddlwareAfterPlugins : ApiMiddleware
+        {
+            public TestMiddlwareAfterPlugins(RequestDelegate next, IDateTimeProvider dateTimeProvider) : base(next, dateTimeProvider)
+            {
+            }
+
+            public override async Task Invoke(HttpContext context)
+            {
+                await Next.Invoke(context);
+            }
+        }
+
+        [Middleware(1, MiddlewareMode.NoRegistration)]
+        private class TestMiddlwareNoRegistration : ApiMiddleware
+        {
+            public TestMiddlwareNoRegistration(RequestDelegate next, IDateTimeProvider dateTimeProvider) : base(next, dateTimeProvider)
             {
             }
 

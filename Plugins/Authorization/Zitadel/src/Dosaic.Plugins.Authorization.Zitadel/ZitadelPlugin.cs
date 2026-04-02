@@ -1,3 +1,4 @@
+using Dosaic.Hosting.Abstractions.Extensions;
 using Dosaic.Hosting.Abstractions.Plugins;
 using IdentityModel.AspNetCore.OAuth2Introspection;
 using IdentityModel.Client;
@@ -11,7 +12,7 @@ using Zitadel.Extensions;
 
 namespace Dosaic.Plugins.Authorization.Zitadel
 {
-    public class ZitadelPlugin(ZitadelConfiguration config, ILogger<ZitadelPlugin> logger)
+    public class ZitadelPlugin(ZitadelConfiguration config, ILogger<ZitadelPlugin> logger, IZitadelConfigurator[] configurators)
         : IPluginServiceConfiguration, IPluginApplicationConfiguration
     {
         public void ConfigureServices(IServiceCollection serviceCollection)
@@ -48,8 +49,12 @@ namespace Dosaic.Plugins.Authorization.Zitadel
 
         public void ConfigureApplication(IApplicationBuilder applicationBuilder)
         {
+            configurators.ForEach(x => x.ConfigureApplicationBeforeAuthentication(applicationBuilder));
             applicationBuilder.UseAuthentication();
+            configurators.ForEach(x => x.ConfigureApplicationAfterAuthentication(applicationBuilder));
+            configurators.ForEach(x => x.ConfigureApplicationBeforeAuthorization(applicationBuilder));
             applicationBuilder.UseAuthorization();
+            configurators.ForEach(x => x.ConfigureApplicationAfterAuthorization(applicationBuilder));
         }
 
         internal Task OnAuthenticationFailed(AuthenticationFailedContext context)
@@ -57,5 +62,13 @@ namespace Dosaic.Plugins.Authorization.Zitadel
             logger.LogError(context.Error);
             return Task.CompletedTask;
         }
+    }
+
+    public interface IZitadelConfigurator : IPluginConfigurator
+    {
+        void ConfigureApplicationBeforeAuthentication(IApplicationBuilder applicationBuilder) { }
+        void ConfigureApplicationAfterAuthentication(IApplicationBuilder applicationBuilder) { }
+        void ConfigureApplicationBeforeAuthorization(IApplicationBuilder applicationBuilder) { }
+        void ConfigureApplicationAfterAuthorization(IApplicationBuilder applicationBuilder) { }
     }
 }
