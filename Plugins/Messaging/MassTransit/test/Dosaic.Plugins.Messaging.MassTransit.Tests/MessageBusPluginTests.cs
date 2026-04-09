@@ -80,7 +80,7 @@ public class MessageBusPluginTests
         healthOptions.MinimalFailureStatus.Should().Be(HealthStatus.Unhealthy);
 
         _configurator.Received().ConfigureMassTransit(Arg.Any<IBusRegistrationConfigurator>());
-        _configurator.Received().ConfigureReceiveEndpoint(Arg.Any<IBusRegistrationContext>(), Arg.Any<Uri>(), Arg.Any<IRabbitMqReceiveEndpointConfigurator>());
+        _configurator.Received().ConfigureReceiveEndpoint(Arg.Any<IBusRegistrationContext>(), Arg.Any<Uri>(), Arg.Any<Type[]>(), Arg.Any<IRabbitMqReceiveEndpointConfigurator>());
         _configurator.Received().ConfigureRabbitMq(Arg.Any<IBusRegistrationContext>(), Arg.Any<IRabbitMqBusFactoryConfigurator>());
     }
 
@@ -105,7 +105,7 @@ public class MessageBusPluginTests
 
         _configurator.Received().ConfigureMassTransit(Arg.Any<IBusRegistrationConfigurator>());
         _configurator.DidNotReceive().ConfigureRabbitMq(Arg.Any<IBusRegistrationContext>(), Arg.Any<IRabbitMqBusFactoryConfigurator>());
-        _configurator.DidNotReceive().ConfigureReceiveEndpoint(Arg.Any<IBusRegistrationContext>(), Arg.Any<Uri>(), Arg.Any<IRabbitMqReceiveEndpointConfigurator>());
+        _configurator.DidNotReceive().ConfigureReceiveEndpoint(Arg.Any<IBusRegistrationContext>(), Arg.Any<Uri>(), Arg.Any<Type[]>(), Arg.Any<IRabbitMqReceiveEndpointConfigurator>());
     }
 
     internal record TestMessage : IMessage;
