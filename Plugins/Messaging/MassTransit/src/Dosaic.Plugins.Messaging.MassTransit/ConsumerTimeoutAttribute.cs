@@ -1,7 +1,13 @@
 namespace Dosaic.Plugins.Messaging.MassTransit;
 
 [AttributeUsage(AttributeTargets.Class, Inherited = false)]
-public class ConsumerTimeoutAttribute(int timeoutSeconds) : Attribute
+public class ConsumerTimeoutAttribute : Attribute
 {
-    public int TimeoutSeconds { get; } = timeoutSeconds;
+    public ConsumerTimeoutAttribute(int timeoutSeconds)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(timeoutSeconds);
+        TimeoutSeconds = timeoutSeconds;
+    }
+
+    public int TimeoutSeconds { get; }
 }

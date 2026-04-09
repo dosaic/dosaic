@@ -53,9 +53,9 @@ messageBus:
 | `redeliveryDelaySeconds` | `int` | `30` | Delay between redelivery attempts (seconds) |
 | `deduplication` | `bool` | `false` | Enable message deduplication via `x-deduplication-header` |
 | `useInMemory` | `bool` | `false` | Use in-memory transport instead of RabbitMQ (useful for testing) |
-| `prefetchCount` | `int?` | `null` | RabbitMQ prefetch count. When `null`, aligns to `[ConsumerConcurrency]` if set, otherwise uses the MassTransit default |
+| `prefetchCount` | `ushort?` | `null` | RabbitMQ prefetch count. When `null`, aligns to `[ConsumerConcurrency]` if set, otherwise uses the MassTransit default |
 | `useCircuitBreaker` | `bool` | `false` | Enable circuit breaker on receive endpoints |
-| `circuitBreakerTripThreshold` | `int` | `10` | Percentage of failures that trips the circuit breaker |
+| `circuitBreakerTripThreshold` | `int` | `10` | Percentage of failed attempts that trips the circuit breaker (0–100) |
 | `circuitBreakerActiveThreshold` | `int` | `5` | Minimum number of attempts before the circuit breaker can trip |
 | `circuitBreakerResetIntervalSeconds` | `int` | `60` | Duration (seconds) the circuit stays open before resetting |
 

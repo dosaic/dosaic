@@ -110,7 +110,7 @@ public class MessageBusPlugin(IImplementationResolver implementationResolver, Me
                             if (concurrencyLimit.HasValue)
                             {
                                 configurator.UseConcurrencyLimit(concurrencyLimit.Value);
-                                configurator.PrefetchCount = configuration.PrefetchCount ?? concurrencyLimit.Value;
+                                configurator.PrefetchCount = configuration.PrefetchCount ?? (ushort)concurrencyLimit.Value;
                             }
                             else if (configuration.PrefetchCount.HasValue)
                             {

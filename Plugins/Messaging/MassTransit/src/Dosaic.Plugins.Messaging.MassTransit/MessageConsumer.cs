@@ -1,5 +1,7 @@
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Diagnostics.Metrics;
+using System.Reflection;
 using Dosaic.Hosting.Abstractions.Metrics;
 using Dosaic.Plugins.Messaging.Abstractions;
 using MassTransit;
@@ -12,11 +14,16 @@ internal class MessageConsumer<TMessage>(ILogger<MessageConsumer<TMessage>> logg
 {
     private static readonly string MessageTypeName = typeof(TMessage).Name;
 
+    private static readonly ConcurrentDictionary<Type, int?> TimeoutCache = new();
+
     private static readonly Counter<long> FailureCounter =
         Metrics.CreateCounter<long>("messaging.consumer.failures", "failures", "Number of consumer processing failures");
 
     private static readonly Histogram<double> DurationHistogram =
         Metrics.CreateHistogram<double>("messaging.consumer.duration", "ms", "Consumer processing duration");
+
+    private static int? GetTimeoutSeconds(Type consumerType) =>
+        TimeoutCache.GetOrAdd(consumerType, t => t.GetCustomAttribute<ConsumerTimeoutAttribute>()?.TimeoutSeconds);
 
     public async Task Consume(ConsumeContext<TMessage> context)
     {
@@ -35,11 +42,9 @@ internal class MessageConsumer<TMessage>(ILogger<MessageConsumer<TMessage>> logg
         var sw = Stopwatch.StartNew();
         try
         {
-            var timeoutSeconds = consumer.GetType().GetCustomAttributes(typeof(ConsumerTimeoutAttribute), false)
-                .OfType<ConsumerTimeoutAttribute>()
-                .FirstOrDefault()?.TimeoutSeconds;
+            var timeoutSeconds = GetTimeoutSeconds(consumer.GetType());
 
-            if (timeoutSeconds is > 0)
+            if (timeoutSeconds.HasValue)
             {
                 using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
                 cts.CancelAfter(TimeSpan.FromSeconds(timeoutSeconds.Value));

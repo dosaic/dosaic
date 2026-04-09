@@ -17,7 +17,7 @@ public class MessageBusConfiguration
     public int MaxRedeliveryCount { get; set; } = 3;
     public int RedeliveryDelaySeconds { get; set; } = 30;
     public bool Deduplication { get; set; }
-    public int? PrefetchCount { get; set; }
+    public ushort? PrefetchCount { get; set; }
     public bool UseCircuitBreaker { get; set; }
     public int CircuitBreakerTripThreshold { get; set; } = 10;
     public int CircuitBreakerActiveThreshold { get; set; } = 5;

@@ -1,7 +1,13 @@
 namespace Dosaic.Plugins.Messaging.MassTransit;
 
 [AttributeUsage(AttributeTargets.Class, Inherited = false)]
-public class ConsumerConcurrencyAttribute(int concurrencyLimit) : Attribute
+public class ConsumerConcurrencyAttribute : Attribute
 {
-    public int ConcurrencyLimit { get; } = concurrencyLimit;
+    public ConsumerConcurrencyAttribute(int concurrencyLimit)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(concurrencyLimit);
+        ConcurrencyLimit = concurrencyLimit;
+    }
+
+    public int ConcurrencyLimit { get; }
 }
