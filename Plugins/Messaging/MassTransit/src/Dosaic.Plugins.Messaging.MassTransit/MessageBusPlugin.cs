@@ -13,7 +13,7 @@ namespace Dosaic.Plugins.Messaging.MassTransit;
 public class MessageBusPlugin(IImplementationResolver implementationResolver, MessageBusConfiguration configuration, IMessageBusConfigurator[] configurators) : IPluginServiceConfiguration
 {
     private const string OpenTelemetrySourceName = "MassTransit";
-    private record QueueMessageTypes(Uri Queue, Type[] MessageTypes);
+    private record QueueMessageTypes(Uri Queue, Type[] MessageTypes, Type[] ConsumerTypes);
     private IList<Type> GetMessageConsumers()
     {
         var messageConsumers = implementationResolver.FindAssemblies().SelectMany(x => x.GetTypes())
@@ -23,18 +23,19 @@ public class MessageBusPlugin(IImplementationResolver implementationResolver, Me
     }
     private IList<QueueMessageTypes> GetQueueGroups()
     {
-        var queues = (
+        var entries = (
             from messageConsumer in GetMessageConsumers()
             from @interface in messageConsumer.GetInterfaces()
                 .Where(x => x.IsGenericType && x.GetGenericTypeDefinition() == typeof(IMessageConsumer<>))
-            select @interface.GetGenericArguments().First() into messageType
+            let messageType = @interface.GetGenericArguments().First()
             let queueName = QueueResolver.Resolve(messageType)
-            select (queueName, messageType)).ToList();
-        return queues.GroupBy(x => x.queueName)
+            select (queueName, messageType, consumerType: messageConsumer)).ToList();
+        return entries.GroupBy(x => x.queueName)
             .Select(x =>
                 new QueueMessageTypes(
                     x.Key,
-                    x.Select(y => y.messageType).Distinct().ToArray()))
+                    x.Select(y => y.messageType).Distinct().ToArray(),
+                    x.Select(y => y.consumerType).Distinct().ToArray()))
             .ToList();
     }
 
@@ -60,6 +61,16 @@ public class MessageBusPlugin(IImplementationResolver implementationResolver, Me
         {
             builder.AddSource(OpenTelemetrySourceName);
         });
+    }
+
+    private static int? GetConcurrencyLimitFromConsumers(Type[] consumerTypes)
+    {
+        var limits = consumerTypes
+            .Select(t => t.GetAttribute<ConsumerConcurrencyAttribute>())
+            .Where(a => a is not null)
+            .Select(a => a!.ConcurrencyLimit)
+            .ToArray();
+        return limits.Length > 0 ? limits.Min() : null;
     }
 
     private void ConfigureMassTransit(IServiceCollection serviceCollection, Type[] messageTypes, IList<QueueMessageTypes> queueGroups)
@@ -95,7 +106,32 @@ public class MessageBusPlugin(IImplementationResolver implementationResolver, Me
                     {
                         config.ReceiveEndpoint(queueGroup.Queue.PathAndQuery, configurator =>
                         {
-                            configurators.ForEach(x => x.ConfigureReceiveEndpoint(context, queueGroup.Queue, configurator));
+                            var concurrencyLimit = GetConcurrencyLimitFromConsumers(queueGroup.ConsumerTypes);
+                            if (concurrencyLimit.HasValue)
+                            {
+                                configurator.UseConcurrencyLimit(concurrencyLimit.Value);
+                                configurator.PrefetchCount = configuration.PrefetchCount ?? (ushort)concurrencyLimit.Value;
+                            }
+                            else if (configuration.PrefetchCount.HasValue)
+                            {
+                                configurator.PrefetchCount = configuration.PrefetchCount.Value;
+                            }
+
+                            configurators.ForEach(x => x.ConfigureReceiveEndpoint(context, queueGroup.Queue, queueGroup.ConsumerTypes, configurator));
+
+                            if (configuration.UseCircuitBreaker)
+                            {
+                                configurator.UseCircuitBreaker(cb =>
+                                {
+                                    cb.TripThreshold = configuration.CircuitBreakerTripThreshold;
+                                    cb.ActiveThreshold = configuration.CircuitBreakerActiveThreshold;
+                                    cb.ResetInterval = TimeSpan.FromSeconds(configuration.CircuitBreakerResetIntervalSeconds);
+                                });
+                            }
+
+                            configurator.UseMessageScope(context);
+                            configurator.UseInMemoryOutbox(context);
+
                             if (configuration.UseRetry)
                             {
                                 configurator.UseMessageRetry(r => r.Interval(configuration.MaxRetryCount, TimeSpan.FromSeconds(configuration.RetryDelaySeconds)));

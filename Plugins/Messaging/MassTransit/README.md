@@ -32,6 +32,11 @@ messageBus:
   redeliveryDelaySeconds: 30
   deduplication: false
   useInMemory: false
+  prefetchCount: null
+  useCircuitBreaker: false
+  circuitBreakerTripThreshold: 10
+  circuitBreakerActiveThreshold: 5
+  circuitBreakerResetIntervalSeconds: 60
 ```
 
 | Property | Type | Default | Description |
@@ -48,6 +53,11 @@ messageBus:
 | `redeliveryDelaySeconds` | `int` | `30` | Delay between redelivery attempts (seconds) |
 | `deduplication` | `bool` | `false` | Enable message deduplication via `x-deduplication-header` |
 | `useInMemory` | `bool` | `false` | Use in-memory transport instead of RabbitMQ (useful for testing) |
+| `prefetchCount` | `ushort?` | `null` | RabbitMQ prefetch count. When `null`, aligns to `[ConsumerConcurrency]` if set, otherwise uses the MassTransit default |
+| `useCircuitBreaker` | `bool` | `false` | Enable circuit breaker on receive endpoints |
+| `circuitBreakerTripThreshold` | `int` | `10` | Percentage of failed attempts that trips the circuit breaker (0–100) |
+| `circuitBreakerActiveThreshold` | `int` | `5` | Minimum number of attempts before the circuit breaker can trip |
+| `circuitBreakerResetIntervalSeconds` | `int` | `60` | Duration (seconds) the circuit stays open before resetting |
 
 > **Note:** When `useInMemory` is `true`, all RabbitMQ settings are ignored.
 
@@ -112,6 +122,43 @@ public class OrderPlacedAuditConsumer : IMessageConsumer<OrderPlaced>
 ```
 
 Consumers are auto-discovered via the Dosaic source generator and registered automatically — no manual registration is required.
+
+### Per-Consumer Concurrency Control
+
+By default, MassTransit determines the concurrency limit. You can restrict it per consumer using `[ConsumerConcurrency]`. When multiple consumers share a queue, the **minimum** value wins:
+
+```csharp
+using Dosaic.Plugins.Messaging.MassTransit;
+
+// This endpoint will process at most 1 message at a time
+[ConsumerConcurrency(1)]
+public class ImportShipmentConsumer : IMessageConsumer<EntityChange<ImportShipment>>
+{
+    public async Task ProcessAsync(EntityChange<ImportShipment> message, CancellationToken ct)
+    {
+        // Safe for scoped services like DbContext — no concurrent access
+    }
+}
+```
+
+When `[ConsumerConcurrency]` is set, `PrefetchCount` is automatically aligned to the concurrency limit (unless overridden in config).
+
+### Per-Consumer Timeout
+
+Add `[ConsumerTimeout]` to limit how long a consumer is allowed to process a single message:
+
+```csharp
+using Dosaic.Plugins.Messaging.MassTransit;
+
+[ConsumerTimeout(120)] // 120 seconds
+public class LongRunningConsumer : IMessageConsumer<HeavyReport>
+{
+    public async Task ProcessAsync(HeavyReport message, CancellationToken cancellationToken)
+    {
+        // cancellationToken will be cancelled after 120 seconds
+    }
+}
+```
 
 ### Sending Messages
 
@@ -197,28 +244,35 @@ public class MyBusConfigurator : IMessageBusConfigurator
         config.UseMessageData(/* ... */);
     }
 
-    // Called for each receive endpoint (queue)
-    public void ConfigureReceiveEndpoint(IBusRegistrationContext context, Uri queue,
+    // Called for each receive endpoint (queue) — receives the consumer types on this endpoint
+    public void ConfigureReceiveEndpoint(IBusRegistrationContext context, Uri queue, Type[] consumerTypes,
         IRabbitMqReceiveEndpointConfigurator configurator)
     {
-        configurator.PrefetchCount = 10;
+        // Example: set prefetch based on consumer types
+        if (consumerTypes.Any(t => t.Name.Contains("Import")))
+            configurator.PrefetchCount = 1;
     }
 }
 ```
+
+> **Backward compatibility:** The 3-parameter `ConfigureReceiveEndpoint(context, queue, configurator)` overload still works via a default interface method. Existing implementations do not need to change.
 
 ## Features
 
 - **Auto-discovery** — all `IMessageConsumer<T>` implementations in the application are found at startup without explicit registration.
 - **Multiple consumers per queue** — any number of consumers may handle the same message type; they are run concurrently, and all exceptions are collected and re-thrown as an `AggregateException`.
+- **Scoped retry with fresh DI context** — each retry gets a fresh DI scope via `UseMessageScope` + `UseInMemoryOutbox`. This ensures scoped services like `DbContext` are recreated on every attempt, preventing thread-safety issues.
 - **Built-in retry** — configurable immediate retry (`useRetry`, `maxRetryCount`, `retryDelaySeconds`) and delayed redelivery (`maxRedeliveryCount`, `redeliveryDelaySeconds`) using MassTransit middleware.
-- **Per-consumer Polly retry** — each consumer call is wrapped in a `WaitAndRetryAsync` Polly policy with up to 2 exponential back-off attempts before the error is propagated to MassTransit's error queue (`QUEUE_NAME_error`).
+- **Per-consumer concurrency control** — `[ConsumerConcurrency(n)]` attribute to limit concurrent message processing per endpoint. When multiple consumers share a queue, the minimum value wins. `PrefetchCount` auto-aligns to the concurrency limit.
+- **Per-consumer timeout** — `[ConsumerTimeout(seconds)]` attribute to set a processing deadline per consumer. The `CancellationToken` passed to `ProcessAsync` will be cancelled after the configured duration.
+- **Circuit breaker** — configurable circuit breaker (`useCircuitBreaker`) to stop processing when failure thresholds are exceeded, preventing cascading failures.
 - **Scheduled sending** — send messages at a future point in time using `ScheduleAsync` with a `TimeSpan` or `DateTime`.
 - **Custom message headers** — pass arbitrary headers via `IDictionary<string, string>` overloads of `SendAsync` / `ScheduleAsync`.
 - **Message deduplication** — SHA-256 content hash (or custom factory) written to `x-deduplication-header`.
 - **Queue name customisation** — automatic resolution from type name; `[QueueName("...")]` attribute for explicit overrides; generic types produce hyphen-joined segment names.
 - **In-memory transport** — set `useInMemory: true` for integration tests without a running RabbitMQ broker.
-- **OpenTelemetry tracing** — MassTransit activity source is registered automatically with the OpenTelemetry `TracerProvider`.
+- **Observability** — MassTransit activity source registered with OpenTelemetry `TracerProvider`; `messaging.consumer.duration` (histogram) and `messaging.consumer.failures` (counter) metrics emitted per consumer invocation with `consumer_type` and `message_type` tags.
 - **Health checks** — a MassTransit health check named `message-bus` is registered under the `readiness` tag; reports `Unhealthy` on failure.
-- **Extensible** — `IMessageBusConfigurator` allows full access to the MassTransit configuration API for advanced scenarios.
+- **Extensible** — `IMessageBusConfigurator` allows full access to the MassTransit configuration API for advanced scenarios. The `ConfigureReceiveEndpoint` overload now provides the consumer types registered on each endpoint.
 
 
