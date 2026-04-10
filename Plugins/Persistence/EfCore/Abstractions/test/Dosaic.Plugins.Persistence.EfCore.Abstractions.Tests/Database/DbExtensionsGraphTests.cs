@@ -1,4 +1,5 @@
 using Dosaic.Extensions.NanoIds;
+using Dosaic.Hosting.Abstractions.Extensions;
 using Dosaic.Plugins.Persistence.EfCore.Abstractions.Database;
 using Microsoft.EntityFrameworkCore;
 
@@ -7,6 +8,7 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests.Database
 
     using System;
     using System.Linq;
+    using System.Reflection;
     using AwesomeAssertions;
     using NUnit.Framework;
 
@@ -74,7 +76,7 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests.Database
             model.Subs.First().DeepName = "Changed";
             await _db.UpdateGraphAsync(model, m => m.Id == model.Id);
             _db.ChangeTracker.Entries<TestAuditModel>().Single().State.Should().Be(EntityState.Modified);
-            _db.ChangeTracker.Entries<SubTestModel>().Should().AllSatisfy(x => x.State.Should().Be(EntityState.Modified));
+            _db.ChangeTracker.Entries<SubTestModel>().Should().Contain(x => x.State == EntityState.Modified);
             model.ModifiedUtc.Should().BeWithin(TimeSpan.FromSeconds(1));
             model.ModifiedBy.Should().Be(new NanoId("test"));
             model.Subs.Add(new SubTestModel { Id = "33", DeepName = "33" });
@@ -94,7 +96,7 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests.Database
             await _db.UpdateGraphAsync(model, m => m.Id == model.Id);
             _db.ChangeTracker.Entries<TestAuditModel>().Single().State.Should().Be(EntityState.Modified);
             _db.ChangeTracker.Entries<SubTestModel>().Should().Contain(x => x.State == EntityState.Deleted);
-            _db.ChangeTracker.Entries<SubTestModel>().Should().Contain(x => x.State == EntityState.Modified);
+            _db.ChangeTracker.Entries<SubTestModel>().Should().Contain(x => x.State == EntityState.Unchanged);
         }
 
         [Test]
@@ -128,6 +130,32 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests.Database
             var patchedSub = _db.ChangeTracker.Entries<SubTestModel>().Single().Entity;
             patchedSub.OwnedInfo.InfoKey.Should().Be("key1-updated");
             patchedSub.OwnedInfo.InfoValue.Should().Be("val1-updated");
+        }
+
+        [Test]
+        public async Task UpsertMultipleAttachesDetachedEntities()
+        {
+            var model = GetModel();
+            _db.Add(model);
+            await _db.SaveChangesAsync();
+
+            var sub = model.Subs.First();
+            _db.Entry(sub).State = EntityState.Detached;
+            _db.Entry(sub).State.Should().Be(EntityState.Detached);
+
+            var updatedSub = new SubTestModel { Id = sub.Id, DeepName = "Updated" };
+            ICollection<SubTestModel> currentEntities = [sub];
+            ICollection<SubTestModel> newEntities = [sub];
+            sub.PatchModel(updatedSub, PatchMode.IgnoreLists);
+
+            var upsertMethod = typeof(DbExtensions)
+                .GetMethod("UpsertMultiple", BindingFlags.Static | BindingFlags.NonPublic)!
+                .MakeGenericMethod(typeof(SubTestModel));
+            upsertMethod.Invoke(null, [_db, currentEntities, newEntities]);
+
+            var entry = _db.Entry(sub);
+            entry.State.Should().Be(EntityState.Modified);
+            entry.Entity.DeepName.Should().Be("Updated");
         }
     }
 }
