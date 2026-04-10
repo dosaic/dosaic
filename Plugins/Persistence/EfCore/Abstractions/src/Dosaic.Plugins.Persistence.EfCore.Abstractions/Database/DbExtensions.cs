@@ -78,6 +78,7 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Database
                 if (model is AuditableModel auditableModel)
                     auditableModel.ModifiedUtc = DateTime.UtcNow;
                 existing.PatchModel(model, PatchMode.IgnoreLists);
+                SyncOwnedEntities((DbContext)db, existing, model);
                 foreach (var prop in listProps)
                 {
                     var itemType = prop.PropertyType.GenericTypeArguments[0];
@@ -105,25 +106,44 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Database
             currentEntities ??= new HashSet<T>();
             newEntities ??= new HashSet<T>();
             var dbSet = db.Get<T>();
+            var newIds = newEntities.Select(x => x.Id).ToHashSet();
             var entitiesToRemove = currentEntities
-                .Where(current => !newEntities.Contains(current));
+                .Where(current => !newIds.Contains(current.Id))
+                .ToList();
             foreach (var entity in entitiesToRemove)
                 dbSet.Remove(entity);
 
             foreach (var newEntity in newEntities)
             {
-                var existingEntity = currentEntities.FirstOrDefault(current => current?.Equals(newEntity) ?? false);
+                var existingEntity = currentEntities.FirstOrDefault(current => current.Id == newEntity.Id);
 
                 if (existingEntity is null)
-                    dbSet.Add(newEntity);
+                    currentEntities.Add(newEntity);
                 else
                 {
                     existingEntity.PatchModel(newEntity, PatchMode.IgnoreLists);
                     var dbContext = (DbContext)db;
+                    SyncOwnedEntities(dbContext, existingEntity, newEntity);
                     var entry = dbContext.Entry(existingEntity);
                     if (entry.State == EntityState.Detached)
                         dbSet.Update(existingEntity);
                 }
+            }
+        }
+
+        private static void SyncOwnedEntities<T>(DbContext dbContext, T existingEntity, T newEntity)
+            where T : class
+        {
+            var entry = dbContext.Entry(existingEntity);
+            foreach (var nav in entry.Navigations)
+            {
+                if (!nav.Metadata.TargetEntityType.IsOwned()) continue;
+                var newOwnedValue = typeof(T).GetProperty(nav.Metadata.Name)?.GetValue(newEntity);
+                if (newOwnedValue == null) continue;
+                if (nav.CurrentValue != null)
+                    dbContext.Entry(nav.CurrentValue).CurrentValues.SetValues(newOwnedValue);
+                else
+                    nav.CurrentValue = newOwnedValue;
             }
         }
     }
