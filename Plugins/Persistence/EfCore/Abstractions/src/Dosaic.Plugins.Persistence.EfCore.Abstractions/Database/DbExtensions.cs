@@ -119,7 +119,10 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Database
                 else
                 {
                     existingEntity.PatchModel(newEntity, PatchMode.IgnoreLists);
-                    dbSet.Update(existingEntity);
+                    var dbContext = (DbContext)db;
+                    var entry = dbContext.Entry(existingEntity);
+                    if (entry.State == EntityState.Detached)
+                        dbSet.Update(existingEntity);
                 }
             }
         }
