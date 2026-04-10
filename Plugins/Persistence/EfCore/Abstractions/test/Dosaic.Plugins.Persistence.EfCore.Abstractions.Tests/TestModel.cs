@@ -55,10 +55,17 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests
         public virtual ICollection<SubTestModel> Subs { get; set; } = null!;
     }
 
+    public class SubTestOwnedInfo
+    {
+        public string InfoKey { get; set; }
+        public string InfoValue { get; set; }
+    }
+
     [DbNanoIdPrimaryKey(NanoIdConfig.Lengths.NoLookAlikeDigitsAndLetters.L2)]
     public class SubTestModel : Model
     {
         public required string DeepName { get; set; }
+        public SubTestOwnedInfo OwnedInfo { get; set; }
     }
 
     [DbNanoIdPrimaryKey(NanoIdConfig.Lengths.NoLookAlikeDigitsAndLetters.L2)]
@@ -104,6 +111,11 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests
             builder.ToTable(nameof(SubTestModel), "test");
             builder.HasKey(x => x.Id);
             builder.Property(x => x.DeepName);
+            builder.OwnsOne(x => x.OwnedInfo, owned =>
+            {
+                owned.Property(x => x.InfoKey);
+                owned.Property(x => x.InfoValue);
+            });
         }
     }
 

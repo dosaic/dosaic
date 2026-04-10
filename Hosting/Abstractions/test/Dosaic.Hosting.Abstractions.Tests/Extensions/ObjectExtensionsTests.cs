@@ -106,6 +106,29 @@ namespace Dosaic.Hosting.Abstractions.Tests.Extensions
         }
 
         [Test]
+        public void PatchPreservesObjectReferenceIdentity()
+        {
+            var originalNested = _source.Nested;
+            var patch = new BigClass { Nested = new BigClassNested { Id = "patched-id", Name = "patched-nested" } };
+            _source.DeepPatch(patch);
+            ReferenceEquals(_source.Nested, originalNested).Should().BeTrue();
+            _source.Nested.Id.Should().Be("patched-id");
+            _source.Nested.Name.Should().Be("patched-nested");
+        }
+
+        [Test]
+        public void PatchHandlesNullOldValueForObject()
+        {
+            _source.Nested = null;
+            var patch = new BigClass { Nested = new BigClassNested { Id = "new-id", Name = "new-name" } };
+            _source.DeepPatch(patch);
+            _source.Nested.Should().NotBeNull();
+            ReferenceEquals(_source.Nested, patch.Nested).Should().BeFalse();
+            _source.Nested.Id.Should().Be("new-id");
+            _source.Nested.Name.Should().Be("new-name");
+        }
+
+        [Test]
         public void GetListValueDoesNothingOnInvalidEnumerable()
         {
             var method =

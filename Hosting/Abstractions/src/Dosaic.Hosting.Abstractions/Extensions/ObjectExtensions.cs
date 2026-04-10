@@ -65,7 +65,7 @@ namespace Dosaic.Hosting.Abstractions.Extensions
                 else if (isObject)
                 {
                     if (ignoreObjects) continue;
-                    newValue = DeepPatchInternal(oldValue, newValue, mode, filter);
+                    newValue = DeepPatchInternal(oldValue ?? Activator.CreateInstance(prop.PropertyType), newValue, mode, filter);
                 }
                 prop.SetValue(value, newValue);
             }
