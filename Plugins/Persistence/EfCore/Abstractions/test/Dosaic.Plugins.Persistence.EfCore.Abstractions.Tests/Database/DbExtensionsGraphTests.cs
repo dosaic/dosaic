@@ -96,5 +96,38 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests.Database
             _db.ChangeTracker.Entries<SubTestModel>().Should().Contain(x => x.State == EntityState.Deleted);
             _db.ChangeTracker.Entries<SubTestModel>().Should().Contain(x => x.State == EntityState.Modified);
         }
+
+        [Test]
+        public async Task UpdateGraphPreservesOwnedTypeReference()
+        {
+            var model = new TestAuditModel
+            {
+                Id = "1",
+                Name = "test",
+                Subs =
+                [
+                    new SubTestModel
+                    {
+                        Id = "11",
+                        DeepName = "11",
+                        OwnedInfo = new SubTestOwnedInfo { InfoKey = "key1", InfoValue = "val1" }
+                    }
+                ],
+                CreatedUtc = DateTime.UtcNow,
+                CreatedBy = "test",
+                ModifiedBy = "test"
+            };
+            _db.Add(model);
+            await _db.SaveChangesAsync();
+            _db.Entry(model).State = EntityState.Detached;
+
+            model.Subs.Single().OwnedInfo = new SubTestOwnedInfo { InfoKey = "key1-updated", InfoValue = "val1-updated" };
+
+            await _db.UpdateGraphAsync(model, m => m.Id == model.Id);
+
+            var patchedSub = _db.ChangeTracker.Entries<SubTestModel>().Single().Entity;
+            patchedSub.OwnedInfo.InfoKey.Should().Be("key1-updated");
+            patchedSub.OwnedInfo.InfoValue.Should().Be("val1-updated");
+        }
     }
 }
