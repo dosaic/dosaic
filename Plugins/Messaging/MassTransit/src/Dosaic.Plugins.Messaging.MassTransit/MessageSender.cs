@@ -10,7 +10,9 @@ namespace Dosaic.Plugins.Messaging.MassTransit
         ISendEndpointProvider provider,
         IMessageValidator messageValidator,
         IMessageScheduler scheduler,
-        IMessageDeduplicateKeyProvider deduplicateKeyProvider) : IMessageBus
+        IMessageDeduplicateKeyProvider deduplicateKeyProvider,
+        IQueueResolver queueResolver) : IMessageBus
+
     {
         private readonly ConcurrentDictionary<Uri, ISendEndpoint> _sendEndpoints = new();
         private const string DedupeHeader = "x-deduplication-header";
@@ -59,7 +61,7 @@ namespace Dosaic.Plugins.Messaging.MassTransit
             if (scheduler is null)
                 throw new InvalidOperationException("Scheduler is not available and must be configured!");
             if (!messageValidator.HasConsumers(messageType)) return;
-            var queue = QueueResolver.Resolve(messageType);
+            var queue = queueResolver.ResolveSendAddress(messageType);
 
             await scheduler.ScheduleSend(
                 queue,
@@ -93,7 +95,7 @@ namespace Dosaic.Plugins.Messaging.MassTransit
 
         private async Task<ISendEndpoint> GetSendEndpoint(Type messageType)
         {
-            var address = QueueResolver.Resolve(messageType);
+            var address = queueResolver.ResolveSendAddress(messageType);
             if (_sendEndpoints.TryGetValue(address, out var endpoint))
                 return endpoint;
             var newEndpoint = await provider.GetSendEndpoint(address);

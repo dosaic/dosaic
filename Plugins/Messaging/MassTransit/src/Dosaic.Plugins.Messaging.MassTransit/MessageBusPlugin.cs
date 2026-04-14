@@ -28,7 +28,7 @@ public class MessageBusPlugin(IImplementationResolver implementationResolver, Me
             from @interface in messageConsumer.GetInterfaces()
                 .Where(x => x.IsGenericType && x.GetGenericTypeDefinition() == typeof(IMessageConsumer<>))
             let messageType = @interface.GetGenericArguments().First()
-            let queueName = QueueResolver.Resolve(messageType)
+            let queueName = QueueResolver.BuildListenAddress(messageType)
             select (queueName, messageType, consumerType: messageConsumer)).ToList();
         return entries.GroupBy(x => x.queueName)
             .Select(x =>
@@ -52,10 +52,13 @@ public class MessageBusPlugin(IImplementationResolver implementationResolver, Me
         var messageTypes = queueGroups.SelectMany(x => x.MessageTypes).Distinct().ToArray();
         serviceCollection.AddSingleton<IMessageValidator>(new MessageValidator(messageTypes));
         serviceCollection.AddSingleton<IMessageDeduplicateKeyProvider>(new MessageDeduplicateKeyProvider(configuration));
+        var queueResolver = new QueueResolver(configuration, queueGroups.Select(qg => (qg.Queue, qg.ConsumerTypes)).ToList());
+        serviceCollection.AddSingleton<IQueueResolver>(queueResolver);
         serviceCollection.AddSingleton<IMessageBus>(sp => new MessageSender(sp.GetRequiredService<IDateTimeProvider>(),
             sp.GetRequiredService<ISendEndpointProvider>(),
             sp.GetRequiredService<IMessageValidator>(),
-            sp.GetService<IMessageScheduler>(), sp.GetRequiredService<IMessageDeduplicateKeyProvider>()));
+            sp.GetService<IMessageScheduler>(), sp.GetRequiredService<IMessageDeduplicateKeyProvider>(),
+            sp.GetRequiredService<IQueueResolver>()));
         ConfigureMassTransit(serviceCollection, messageTypes, queueGroups);
         serviceCollection.AddOpenTelemetry().WithTracing(builder =>
         {
@@ -71,18 +74,6 @@ public class MessageBusPlugin(IImplementationResolver implementationResolver, Me
             .Select(a => a!.ConcurrencyLimit)
             .ToArray();
         return limits.Length > 0 ? limits.Min() : null;
-    }
-
-    private static int? GetQuorumQueueReplicationFactorFromConsumers(Type[] consumerTypes)
-    {
-        var attributes = consumerTypes
-            .Select(t => t.GetAttribute<QuorumQueueAttribute>())
-            .Where(a => a is not null)
-            .ToArray();
-        if (attributes.Length == 0)
-            return null;
-        var factors = attributes.Select(a => a!.ReplicationFactor).Where(f => f > 0).ToArray();
-        return factors.Length > 0 ? factors.Min() : 0;
     }
 
     private void ConfigureMassTransit(IServiceCollection serviceCollection, Type[] messageTypes, IList<QueueMessageTypes> queueGroups)
@@ -129,7 +120,7 @@ public class MessageBusPlugin(IImplementationResolver implementationResolver, Me
                                 configurator.PrefetchCount = configuration.PrefetchCount.Value;
                             }
 
-                            var quorumReplicationFactor = GetQuorumQueueReplicationFactorFromConsumers(queueGroup.ConsumerTypes);
+                            var quorumReplicationFactor = QueueResolver.GetQuorumQueueReplicationFactorFromConsumers(queueGroup.ConsumerTypes);
                             if (quorumReplicationFactor.HasValue)
                             {
                                 configurator.SetQuorumQueue(quorumReplicationFactor.Value > 0 ? quorumReplicationFactor.Value : null);

@@ -6,25 +6,49 @@ namespace Dosaic.Plugins.Messaging.MassTransit.Tests;
 
 public class QueueResolverTests
 {
-    [Test]
-    public void ShouldResolveQueueNameFromAttribute()
+    private QueueResolver _resolver;
+
+    [SetUp]
+    public void Setup()
     {
-        QueueResolver.Resolve<AttrMessage>().Should().Be("queue:Attr_queue");
-        QueueResolver.Resolve<AttrMessage>().Should().Be("queue:Attr_queue");
+        _resolver = new QueueResolver(new MessageBusConfiguration { Host = "localhost" }, []);
     }
 
     [Test]
-    public void ShouldResolveQueueNameFromTypeName()
+    public void ShouldResolveListenAddressFromAttribute()
     {
-        QueueResolver.Resolve<TypeMessage>().Should().Be("queue:TypeMessage");
-        QueueResolver.Resolve<TypeMessage>().Should().Be("queue:TypeMessage");
+        _resolver.ResolveListenAddress(typeof(AttrMessage)).Should().Be("queue:Attr_queue");
+        _resolver.ResolveListenAddress(typeof(AttrMessage)).Should().Be("queue:Attr_queue");
     }
 
     [Test]
-    public void ShouldResolveQueueNameFromGenerics()
+    public void ShouldResolveListenAddressFromTypeName()
     {
-        QueueResolver.Resolve<GenericMessage<int, decimal>>().Should().Be("queue:GenericMessage-Int32-Decimal");
-        QueueResolver.Resolve<GenericMessage<int, decimal>>().Should().Be("queue:GenericMessage-Int32-Decimal");
+        _resolver.ResolveListenAddress(typeof(TypeMessage)).Should().Be("queue:TypeMessage");
+        _resolver.ResolveListenAddress(typeof(TypeMessage)).Should().Be("queue:TypeMessage");
+    }
+
+    [Test]
+    public void ShouldResolveListenAddressFromGenerics()
+    {
+        _resolver.ResolveListenAddress(typeof(GenericMessage<int, decimal>)).Should().Be("queue:GenericMessage-Int32-Decimal");
+        _resolver.ResolveListenAddress(typeof(GenericMessage<int, decimal>)).Should().Be("queue:GenericMessage-Int32-Decimal");
+    }
+
+    [Test]
+    public void ShouldResolveSendAddressAsExchangeForQuorumQueues()
+    {
+        var listenAddress = QueueResolver.BuildListenAddress(typeof(TypeMessage));
+        var resolver = new QueueResolver(
+            new MessageBusConfiguration { Host = "localhost", UseQuorumQueues = true },
+            [(listenAddress, [typeof(TypeMessage)])]);
+        resolver.ResolveSendAddress(typeof(TypeMessage)).Should().Be("exchange:TypeMessage");
+    }
+
+    [Test]
+    public void ShouldResolveSendAddressAsQueueForClassicQueues()
+    {
+        _resolver.ResolveSendAddress(typeof(TypeMessage)).Should().Be("queue:TypeMessage");
     }
 
     [QueueName("Attr_queue")]
