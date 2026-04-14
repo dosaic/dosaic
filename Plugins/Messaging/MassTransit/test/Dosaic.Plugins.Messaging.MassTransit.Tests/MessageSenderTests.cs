@@ -18,6 +18,7 @@ public class MessageSenderTests
     private IDateTimeProvider _dateTimeProvider;
     private ISendEndpoint _sendEndpoint;
     private IMessageDeduplicateKeyProvider _deduplicateKeyProvider;
+    private IQueueResolver _queueResolver;
     private static readonly DateTime _now = DateTime.UtcNow;
 
     [SetUp]
@@ -36,7 +37,8 @@ public class MessageSenderTests
                 Deduplication = true,
                 Host = "localhost"
             });
-        _messageBus = new MessageSender(_dateTimeProvider, _sendEndpointProvider, _messageValidator, _scheduler, _deduplicateKeyProvider);
+        _queueResolver = new QueueResolver(new MessageBusConfiguration { Host = "localhost" }, []);
+        _messageBus = new MessageSender(_dateTimeProvider, _sendEndpointProvider, _messageValidator, _scheduler, _deduplicateKeyProvider, _queueResolver);
     }
 
     [Test]
@@ -82,7 +84,7 @@ public class MessageSenderTests
     [Test]
     public async Task ThrowsExceptionWhenSchedulerIsNotPresent()
     {
-        _messageBus = new MessageSender(_dateTimeProvider, _sendEndpointProvider, _messageValidator, null, _deduplicateKeyProvider);
+        _messageBus = new MessageSender(_dateTimeProvider, _sendEndpointProvider, _messageValidator, null, _deduplicateKeyProvider, _queueResolver);
         await _messageBus.Invoking(x => x.ScheduleAsync(new TestMessage(123), TimeSpan.FromSeconds(1)))
             .Should().ThrowAsync<InvalidOperationException>();
     }
@@ -283,6 +285,42 @@ public class MessageSenderTests
 
         durableWasSet = localDurableWasSet;
         return headers;
+    }
+
+    [Test]
+    public async Task SendAsyncUsesExchangeUriForQuorumQueues()
+    {
+        var listenAddress = QueueResolver.BuildListenAddress(typeof(TestMessage));
+        var quorumResolver = new QueueResolver(
+            new MessageBusConfiguration { Host = "localhost", UseQuorumQueues = true },
+            [(listenAddress, [typeof(TestMessage)])]);
+        _messageBus = new MessageSender(_dateTimeProvider, _sendEndpointProvider, _messageValidator, _scheduler, _deduplicateKeyProvider, quorumResolver);
+        _messageValidator.HasConsumers(typeof(TestMessage)).Returns(true);
+        _deduplicateKeyProvider = Substitute.For<IMessageDeduplicateKeyProvider>();
+        await _messageBus.SendAsync(new TestMessage(1));
+        await _sendEndpointProvider.Received(1).GetSendEndpoint(Arg.Is<Uri>(u => u.Scheme == "exchange"));
+    }
+
+    [Test]
+    public async Task SendAsyncUsesQueueUriForClassicQueues()
+    {
+        _messageValidator.HasConsumers(typeof(TestMessage)).Returns(true);
+        _deduplicateKeyProvider = Substitute.For<IMessageDeduplicateKeyProvider>();
+        await _messageBus.SendAsync(new TestMessage(1));
+        await _sendEndpointProvider.Received(1).GetSendEndpoint(Arg.Is<Uri>(u => u.Scheme == "queue"));
+    }
+
+    [Test]
+    public async Task ScheduleAsyncUsesExchangeUriForQuorumQueues()
+    {
+        var listenAddress = QueueResolver.BuildListenAddress(typeof(TestMessage));
+        var quorumResolver = new QueueResolver(
+            new MessageBusConfiguration { Host = "localhost", UseQuorumQueues = true },
+            [(listenAddress, [typeof(TestMessage)])]);
+        _messageBus = new MessageSender(_dateTimeProvider, _sendEndpointProvider, _messageValidator, _scheduler, _deduplicateKeyProvider, quorumResolver);
+        _messageValidator.HasConsumers(typeof(TestMessage)).Returns(true);
+        await _messageBus.ScheduleAsync(new TestMessage(1), TimeSpan.FromSeconds(1));
+        await _scheduler.Received(1).ScheduleSend(Arg.Is<Uri>(u => u.Scheme == "exchange"), Arg.Any<DateTime>(), Arg.Any<object>(), typeof(TestMessage), Arg.Any<IPipe<SendContext>>(), Arg.Any<CancellationToken>());
     }
 
     private record TestMessage(int Id) : IMessage;

@@ -28,7 +28,7 @@ public class MessageBusPlugin(IImplementationResolver implementationResolver, Me
             from @interface in messageConsumer.GetInterfaces()
                 .Where(x => x.IsGenericType && x.GetGenericTypeDefinition() == typeof(IMessageConsumer<>))
             let messageType = @interface.GetGenericArguments().First()
-            let queueName = QueueResolver.Resolve(messageType)
+            let queueName = QueueResolver.BuildListenAddress(messageType)
             select (queueName, messageType, consumerType: messageConsumer)).ToList();
         return entries.GroupBy(x => x.queueName)
             .Select(x =>
@@ -52,10 +52,13 @@ public class MessageBusPlugin(IImplementationResolver implementationResolver, Me
         var messageTypes = queueGroups.SelectMany(x => x.MessageTypes).Distinct().ToArray();
         serviceCollection.AddSingleton<IMessageValidator>(new MessageValidator(messageTypes));
         serviceCollection.AddSingleton<IMessageDeduplicateKeyProvider>(new MessageDeduplicateKeyProvider(configuration));
+        var queueResolver = new QueueResolver(configuration, queueGroups.Select(qg => (qg.Queue, qg.ConsumerTypes)).ToList());
+        serviceCollection.AddSingleton<IQueueResolver>(queueResolver);
         serviceCollection.AddSingleton<IMessageBus>(sp => new MessageSender(sp.GetRequiredService<IDateTimeProvider>(),
             sp.GetRequiredService<ISendEndpointProvider>(),
             sp.GetRequiredService<IMessageValidator>(),
-            sp.GetService<IMessageScheduler>(), sp.GetRequiredService<IMessageDeduplicateKeyProvider>()));
+            sp.GetService<IMessageScheduler>(), sp.GetRequiredService<IMessageDeduplicateKeyProvider>(),
+            sp.GetRequiredService<IQueueResolver>()));
         ConfigureMassTransit(serviceCollection, messageTypes, queueGroups);
         serviceCollection.AddOpenTelemetry().WithTracing(builder =>
         {
@@ -117,6 +120,20 @@ public class MessageBusPlugin(IImplementationResolver implementationResolver, Me
                                 configurator.PrefetchCount = configuration.PrefetchCount.Value;
                             }
 
+                            var quorumReplicationFactor = QueueResolver.GetQuorumQueueReplicationFactorFromConsumers(queueGroup.ConsumerTypes);
+                            if (quorumReplicationFactor.HasValue)
+                            {
+                                configurator.SetQuorumQueue(quorumReplicationFactor.Value > 0 ? quorumReplicationFactor.Value : null);
+                                if (configuration.DeliveryLimit.HasValue)
+                                    configurator.SetQueueArgument("x-delivery-limit", configuration.DeliveryLimit.Value);
+                            }
+                            else if (configuration.UseQuorumQueues)
+                            {
+                                configurator.SetQuorumQueue(configuration.QuorumQueueReplicationFactor);
+                                if (configuration.DeliveryLimit.HasValue)
+                                    configurator.SetQueueArgument("x-delivery-limit", configuration.DeliveryLimit.Value);
+                            }
+
                             configurators.ForEach(x => x.ConfigureReceiveEndpoint(context, queueGroup.Queue, queueGroup.ConsumerTypes, configurator));
 
                             if (configuration.UseCircuitBreaker)
@@ -129,14 +146,16 @@ public class MessageBusPlugin(IImplementationResolver implementationResolver, Me
                                 });
                             }
 
-                            configurator.UseMessageScope(context);
-                            configurator.UseInMemoryOutbox(context);
+                            configurator.UseDelayedRedelivery(r => r.Interval(configuration.MaxRedeliveryCount, TimeSpan.FromSeconds(configuration.RedeliveryDelaySeconds)));
 
                             if (configuration.UseRetry)
                             {
                                 configurator.UseMessageRetry(r => r.Interval(configuration.MaxRetryCount, TimeSpan.FromSeconds(configuration.RetryDelaySeconds)));
                             }
-                            configurator.UseDelayedRedelivery(r => r.Interval(configuration.MaxRedeliveryCount, TimeSpan.FromSeconds(configuration.RedeliveryDelaySeconds)));
+
+                            configurator.UseMessageScope(context);
+                            configurator.UseInMemoryOutbox(context);
+
                             foreach (var messageType in queueGroup.MessageTypes)
                                 configurator.ConfigureConsumer(context, consumerType.MakeGenericType(messageType));
                         });

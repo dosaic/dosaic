@@ -37,6 +37,9 @@ messageBus:
   circuitBreakerTripThreshold: 10
   circuitBreakerActiveThreshold: 5
   circuitBreakerResetIntervalSeconds: 60
+  useQuorumQueues: false
+  quorumQueueReplicationFactor: null
+  deliveryLimit: null
 ```
 
 | Property | Type | Default | Description |
@@ -58,6 +61,9 @@ messageBus:
 | `circuitBreakerTripThreshold` | `int` | `10` | Percentage of failed attempts that trips the circuit breaker (0–100) |
 | `circuitBreakerActiveThreshold` | `int` | `5` | Minimum number of attempts before the circuit breaker can trip |
 | `circuitBreakerResetIntervalSeconds` | `int` | `60` | Duration (seconds) the circuit stays open before resetting |
+| `useQuorumQueues` | `bool` | `false` | Enable RabbitMQ quorum queues for all consumers |
+| `quorumQueueReplicationFactor` | `int?` | `null` | Replication factor for quorum queues (when `null`, uses RabbitMQ default) |
+| `deliveryLimit` | `int?` | `null` | Sets `x-delivery-limit` queue argument on quorum queues — controls how many times a message can be redelivered before being dead-lettered |
 
 > **Note:** When `useInMemory` is `true`, all RabbitMQ settings are ignored.
 
@@ -142,6 +148,38 @@ public class ImportShipmentConsumer : IMessageConsumer<EntityChange<ImportShipme
 ```
 
 When `[ConsumerConcurrency]` is set, `PrefetchCount` is automatically aligned to the concurrency limit (unless overridden in config).
+
+### Quorum Queues
+
+RabbitMQ [quorum queues](https://www.rabbitmq.com/docs/quorum-queues) can be enabled globally via configuration or per-consumer via the `[QuorumQueue]` attribute.
+
+**Global** — enable for all consumers:
+
+```yaml
+messageBus:
+  host: rabbitmq://localhost
+  username: guest
+  password: guest
+  useQuorumQueues: true
+  quorumQueueReplicationFactor: 3
+  deliveryLimit: 5
+```
+
+**Per-consumer** — enable (or override the replication factor) for a specific consumer:
+
+```csharp
+using Dosaic.Plugins.Messaging.MassTransit;
+
+[QuorumQueue(3)]
+public class MyConsumer : MessageConsumer<MyMessage>
+{
+    // This consumer's queue will use quorum queues with replication factor 3
+}
+```
+
+`[QuorumQueue]` without arguments enables quorum queues with the RabbitMQ default replication factor. When both global configuration and the attribute are present, the attribute takes precedence.
+
+`DeliveryLimit` only applies to quorum queues and is ignored for classic queues.
 
 ### Per-Consumer Timeout
 
@@ -265,6 +303,7 @@ public class MyBusConfigurator : IMessageBusConfigurator
 - **Built-in retry** — configurable immediate retry (`useRetry`, `maxRetryCount`, `retryDelaySeconds`) and delayed redelivery (`maxRedeliveryCount`, `redeliveryDelaySeconds`) using MassTransit middleware.
 - **Per-consumer concurrency control** — `[ConsumerConcurrency(n)]` attribute to limit concurrent message processing per endpoint. When multiple consumers share a queue, the minimum value wins. `PrefetchCount` auto-aligns to the concurrency limit.
 - **Per-consumer timeout** — `[ConsumerTimeout(seconds)]` attribute to set a processing deadline per consumer. The `CancellationToken` passed to `ProcessAsync` will be cancelled after the configured duration.
+- **Quorum queues** — enable RabbitMQ quorum queues globally (`useQuorumQueues: true`) or per-consumer via `[QuorumQueue]` attribute, with optional replication factor and delivery limit. The attribute takes precedence over global configuration.
 - **Circuit breaker** — configurable circuit breaker (`useCircuitBreaker`) to stop processing when failure thresholds are exceeded, preventing cascading failures.
 - **Scheduled sending** — send messages at a future point in time using `ScheduleAsync` with a `TimeSpan` or `DateTime`.
 - **Custom message headers** — pass arbitrary headers via `IDictionary<string, string>` overloads of `SendAsync` / `ScheduleAsync`.
