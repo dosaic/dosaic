@@ -1,0 +1,21 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "build-example",
+            "command": "dotnet",
+            "type": "process",
+            "args": [
+                "build",
+                "${workspaceFolder}/example/src/Dosaic.Example.Service/Dosaic.Example.Service.csproj",
+                "/property:GenerateFullPaths=true",
+                "/consoleloggerparameters:NoSummary;ForceNoAlign"
+            ],
+            "problemMatcher": "$msCompile",
+            "presentation": {
+                "close": true,
+                "reveal": "silent"
+            }
+        },
+    ]
+}

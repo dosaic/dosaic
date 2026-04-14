@@ -5,14 +5,13 @@
     </ItemGroup>
 
     <ItemGroup>
-      <PackageReference Include="AspNetCore.HealthChecks.Hangfire" />
-      <PackageReference Include="HangFire" />
-      <PackageReference Include="Hangfire.MemoryStorage" />
-      <PackageReference Include="Hangfire.PostgreSql" />
       <PackageReference Include="Microsoft.FeatureManagement" />
-      <PackageReference Include="Newtonsoft.Json" />
-      <PackageReference Include="OpenTelemetry.Instrumentation.Hangfire" />
+      <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
       <PackageReference Include="OpenTelemetry.Extensions.Hosting" />
+      <PackageReference Include="TickerQ" />
+      <PackageReference Include="TickerQ.Caching.StackExchangeRedis" />
+      <PackageReference Include="TickerQ.Dashboard" />
+      <PackageReference Include="TickerQ.EntityFrameworkCore" />
+      <PackageReference Include="TickerQ.Instrumentation.OpenTelemetry" />
     </ItemGroup>
-
 </Project>

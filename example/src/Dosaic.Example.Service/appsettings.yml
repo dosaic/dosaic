@@ -12,3 +12,8 @@ hangfire:
   allowedDashboardHost: localhost
   queues:
     - test
+
+tickerq:
+  inMemory: true
+  allowedDashboardHost: localhost
+  dashboardAuthMode: None

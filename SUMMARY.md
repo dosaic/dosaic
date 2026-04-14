@@ -22,7 +22,9 @@
   * [Abstractions](Plugins/Handlers/Abstractions/Cqrs/README.md)
   * [CQRS](Plugins/Handlers/Cqrs/README.md)
 * Jobs
+  * [Abstractions](Plugins/Jobs/Abstractions/README.md)
   * [Hangfire](Plugins/Jobs/Hangfire/README.md)
+  * [TickerQ](Plugins/Jobs/TickerQ/README.md)
 * Management
   * [Unleash](Plugins/Management/Unleash/README.md)
 * Mapping

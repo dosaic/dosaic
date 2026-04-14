@@ -1,11 +1,9 @@
-using Hangfire.States;
-
-namespace Dosaic.Plugins.Jobs.Hangfire.Attributes
+namespace Dosaic.Plugins.Jobs.Abstractions.Attributes
 {
     [AttributeUsage(AttributeTargets.Class)]
     public class RecurringJobAttribute : Attribute
     {
-        public RecurringJobAttribute(string cronPattern, string queue = EnqueuedState.DefaultQueue)
+        public RecurringJobAttribute(string cronPattern, string queue = "default")
         {
             CronPattern = cronPattern;
             Queue = queue;
