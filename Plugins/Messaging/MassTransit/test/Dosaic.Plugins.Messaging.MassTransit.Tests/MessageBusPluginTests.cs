@@ -117,4 +117,209 @@ public class MessageBusPluginTests
             return Task.CompletedTask;
         }
     }
+
+    internal record QuorumTestMessage : IMessage;
+
+    [QuorumQueue(5)]
+    internal class QuorumTestConsumer : IMessageConsumer<QuorumTestMessage>
+    {
+        public Task ProcessAsync(QuorumTestMessage message, CancellationToken cancellationToken = default)
+        {
+            return Task.CompletedTask;
+        }
+    }
+
+    internal record QuorumDefaultTestMessage : IMessage;
+
+    [QuorumQueue]
+    internal class QuorumDefaultTestConsumer : IMessageConsumer<QuorumDefaultTestMessage>
+    {
+        public Task ProcessAsync(QuorumDefaultTestMessage message, CancellationToken cancellationToken = default)
+        {
+            return Task.CompletedTask;
+        }
+    }
+
+    private static Dictionary<string, IDictionary<string, object>> GetEndpointQueueArguments(IServiceProvider sp)
+    {
+        var bus = sp.GetRequiredService<IBus>();
+        var host = bus.GetInaccessibleValue<RabbitMqHost>("_host");
+        var endpoints = host.GetInaccessibleValue<ReceiveEndpointCollection>("ReceiveEndpoints")
+            .GetInaccessibleValue<SingleThreadedDictionary<string, ReceiveEndpoint>>("_endpoints");
+        var result = new Dictionary<string, IDictionary<string, object>>();
+        foreach (var kvp in endpoints)
+        {
+            var queueArgs = kvp.Value
+                .GetInaccessibleValue<object>("_context")
+                .GetInaccessibleValue<object>("_configuration")
+                .GetInaccessibleValue<object>("_settings")
+                .GetInaccessibleValue<IDictionary<string, object>>("QueueArguments");
+            result[kvp.Key] = queueArgs;
+        }
+        return result;
+    }
+
+    [Test]
+    public void ShouldConfigureQuorumQueuesFromGlobalConfig()
+    {
+        var config = new MessageBusConfiguration
+        {
+            Host = "localhost",
+            Username = "guest",
+            Password = "guest",
+            UseQuorumQueues = true,
+            QuorumQueueReplicationFactor = 3
+        };
+        var plugin = new MessageBusPlugin(_implementationResolver, config, [_configurator]);
+        var sc = TestingDefaults.ServiceCollection();
+        plugin.ConfigureServices(sc);
+        var sp = sc.BuildServiceProvider();
+
+        var allArgs = GetEndpointQueueArguments(sp);
+        allArgs.Should().ContainKey(nameof(TestMessage));
+        allArgs[nameof(TestMessage)].Should().Contain("x-queue-type", "quorum");
+    }
+
+    [Test]
+    public void ShouldConfigureQuorumQueuesFromAttribute()
+    {
+        var config = new MessageBusConfiguration
+        {
+            Host = "localhost",
+            Username = "guest",
+            Password = "guest"
+        };
+        var plugin = new MessageBusPlugin(_implementationResolver, config, [_configurator]);
+        var sc = TestingDefaults.ServiceCollection();
+        plugin.ConfigureServices(sc);
+        var sp = sc.BuildServiceProvider();
+
+        var allArgs = GetEndpointQueueArguments(sp);
+        allArgs.Should().ContainKey(nameof(QuorumTestMessage));
+        var args = allArgs[nameof(QuorumTestMessage)];
+        args.Should().Contain("x-queue-type", "quorum");
+        args.Should().Contain("x-quorum-initial-group-size", 5);
+    }
+
+    [Test]
+    public void ShouldPreferAttributeOverGlobalConfig()
+    {
+        var config = new MessageBusConfiguration
+        {
+            Host = "localhost",
+            Username = "guest",
+            Password = "guest",
+            UseQuorumQueues = true,
+            QuorumQueueReplicationFactor = 3
+        };
+        var plugin = new MessageBusPlugin(_implementationResolver, config, [_configurator]);
+        var sc = TestingDefaults.ServiceCollection();
+        plugin.ConfigureServices(sc);
+        var sp = sc.BuildServiceProvider();
+
+        var allArgs = GetEndpointQueueArguments(sp);
+        var args = allArgs[nameof(QuorumTestMessage)];
+        args.Should().Contain("x-quorum-initial-group-size", 5);
+    }
+
+    [Test]
+    public void ShouldNotUseQuorumQueuesWhenDisabled()
+    {
+        var config = new MessageBusConfiguration
+        {
+            Host = "localhost",
+            Username = "guest",
+            Password = "guest"
+        };
+        var plugin = new MessageBusPlugin(_implementationResolver, config, [_configurator]);
+        var sc = TestingDefaults.ServiceCollection();
+        plugin.ConfigureServices(sc);
+        var sp = sc.BuildServiceProvider();
+
+        var allArgs = GetEndpointQueueArguments(sp);
+        allArgs[nameof(TestMessage)].Should().NotContainKey("x-queue-type");
+    }
+
+    [Test]
+    public void ShouldSetDeliveryLimitOnQuorumQueues()
+    {
+        var config = new MessageBusConfiguration
+        {
+            Host = "localhost",
+            Username = "guest",
+            Password = "guest",
+            UseQuorumQueues = true,
+            DeliveryLimit = 5
+        };
+        var plugin = new MessageBusPlugin(_implementationResolver, config, [_configurator]);
+        var sc = TestingDefaults.ServiceCollection();
+        plugin.ConfigureServices(sc);
+        var sp = sc.BuildServiceProvider();
+
+        var allArgs = GetEndpointQueueArguments(sp);
+        var args = allArgs[nameof(TestMessage)];
+        args.Should().Contain("x-queue-type", "quorum");
+        args.Should().Contain("x-delivery-limit", 5);
+    }
+
+    [Test]
+    public void ShouldNotSetDeliveryLimitOnClassicQueues()
+    {
+        var config = new MessageBusConfiguration
+        {
+            Host = "localhost",
+            Username = "guest",
+            Password = "guest",
+            DeliveryLimit = 5
+        };
+        var plugin = new MessageBusPlugin(_implementationResolver, config, [_configurator]);
+        var sc = TestingDefaults.ServiceCollection();
+        plugin.ConfigureServices(sc);
+        var sp = sc.BuildServiceProvider();
+
+        var allArgs = GetEndpointQueueArguments(sp);
+        allArgs[nameof(TestMessage)].Should().NotContainKey("x-queue-type");
+        allArgs[nameof(TestMessage)].Should().NotContainKey("x-delivery-limit");
+    }
+
+    [Test]
+    public void ShouldSetDeliveryLimitOnAttributeQuorumQueues()
+    {
+        var config = new MessageBusConfiguration
+        {
+            Host = "localhost",
+            Username = "guest",
+            Password = "guest",
+            DeliveryLimit = 10
+        };
+        var plugin = new MessageBusPlugin(_implementationResolver, config, [_configurator]);
+        var sc = TestingDefaults.ServiceCollection();
+        plugin.ConfigureServices(sc);
+        var sp = sc.BuildServiceProvider();
+
+        var allArgs = GetEndpointQueueArguments(sp);
+        var args = allArgs[nameof(QuorumTestMessage)];
+        args.Should().Contain("x-queue-type", "quorum");
+        args.Should().Contain("x-delivery-limit", 10);
+    }
+
+    [Test]
+    public void ShouldConfigureQuorumQueueFromAttributeWithDefaultReplicationFactor()
+    {
+        var config = new MessageBusConfiguration
+        {
+            Host = "localhost",
+            Username = "guest",
+            Password = "guest"
+        };
+        var plugin = new MessageBusPlugin(_implementationResolver, config, [_configurator]);
+        var sc = TestingDefaults.ServiceCollection();
+        plugin.ConfigureServices(sc);
+        var sp = sc.BuildServiceProvider();
+
+        var allArgs = GetEndpointQueueArguments(sp);
+        var args = allArgs[nameof(QuorumDefaultTestMessage)];
+        args.Should().Contain("x-queue-type", "quorum");
+        args.Should().NotContainKey("x-quorum-initial-group-size");
+    }
 }

@@ -73,6 +73,18 @@ public class MessageBusPlugin(IImplementationResolver implementationResolver, Me
         return limits.Length > 0 ? limits.Min() : null;
     }
 
+    private static int? GetQuorumQueueReplicationFactorFromConsumers(Type[] consumerTypes)
+    {
+        var attributes = consumerTypes
+            .Select(t => t.GetAttribute<QuorumQueueAttribute>())
+            .Where(a => a is not null)
+            .ToArray();
+        if (attributes.Length == 0)
+            return null;
+        var factors = attributes.Select(a => a!.ReplicationFactor).Where(f => f > 0).ToArray();
+        return factors.Length > 0 ? factors.Min() : 0;
+    }
+
     private void ConfigureMassTransit(IServiceCollection serviceCollection, Type[] messageTypes, IList<QueueMessageTypes> queueGroups)
     {
         var consumerType = typeof(MessageConsumer<>);
@@ -117,6 +129,20 @@ public class MessageBusPlugin(IImplementationResolver implementationResolver, Me
                                 configurator.PrefetchCount = configuration.PrefetchCount.Value;
                             }
 
+                            var quorumReplicationFactor = GetQuorumQueueReplicationFactorFromConsumers(queueGroup.ConsumerTypes);
+                            if (quorumReplicationFactor.HasValue)
+                            {
+                                configurator.SetQuorumQueue(quorumReplicationFactor.Value > 0 ? quorumReplicationFactor.Value : null);
+                                if (configuration.DeliveryLimit.HasValue)
+                                    configurator.SetQueueArgument("x-delivery-limit", configuration.DeliveryLimit.Value);
+                            }
+                            else if (configuration.UseQuorumQueues)
+                            {
+                                configurator.SetQuorumQueue(configuration.QuorumQueueReplicationFactor);
+                                if (configuration.DeliveryLimit.HasValue)
+                                    configurator.SetQueueArgument("x-delivery-limit", configuration.DeliveryLimit.Value);
+                            }
+
                             configurators.ForEach(x => x.ConfigureReceiveEndpoint(context, queueGroup.Queue, queueGroup.ConsumerTypes, configurator));
 
                             if (configuration.UseCircuitBreaker)
@@ -129,14 +155,16 @@ public class MessageBusPlugin(IImplementationResolver implementationResolver, Me
                                 });
                             }
 
-                            configurator.UseMessageScope(context);
-                            configurator.UseInMemoryOutbox(context);
+                            configurator.UseDelayedRedelivery(r => r.Interval(configuration.MaxRedeliveryCount, TimeSpan.FromSeconds(configuration.RedeliveryDelaySeconds)));
 
                             if (configuration.UseRetry)
                             {
                                 configurator.UseMessageRetry(r => r.Interval(configuration.MaxRetryCount, TimeSpan.FromSeconds(configuration.RetryDelaySeconds)));
                             }
-                            configurator.UseDelayedRedelivery(r => r.Interval(configuration.MaxRedeliveryCount, TimeSpan.FromSeconds(configuration.RedeliveryDelaySeconds)));
+
+                            configurator.UseMessageScope(context);
+                            configurator.UseInMemoryOutbox(context);
+
                             foreach (var messageType in queueGroup.MessageTypes)
                                 configurator.ConfigureConsumer(context, consumerType.MakeGenericType(messageType));
                         });

@@ -22,4 +22,7 @@ public class MessageBusConfiguration
     public int CircuitBreakerTripThreshold { get; set; } = 10;
     public int CircuitBreakerActiveThreshold { get; set; } = 5;
     public int CircuitBreakerResetIntervalSeconds { get; set; } = 60;
+    public bool UseQuorumQueues { get; set; }
+    public int? QuorumQueueReplicationFactor { get; set; }
+    public int? DeliveryLimit { get; set; }
 }
