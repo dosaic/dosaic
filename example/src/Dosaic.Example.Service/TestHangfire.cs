@@ -1,5 +1,5 @@
+using Dosaic.Plugins.Jobs.Abstractions.Attributes;
 using Dosaic.Plugins.Jobs.Hangfire;
-using Dosaic.Plugins.Jobs.Hangfire.Attributes;
 using Dosaic.Plugins.Jobs.Hangfire.Job;
 using Hangfire;
 using Hangfire.MemoryStorage;

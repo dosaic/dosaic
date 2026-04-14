@@ -2,6 +2,7 @@ using Dosaic.Hosting.Abstractions;
 using Dosaic.Hosting.Abstractions.Extensions;
 using Dosaic.Hosting.Abstractions.Plugins;
 using Dosaic.Hosting.Abstractions.Services;
+using Dosaic.Plugins.Jobs.Abstractions.Attributes;
 using Dosaic.Plugins.Jobs.Hangfire.Attributes;
 using Dosaic.Plugins.Jobs.Hangfire.Job;
 using Hangfire;

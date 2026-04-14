@@ -1,5 +1,5 @@
 using Dosaic.Hosting.Abstractions.Extensions;
-using Dosaic.Plugins.Jobs.Hangfire.Attributes;
+using Dosaic.Plugins.Jobs.Abstractions.Attributes;
 using Dosaic.Plugins.Jobs.Hangfire.Extensions;
 using Dosaic.Plugins.Jobs.Hangfire.Job;
 using Hangfire;

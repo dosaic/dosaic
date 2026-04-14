@@ -1,5 +1,5 @@
 using AwesomeAssertions;
-using Dosaic.Plugins.Jobs.Hangfire.Attributes;
+using Dosaic.Plugins.Jobs.Abstractions.Attributes;
 using NUnit.Framework;
 
 namespace Dosaic.Plugins.Jobs.Hangfire.Tests.Attributes
