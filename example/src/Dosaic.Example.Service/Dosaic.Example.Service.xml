@@ -201,6 +201,54 @@
         <member name="M:Dosaic.Example.Service.EntryId.TryFormat(System.Span{System.Byte},System.Int32@,System.ReadOnlySpan{System.Char},System.IFormatProvider)">
             <inheritdoc cref = "M:System.Int32.TryFormat(System.Span{System.Byte},System.Int32@,System.ReadOnlySpan{System.Char},System.IFormatProvider)"/>
         </member>
+        <member name="M:Dosaic.Example.Service.EntryId.GetTypeCode">
+            <inheritdoc cref = "M:System.Int32.GetTypeCode"/>
+        </member>
+        <member name="M:Dosaic.Example.Service.EntryId.System#IConvertible#ToBoolean(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Example.Service.EntryId.System#IConvertible#ToByte(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Example.Service.EntryId.System#IConvertible#ToChar(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Example.Service.EntryId.System#IConvertible#ToDateTime(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Example.Service.EntryId.System#IConvertible#ToDecimal(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Example.Service.EntryId.System#IConvertible#ToDouble(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Example.Service.EntryId.System#IConvertible#ToInt16(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Example.Service.EntryId.System#IConvertible#ToInt32(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Example.Service.EntryId.System#IConvertible#ToInt64(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Example.Service.EntryId.System#IConvertible#ToSByte(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Example.Service.EntryId.System#IConvertible#ToSingle(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Example.Service.EntryId.System#IConvertible#ToType(System.Type,System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Example.Service.EntryId.System#IConvertible#ToUInt16(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Example.Service.EntryId.System#IConvertible#ToUInt32(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Example.Service.EntryId.System#IConvertible#ToUInt64(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
         <member name="M:Dosaic.Example.Service.EntryId.ToString">
             <inheritdoc cref = "M:System.Int32.ToString"/>
         </member>

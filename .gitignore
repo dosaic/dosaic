@@ -1,4 +1,7 @@
 
+# Claude Code
+.claude/settings.local.json
+
 # Created by https://www.toptal.com/developers/gitignore/api/dotnetcore,linux,windows,aspnetcore,visualstudio,visualstudiocode,jetbrains,git
 # Edit at https://www.toptal.com/developers/gitignore?templates=dotnetcore,linux,windows,aspnetcore,visualstudio,visualstudiocode,jetbrains,git
 
