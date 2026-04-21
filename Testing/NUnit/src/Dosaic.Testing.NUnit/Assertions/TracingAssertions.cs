@@ -37,7 +37,7 @@ namespace Dosaic.Testing.NUnit.Assertions
 
         public AndConstraint<TracingAssertions> RegisterInstrumentation<T>(string because = "", params object[] becauseArgs)
         {
-            var instrumentations = Subject.GetInaccessibleValue<List<object>>("instrumentations");
+            var instrumentations = Subject.GetInaccessibleValue<List<object>>("Instrumentations");
 
             CurrentAssertionChain.BecauseOf(because, becauseArgs)
                 .ForCondition(instrumentations?.Any(i => i.GetType() == typeof(T)) ?? false)
@@ -48,7 +48,7 @@ namespace Dosaic.Testing.NUnit.Assertions
 
         public AndConstraint<TracingAssertions> RegisterInstrumentation(string name, string because = "", params object[] becauseArgs)
         {
-            var instrumentations = Subject.GetInaccessibleValue<List<object>>("instrumentations");
+            var instrumentations = Subject.GetInaccessibleValue<List<object>>("Instrumentations");
 
             CurrentAssertionChain.BecauseOf(because, becauseArgs)
                 .ForCondition(instrumentations?.Any(i => i.GetType().Name == name) ?? false)

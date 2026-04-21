@@ -198,6 +198,54 @@
         <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectDefaultIsInt.TryFormat(System.Span{System.Byte},System.Int32@,System.ReadOnlySpan{System.Char},System.IFormatProvider)">
             <inheritdoc cref = "M:System.Int32.TryFormat(System.Span{System.Byte},System.Int32@,System.ReadOnlySpan{System.Char},System.IFormatProvider)"/>
         </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectDefaultIsInt.GetTypeCode">
+            <inheritdoc cref = "M:System.Int32.GetTypeCode"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectDefaultIsInt.System#IConvertible#ToBoolean(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectDefaultIsInt.System#IConvertible#ToByte(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectDefaultIsInt.System#IConvertible#ToChar(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectDefaultIsInt.System#IConvertible#ToDateTime(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectDefaultIsInt.System#IConvertible#ToDecimal(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectDefaultIsInt.System#IConvertible#ToDouble(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectDefaultIsInt.System#IConvertible#ToInt16(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectDefaultIsInt.System#IConvertible#ToInt32(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectDefaultIsInt.System#IConvertible#ToInt64(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectDefaultIsInt.System#IConvertible#ToSByte(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectDefaultIsInt.System#IConvertible#ToSingle(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectDefaultIsInt.System#IConvertible#ToType(System.Type,System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectDefaultIsInt.System#IConvertible#ToUInt16(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectDefaultIsInt.System#IConvertible#ToUInt32(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectDefaultIsInt.System#IConvertible#ToUInt64(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
         <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectDefaultIsInt.ToString">
             <inheritdoc cref = "M:System.Int32.ToString"/>
         </member>
@@ -257,6 +305,54 @@
             The value created via the <see cref = "M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectString.From(System.String)"/> method.
             </returns>
             <exception cref = "T:Vogen.ValueObjectValidationException">Thrown when the value can be parsed, but is not valid.</exception>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectString.GetTypeCode">
+            <inheritdoc cref = "M:System.String.GetTypeCode"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectString.System#IConvertible#ToBoolean(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectString.System#IConvertible#ToByte(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectString.System#IConvertible#ToChar(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectString.System#IConvertible#ToDateTime(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectString.System#IConvertible#ToDecimal(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectString.System#IConvertible#ToDouble(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectString.System#IConvertible#ToInt16(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectString.System#IConvertible#ToInt32(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectString.System#IConvertible#ToInt64(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectString.System#IConvertible#ToSByte(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectString.System#IConvertible#ToSingle(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectString.System#IConvertible#ToType(System.Type,System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectString.System#IConvertible#ToUInt16(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectString.System#IConvertible#ToUInt32(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectString.System#IConvertible#ToUInt64(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
         </member>
         <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectString.ToString">
             <inheritdoc cref = "M:System.String.ToString"/>
@@ -333,6 +429,54 @@
             The value created by calling the Parse method on the primitive.
             </returns>
             <exception cref = "T:Vogen.ValueObjectValidationException">Thrown when the value can be parsed, but is not valid.</exception>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectBoolean.GetTypeCode">
+            <inheritdoc cref = "M:System.Boolean.GetTypeCode"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectBoolean.System#IConvertible#ToBoolean(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectBoolean.System#IConvertible#ToByte(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectBoolean.System#IConvertible#ToChar(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectBoolean.System#IConvertible#ToDateTime(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectBoolean.System#IConvertible#ToDecimal(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectBoolean.System#IConvertible#ToDouble(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectBoolean.System#IConvertible#ToInt16(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectBoolean.System#IConvertible#ToInt32(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectBoolean.System#IConvertible#ToInt64(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectBoolean.System#IConvertible#ToSByte(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectBoolean.System#IConvertible#ToSingle(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectBoolean.System#IConvertible#ToType(System.Type,System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectBoolean.System#IConvertible#ToUInt16(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectBoolean.System#IConvertible#ToUInt32(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectBoolean.System#IConvertible#ToUInt64(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
         </member>
         <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectBoolean.ToString">
             <inheritdoc cref = "M:System.Boolean.ToString"/>
@@ -528,6 +672,54 @@
         </member>
         <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectShort.TryFormat(System.Span{System.Byte},System.Int32@,System.ReadOnlySpan{System.Char},System.IFormatProvider)">
             <inheritdoc cref = "M:System.Int16.TryFormat(System.Span{System.Byte},System.Int32@,System.ReadOnlySpan{System.Char},System.IFormatProvider)"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectShort.GetTypeCode">
+            <inheritdoc cref = "M:System.Int16.GetTypeCode"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectShort.System#IConvertible#ToBoolean(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectShort.System#IConvertible#ToByte(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectShort.System#IConvertible#ToChar(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectShort.System#IConvertible#ToDateTime(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectShort.System#IConvertible#ToDecimal(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectShort.System#IConvertible#ToDouble(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectShort.System#IConvertible#ToInt16(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectShort.System#IConvertible#ToInt32(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectShort.System#IConvertible#ToInt64(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectShort.System#IConvertible#ToSByte(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectShort.System#IConvertible#ToSingle(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectShort.System#IConvertible#ToType(System.Type,System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectShort.System#IConvertible#ToUInt16(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectShort.System#IConvertible#ToUInt32(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectShort.System#IConvertible#ToUInt64(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
         </member>
         <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectShort.ToString">
             <inheritdoc cref = "M:System.Int16.ToString"/>
@@ -727,6 +919,54 @@
         <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectLong.TryFormat(System.Span{System.Byte},System.Int32@,System.ReadOnlySpan{System.Char},System.IFormatProvider)">
             <inheritdoc cref = "M:System.Int64.TryFormat(System.Span{System.Byte},System.Int32@,System.ReadOnlySpan{System.Char},System.IFormatProvider)"/>
         </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectLong.GetTypeCode">
+            <inheritdoc cref = "M:System.Int64.GetTypeCode"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectLong.System#IConvertible#ToBoolean(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectLong.System#IConvertible#ToByte(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectLong.System#IConvertible#ToChar(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectLong.System#IConvertible#ToDateTime(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectLong.System#IConvertible#ToDecimal(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectLong.System#IConvertible#ToDouble(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectLong.System#IConvertible#ToInt16(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectLong.System#IConvertible#ToInt32(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectLong.System#IConvertible#ToInt64(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectLong.System#IConvertible#ToSByte(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectLong.System#IConvertible#ToSingle(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectLong.System#IConvertible#ToType(System.Type,System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectLong.System#IConvertible#ToUInt16(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectLong.System#IConvertible#ToUInt32(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectLong.System#IConvertible#ToUInt64(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
         <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectLong.ToString">
             <inheritdoc cref = "M:System.Int64.ToString"/>
         </member>
@@ -924,6 +1164,54 @@
         </member>
         <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectByte.TryFormat(System.Span{System.Byte},System.Int32@,System.ReadOnlySpan{System.Char},System.IFormatProvider)">
             <inheritdoc cref = "M:System.Byte.TryFormat(System.Span{System.Byte},System.Int32@,System.ReadOnlySpan{System.Char},System.IFormatProvider)"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectByte.GetTypeCode">
+            <inheritdoc cref = "M:System.Byte.GetTypeCode"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectByte.System#IConvertible#ToBoolean(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectByte.System#IConvertible#ToByte(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectByte.System#IConvertible#ToChar(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectByte.System#IConvertible#ToDateTime(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectByte.System#IConvertible#ToDecimal(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectByte.System#IConvertible#ToDouble(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectByte.System#IConvertible#ToInt16(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectByte.System#IConvertible#ToInt32(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectByte.System#IConvertible#ToInt64(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectByte.System#IConvertible#ToSByte(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectByte.System#IConvertible#ToSingle(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectByte.System#IConvertible#ToType(System.Type,System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectByte.System#IConvertible#ToUInt16(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectByte.System#IConvertible#ToUInt32(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectByte.System#IConvertible#ToUInt64(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
         </member>
         <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectByte.ToString">
             <inheritdoc cref = "M:System.Byte.ToString"/>
@@ -1123,6 +1411,54 @@
         <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectFloat.TryFormat(System.Span{System.Byte},System.Int32@,System.ReadOnlySpan{System.Char},System.IFormatProvider)">
             <inheritdoc cref = "M:System.Single.TryFormat(System.Span{System.Byte},System.Int32@,System.ReadOnlySpan{System.Char},System.IFormatProvider)"/>
         </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectFloat.GetTypeCode">
+            <inheritdoc cref = "M:System.Single.GetTypeCode"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectFloat.System#IConvertible#ToBoolean(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectFloat.System#IConvertible#ToByte(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectFloat.System#IConvertible#ToChar(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectFloat.System#IConvertible#ToDateTime(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectFloat.System#IConvertible#ToDecimal(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectFloat.System#IConvertible#ToDouble(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectFloat.System#IConvertible#ToInt16(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectFloat.System#IConvertible#ToInt32(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectFloat.System#IConvertible#ToInt64(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectFloat.System#IConvertible#ToSByte(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectFloat.System#IConvertible#ToSingle(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectFloat.System#IConvertible#ToType(System.Type,System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectFloat.System#IConvertible#ToUInt16(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectFloat.System#IConvertible#ToUInt32(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectFloat.System#IConvertible#ToUInt64(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
         <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectFloat.ToString">
             <inheritdoc cref = "M:System.Single.ToString"/>
         </member>
@@ -1320,6 +1656,54 @@
         </member>
         <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectDecimal.TryFormat(System.Span{System.Byte},System.Int32@,System.ReadOnlySpan{System.Char},System.IFormatProvider)">
             <inheritdoc cref = "M:System.Decimal.TryFormat(System.Span{System.Byte},System.Int32@,System.ReadOnlySpan{System.Char},System.IFormatProvider)"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectDecimal.GetTypeCode">
+            <inheritdoc cref = "M:System.Decimal.GetTypeCode"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectDecimal.System#IConvertible#ToBoolean(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectDecimal.System#IConvertible#ToByte(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectDecimal.System#IConvertible#ToChar(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectDecimal.System#IConvertible#ToDateTime(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectDecimal.System#IConvertible#ToDecimal(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectDecimal.System#IConvertible#ToDouble(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectDecimal.System#IConvertible#ToInt16(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectDecimal.System#IConvertible#ToInt32(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectDecimal.System#IConvertible#ToInt64(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectDecimal.System#IConvertible#ToSByte(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectDecimal.System#IConvertible#ToSingle(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectDecimal.System#IConvertible#ToType(System.Type,System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectDecimal.System#IConvertible#ToUInt16(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectDecimal.System#IConvertible#ToUInt32(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectDecimal.System#IConvertible#ToUInt64(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
         </member>
         <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectDecimal.ToString">
             <inheritdoc cref = "M:System.Decimal.ToString"/>
@@ -1519,6 +1903,54 @@
         <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectDouble.TryFormat(System.Span{System.Byte},System.Int32@,System.ReadOnlySpan{System.Char},System.IFormatProvider)">
             <inheritdoc cref = "M:System.Double.TryFormat(System.Span{System.Byte},System.Int32@,System.ReadOnlySpan{System.Char},System.IFormatProvider)"/>
         </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectDouble.GetTypeCode">
+            <inheritdoc cref = "M:System.Double.GetTypeCode"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectDouble.System#IConvertible#ToBoolean(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectDouble.System#IConvertible#ToByte(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectDouble.System#IConvertible#ToChar(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectDouble.System#IConvertible#ToDateTime(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectDouble.System#IConvertible#ToDecimal(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectDouble.System#IConvertible#ToDouble(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectDouble.System#IConvertible#ToInt16(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectDouble.System#IConvertible#ToInt32(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectDouble.System#IConvertible#ToInt64(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectDouble.System#IConvertible#ToSByte(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectDouble.System#IConvertible#ToSingle(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectDouble.System#IConvertible#ToType(System.Type,System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectDouble.System#IConvertible#ToUInt16(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectDouble.System#IConvertible#ToUInt32(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectDouble.System#IConvertible#ToUInt64(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
         <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectDouble.ToString">
             <inheritdoc cref = "M:System.Double.ToString"/>
         </member>
@@ -1665,6 +2097,54 @@
         </member>
         <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectDateTime.TryFormat(System.Span{System.Byte},System.Int32@,System.ReadOnlySpan{System.Char},System.IFormatProvider)">
             <inheritdoc cref = "M:System.DateTime.TryFormat(System.Span{System.Byte},System.Int32@,System.ReadOnlySpan{System.Char},System.IFormatProvider)"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectDateTime.GetTypeCode">
+            <inheritdoc cref = "M:System.DateTime.GetTypeCode"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectDateTime.System#IConvertible#ToBoolean(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectDateTime.System#IConvertible#ToByte(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectDateTime.System#IConvertible#ToChar(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectDateTime.System#IConvertible#ToDateTime(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectDateTime.System#IConvertible#ToDecimal(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectDateTime.System#IConvertible#ToDouble(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectDateTime.System#IConvertible#ToInt16(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectDateTime.System#IConvertible#ToInt32(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectDateTime.System#IConvertible#ToInt64(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectDateTime.System#IConvertible#ToSByte(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectDateTime.System#IConvertible#ToSingle(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectDateTime.System#IConvertible#ToType(System.Type,System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectDateTime.System#IConvertible#ToUInt16(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectDateTime.System#IConvertible#ToUInt32(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
+        </member>
+        <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectDateTime.System#IConvertible#ToUInt64(System.IFormatProvider)">
+            <inheritdoc cref = "T:System.IConvertible"/>
         </member>
         <member name="M:Dosaic.Api.OpenApi.Tests.Filters.Schema.ValueObjectDateTime.ToString">
             <inheritdoc cref = "M:System.DateTime.ToString"/>
