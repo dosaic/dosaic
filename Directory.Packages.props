@@ -78,8 +78,8 @@
     <PackageVersion Include="Microsoft.Extensions.Http" Version="$(MicrosoftExtensionsVersion)" />
     <PackageVersion Include="Microsoft.Extensions.Http.Polly" Version="$(MicrosoftExtensionsVersion)" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="$(MicrosoftExtensionsVersion)" />
-    <PackageVersion Include="Microsoft.FeatureManagement" Version="4.4.0" />
-    <PackageVersion Include="Microsoft.FeatureManagement.AspNetCore" Version="4.4.0" />
+    <PackageVersion Include="Microsoft.FeatureManagement" Version="4.5.0" />
+    <PackageVersion Include="Microsoft.FeatureManagement.AspNetCore" Version="4.5.0" />
     <PackageVersion Include="Microsoft.IdentityModel.Tokens" Version="8.17.0" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.4.0" />
     <PackageVersion Include="Mime-Detective" Version="25.8.1" />
@@ -108,12 +108,12 @@
     <PackageVersion Include="OpenTelemetry.Exporter.Prometheus.AspNetCore" Version="1.15.0-beta.1" />
     <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.15.3" />
     <PackageVersion Include="OpenTelemetry.Extensions.Propagators" Version="1.15.3" />
-    <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.15.1" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.15.2" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.EntityFrameworkCore" Version="1.15.0-beta.1" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.Hangfire" Version="1.15.0-beta.1" />
-    <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.15.0" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.15.1" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.Process" Version="1.15.0-beta.1" />
-    <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.15.0" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.15.1" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.StackExchangeRedis" Version="1.15.0-beta.1" />
     <PackageVersion Include="Polly" Version="8.6.5" />
     <PackageVersion Include="RichardSzalay.MockHttp" Version="7.0.0" />
@@ -135,7 +135,7 @@
     <PackageVersion Include="Unleash.Client" Version="5.6.1" />
     <PackageVersion Include="VaultSharp" Version="1.17.5.1" />
     <PackageVersion Include="Vogen" Version="8.0.5" />
-    <PackageVersion Include="WireMock.Net" Version="2.3.0" />
+    <PackageVersion Include="WireMock.Net" Version="2.4.0" />
     <PackageVersion Include="YamlDotNet" Version="17.0.1" />
     <PackageVersion Include="jose-jwt" Version="5.3.0" />
     <PackageVersion Include="Zitadel" Version="7.0.41" />
