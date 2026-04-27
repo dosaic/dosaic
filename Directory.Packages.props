@@ -2,9 +2,9 @@
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
-    <MicrosoftExtensionsVersion>10.0.6</MicrosoftExtensionsVersion>
-    <MicrosoftAspNetCoreVersion>10.0.6</MicrosoftAspNetCoreVersion>
-    <MicrosoftEfCoreVersion>10.0.6</MicrosoftEfCoreVersion>
+    <MicrosoftExtensionsVersion>10.0.7</MicrosoftExtensionsVersion>
+    <MicrosoftAspNetCoreVersion>10.0.7</MicrosoftAspNetCoreVersion>
+    <MicrosoftEfCoreVersion>10.0.7</MicrosoftEfCoreVersion>
   </PropertyGroup>
   <ItemGroup>
     <PackageVersion Include="Allure.NUnit" Version="2.14.1" />
