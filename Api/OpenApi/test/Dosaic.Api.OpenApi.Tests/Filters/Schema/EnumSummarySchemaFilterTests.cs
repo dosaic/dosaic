@@ -1,10 +1,10 @@
+using System.Reflection;
+using System.Xml.Linq;
 using AwesomeAssertions;
 using Dosaic.Api.OpenApi.Filters.Common;
 using Dosaic.Api.OpenApi.Filters.Schema;
 using Microsoft.OpenApi;
 using NUnit.Framework;
-using System.Reflection;
-using System.Xml.Linq;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
 namespace Dosaic.Api.OpenApi.Tests.Filters.Schema;
@@ -167,6 +167,4 @@ public class EnumSummarySchemaFilterTests
         }
     }
 }
-
-
 

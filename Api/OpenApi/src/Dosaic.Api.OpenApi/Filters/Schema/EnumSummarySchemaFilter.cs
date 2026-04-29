@@ -79,4 +79,3 @@ internal class EnumSummarySchemaFilter : ISchemaFilter
     }
 }
 
-
