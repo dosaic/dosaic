@@ -4,6 +4,25 @@
         <name>Dosaic.Api.OpenApi.Tests</name>
     </assembly>
     <members>
+        <member name="F:Dosaic.Api.OpenApi.Tests.Filters.Schema.TestEnum.Undefined">
+            <summary>
+                Fallback.
+            </summary>
+        </member>
+        <member name="F:Dosaic.Api.OpenApi.Tests.Filters.Schema.TestEnum.RealValue">
+            <summary>
+                This is the real summery
+            </summary>
+        </member>
+        <member name="F:Dosaic.Api.OpenApi.Tests.Filters.Schema.TestEnum.EmptySummary">
+            <summary>
+            </summary>
+        </member>
+        <member name="F:Dosaic.Api.OpenApi.Tests.Filters.Schema.TestEnum.Fallback">
+            <summary>
+                Fallback.
+            </summary>
+        </member>
         <member name="P:Dosaic.Api.OpenApi.Tests.Filters.Schema.Y.Id2">
             <summary>
             Test summary
