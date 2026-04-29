@@ -10,7 +10,7 @@ namespace Dosaic.Api.OpenApi.Filters.Schema;
 /// <summary>
 ///     Adds XML summary comments from enum members to the OpenAPI schema description.
 /// </summary>
-internal class EnumSummarySchemaFilter : ISchemaFilter
+public class EnumSummarySchemaFilter : ISchemaFilter
 {
     private static readonly Lazy<XDocument> _xmlDoc = new(LoadXmlDoc);
 
