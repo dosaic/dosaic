@@ -1,6 +1,6 @@
 # Dosaic.Api.OpenApi
 
-A Dosaic plugin that integrates [Swashbuckle / Swagger](https://github.com/domaindrivendev/Swashbuckle.AspNetCore) into a Dosaic web service. It registers the Swagger generator, serves the interactive Swagger UI at `"/"`, auto-discovers XML documentation files, and ships several built-in filters that improve schema quality for value objects, read-only properties, and file-upload endpoints. Optional OAuth 2.0 / JWT bearer authentication can be wired up through configuration.
+A Dosaic plugin that integrates [Swashbuckle / Swagger](https://github.com/domaindrivendev/Swashbuckle.AspNetCore) into a Dosaic web service. It registers the Swagger generator, serves the interactive Swagger UI at `"/"`, auto-discovers XML documentation files, and ships built-in filters that improve schema quality for value objects, read-only properties, and file-upload endpoints. Optional OAuth 2.0 / JWT bearer authentication can be wired up through configuration.
 
 ## Installation
 
@@ -80,6 +80,26 @@ XML doc comments are picked up automatically. Enable XML output in your project 
 </PropertyGroup>
 ```
 
+### Enum member summaries (optional)
+
+`EnumSummarySchemaFilter` can append enum member XML summaries to the generated schema description.
+
+- Works only for enum schemas.
+- Skips members marked with `[OpenApiIgnore]`.
+- Skips members with empty or missing XML `<summary>` docs.
+- No-op if the XML documentation file is unavailable.
+
+Register it in your Swagger setup:
+
+```csharp
+using Dosaic.Api.OpenApi.Filters.Schema;
+
+services.AddSwaggerGen(options =>
+{
+    options.SchemaFilter<EnumSummarySchemaFilter>();
+});
+```
+
 ### File-upload endpoints
 
 Endpoints with `IFormFile` parameters are automatically converted to a `multipart/form-data` request body schema — no extra attributes required:
@@ -116,7 +136,7 @@ Use `[OpenApiIgnore]` from `Dosaic.Api.OpenApi.Filters.Common` to omit elements 
 - On a property: removes that property from the containing schema.
 - On a type (`class` / `struct`): skips normal object expansion for that type.
 - On an enum: omits enum value metadata and keeps only the underlying primitive schema type.
-- On an enum member: removes that specific member from the generated enum value list.
+- On an enum member: removes that specific member from generated enum value metadata (including enum summary descriptions, when enabled).
 
 ```csharp
 using Dosaic.Api.OpenApi.Filters.Common;
@@ -141,6 +161,7 @@ public class CreateOrderRequest
 | **Swashbuckle Annotations** | `[SwaggerOperation]`, `[SwaggerResponse]`, `[SwaggerSchema]`, etc. enabled out of the box |
 | **`ReadOnlyPropertySchemaFilter`** | Marks properties annotated with `[ReadOnly(true)]` as `readOnly: true` in the schema |
 | **`OpenApiIgnoreSchemaFilter`** | Applies `[OpenApiIgnore]` rules to omit properties, selected enum members, or entire type details from generated schemas |
+| **`EnumSummarySchemaFilter`** | Optional schema filter that appends enum member XML summaries to schema descriptions, skipping ignored/empty/undocumented members |
 | **`ValueObjectSchemaFilter`** | Replaces Vogen value-object schemas with their underlying primitive type |
 | **`ValueObjectDocumentFilter`** | Removes residual value-object component schemas after the schema filter rewrites inline $refs |
 | **`FormFileFilter`** | Transforms `IFormFile` parameters into proper `multipart/form-data` request body schemas |
