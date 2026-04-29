@@ -82,21 +82,24 @@ XML doc comments are picked up automatically. Enable XML output in your project 
 
 ### Enum member summaries (optional)
 
-`EnumSummarySchemaFilter` can append enum member XML summaries to the generated schema description.
+`EnumSummarySchemaFilter` appends enum member XML summaries to the generated schema description.
 
-- Works only for enum schemas.
+- Works for enum and `Nullable<TEnum>` schemas.
 - Skips members marked with `[OpenApiIgnore]`.
 - Skips members with empty or missing XML `<summary>` docs.
-- No-op if the XML documentation file is unavailable.
+- Resolves XML docs by the enum type's assembly (`{AssemblyName}.xml` next to the binary) and additionally searches any documentation files passed at registration.
+- No-op if no XML documentation can be resolved.
 
-Register it in your Swagger setup:
+`OpenApiPlugin` registers this filter by default and forwards the discovered XML files. If you configure Swagger manually, register it explicitly:
 
 ```csharp
 using Dosaic.Api.OpenApi.Filters.Schema;
 
 services.AddSwaggerGen(options =>
 {
-    options.SchemaFilter<EnumSummarySchemaFilter>();
+    // Optionally pass extra XML docs to search as fallback
+    var documentationFiles = Directory.GetFiles(AppContext.BaseDirectory, "*.xml");
+    options.SchemaFilter<EnumSummarySchemaFilter>(new object[] { documentationFiles });
 });
 ```
 

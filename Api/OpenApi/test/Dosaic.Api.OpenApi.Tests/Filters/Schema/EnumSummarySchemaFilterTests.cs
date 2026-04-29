@@ -161,9 +161,9 @@ public class EnumSummarySchemaFilterTests
 
     private sealed class EnumSummarySchemaFilterWithMissingXmlDoc : EnumSummarySchemaFilter
     {
-        protected override XDocument ResolveXmlDoc()
+        protected override IReadOnlyCollection<XDocument> ResolveXmlDocs(Type enumType)
         {
-            return null;
+            return Array.Empty<XDocument>();
         }
     }
 }

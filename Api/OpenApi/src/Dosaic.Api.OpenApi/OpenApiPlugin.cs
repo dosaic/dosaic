@@ -63,6 +63,7 @@ namespace Dosaic.Api.OpenApi
 
                 options.SchemaFilter<ReadOnlyPropertySchemaFilter>();
                 options.SchemaFilter<OpenApiIgnoreSchemaFilter>();
+                options.SchemaFilter<EnumSummarySchemaFilter>(new object[] { documentationFiles });
                 options.SchemaFilter<ValueObjectSchemaFilter>(new object[] { documentationFiles });
                 options.DocumentFilter<ValueObjectDocumentFilter>();
                 options.OperationFilter<FormFileFilter>();
