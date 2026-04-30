@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Globalization;
 using System.Reflection;
 using System.Xml.Linq;
@@ -12,70 +13,92 @@ namespace Dosaic.Api.OpenApi.Filters.Schema;
 /// </summary>
 public class EnumSummarySchemaFilter : ISchemaFilter
 {
-    private static readonly Lazy<XDocument> _xmlDoc = new(LoadXmlDoc);
+    private static readonly ConcurrentDictionary<string, Lazy<XDocument>> _xmlDocCache =
+        new(StringComparer.OrdinalIgnoreCase);
+
+    private readonly string[] _documentationFiles;
+
+    public EnumSummarySchemaFilter() : this(null) { }
+
+    public EnumSummarySchemaFilter(string[] documentationFiles)
+    {
+        _documentationFiles = documentationFiles ?? Array.Empty<string>();
+    }
 
     public void Apply(IOpenApiSchema schema, SchemaFilterContext context)
     {
-        var type = context.Type;
-        if (!type.IsEnum)
-            return;
+        var enumType = Nullable.GetUnderlyingType(context.Type) ?? context.Type;
+        if (!enumType.IsEnum) return;
 
-        var doc = ResolveXmlDoc();
-        if (doc is null)
-            return;
+        var docs = ResolveXmlDocs(enumType);
+        if (docs.Count == 0) return;
 
         var entries = new List<string>();
-        foreach (var member in Enum.GetValues(type))
+        foreach (var member in Enum.GetValues(enumType))
         {
-            var memberInfo = ResolveMemberField(type, member);
-            if (memberInfo is null)
-                continue;
+            var field = ResolveMemberField(enumType, member);
+            if (field is null) continue;
+            if (field.GetCustomAttribute<OpenApiIgnoreAttribute>() is not null) continue;
 
-            if (memberInfo.GetCustomAttribute<OpenApiIgnoreAttribute>() is not null)
-                continue;
-
-            var summary = GetXmlSummary(doc, memberInfo);
-            if (string.IsNullOrWhiteSpace(summary))
-                continue;
+            var summary = GetXmlSummary(docs, field);
+            if (string.IsNullOrWhiteSpace(summary)) continue;
 
             var value = Convert.ToInt64(member, CultureInfo.InvariantCulture);
-            entries.Add($"- `{memberInfo.Name}` ({value}): {summary}");
+            entries.Add($"- `{field.Name}` ({value}): {summary}");
         }
 
-        if (entries.Count > 0)
-        {
-            var description = string.Join("\n", entries);
-            schema.Description = string.IsNullOrWhiteSpace(schema.Description)
-                ? description
-                : $"{schema.Description}\n\n{description}";
-        }
+        if (entries.Count == 0) return;
+
+        var description = string.Join("\n", entries);
+        schema.Description = string.IsNullOrWhiteSpace(schema.Description)
+            ? description
+            : $"{schema.Description}\n\n{description}";
     }
 
     protected virtual FieldInfo ResolveMemberField(Type type, object member)
     {
-        var memberName = Enum.GetName(type, member);
-        return memberName is null ? null : type.GetField(memberName);
+        var name = Enum.GetName(type, member);
+        return name is null ? null : type.GetField(name);
     }
 
-    protected virtual XDocument ResolveXmlDoc()
+    protected virtual IReadOnlyCollection<XDocument> ResolveXmlDocs(Type enumType)
     {
-        return _xmlDoc.Value;
+        var paths = new List<string>
+        {
+            Path.Combine(AppContext.BaseDirectory, $"{enumType.Assembly.GetName().Name}.xml")
+        };
+        paths.AddRange(_documentationFiles);
+
+        return paths
+            .Where(File.Exists)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Select(LoadXmlDoc)
+            .Where(doc => doc is not null)
+            .ToList();
     }
 
-    private static string GetXmlSummary(XDocument doc, FieldInfo field)
+    private static string GetXmlSummary(IReadOnlyCollection<XDocument> docs, FieldInfo field)
     {
-        var memberName = $"F:{field.DeclaringType!.FullName}.{field.Name}";
-        var memberElement = doc.Descendants("member")
-            .FirstOrDefault(m => m.Attribute("name")?.Value == memberName);
+        var declaringName = field.DeclaringType!.FullName!;
+        var memberName = $"F:{declaringName}.{field.Name}";
+        var nestedMemberName = $"F:{declaringName.Replace('+', '.')}.{field.Name}";
 
-        return memberElement?.Element("summary")?.Value.Trim();
+        foreach (var doc in docs)
+        {
+            var element = doc.Descendants("member").FirstOrDefault(m =>
+            {
+                var name = m.Attribute("name")?.Value;
+                return name == memberName || name == nestedMemberName;
+            });
+
+            var summary = element?.Element("summary")?.Value.Trim();
+            if (!string.IsNullOrWhiteSpace(summary)) return summary;
+        }
+
+        return null;
     }
 
-    private static XDocument LoadXmlDoc()
-    {
-        var assembly = typeof(EnumSummarySchemaFilter).Assembly;
-        var xmlFile = Path.Combine(AppContext.BaseDirectory, $"{assembly.GetName().Name}.xml");
-        return File.Exists(xmlFile) ? XDocument.Load(xmlFile) : null;
-    }
+    private static XDocument LoadXmlDoc(string xmlFile) =>
+        _xmlDocCache.GetOrAdd(xmlFile, static path => new Lazy<XDocument>(() => XDocument.Load(path))).Value;
 }
 
