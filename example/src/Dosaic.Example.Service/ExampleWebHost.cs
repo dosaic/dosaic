@@ -1,4 +1,4 @@
-using System.Diagnostics;
+using Dosaic.Hosting.Abstractions;
 using Dosaic.Hosting.Abstractions.Extensions;
 using Dosaic.Hosting.Abstractions.Plugins;
 using Dosaic.Hosting.Abstractions.Services;
@@ -22,11 +22,10 @@ namespace Dosaic.Example.Service
 
         public void ConfigureEndpoints(IEndpointRouteBuilder endpointRouteBuilder, IServiceProvider serviceProvider)
         {
-            var myActivitySource = new ActivitySource("WebHostSamplePlugin");
 
             endpointRouteBuilder.MapGet("/hello", () =>
             {
-                using (var activity = myActivitySource.StartActivity("SayHello"))
+                using (var activity = Tracing.StartActivity("SayHello"))
                 {
                     activity?.SetTag("foo", 1);
                     activity?.SetTag("bar", "Hello, World!");
@@ -38,7 +37,7 @@ namespace Dosaic.Example.Service
 
             endpointRouteBuilder.MapGet("/secure", () =>
             {
-                using (var activity = myActivitySource.StartActivity("SayHelloSecure"))
+                using (var activity = Tracing.StartActivity("SayHelloSecure"))
                 {
                     activity?.SetTag("foo", 1);
                     activity?.SetTag("bar", "Hello, secure World!");
@@ -50,7 +49,7 @@ namespace Dosaic.Example.Service
 
             endpointRouteBuilder.MapGet("/delay", async () =>
             {
-                using (var activity = myActivitySource.StartActivity("delay"))
+                using (var activity = Tracing.StartActivity("delay"))
                 {
                     activity?.SetTag("foo", 1);
                     activity?.SetTag("bar", "delay");
@@ -59,7 +58,7 @@ namespace Dosaic.Example.Service
 
                 await Task.Delay(5000, CancellationToken.None);
 
-                using (var activity = myActivitySource.StartActivity("delay-end"))
+                using (var activity = Tracing.StartActivity("delay-end"))
                 {
                     activity?.SetTag("foo", 2);
                     activity?.SetTag("bar", "delay");

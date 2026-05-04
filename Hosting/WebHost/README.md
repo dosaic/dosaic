@@ -246,12 +246,12 @@ Metrics instrumentation (always active):
 - HTTP client metrics
 - .NET runtime metrics
 - Process metrics
-- All custom `ActivitySource` meters (`*`)
+- All custom `Meter`s (`*`) plus the shared `Dosaic` meter (`Tracing.SourceName`)
 
 Tracing instrumentation (requires `telemetry:endpoint`):
 - ASP.NET Core (Swagger paths excluded)
 - HTTP client
-- All custom `ActivitySource` sources (`*`)
+- The shared `Dosaic` `ActivitySource` (`Tracing.SourceName`) — emit your own spans with `Tracing.StartActivity(...)`; see [Hosting/Abstractions/README.md](../../Hosting/Abstractions/README.md#tracing)
 - B3 propagation (single and multi-header)
 
 ---

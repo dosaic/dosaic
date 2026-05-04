@@ -9,7 +9,7 @@
 - **Named authorization policies** — define policies by name with required roles in configuration; policies are registered with ASP.NET Core's `IAuthorizationService` automatically
 - **Disable mode** — set `Enabled: false` to run without any authentication (an allow-all default policy is registered), useful for local development
 - **Health check integration** — registers a URL health check against the Keycloak management endpoint (defaults to port `9000`, path `/health/ready`) tagged as `readiness`
-- **OpenTelemetry instrumentation** — emits `authentication_keycloak_success` and `authentication_keycloak_noresult` counters plus distributed tracing spans per authentication attempt
+- **OpenTelemetry instrumentation** — emits `authentication_keycloak_success` and `authentication_keycloak_noresult` counters plus a `HandleAuthenticateAsync` span per authentication attempt on the shared `Dosaic` `ActivitySource`
 - **Separate health-check host** — the health check target can differ from the authentication authority (e.g. internal management port vs. public HTTPS endpoint)
 
 ## Installation
