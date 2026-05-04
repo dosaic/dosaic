@@ -7,7 +7,7 @@
     <MicrosoftEfCoreVersion>10.0.7</MicrosoftEfCoreVersion>
   </PropertyGroup>
   <ItemGroup>
-    <PackageVersion Include="Allure.NUnit" Version="2.14.1" />
+    <PackageVersion Include="Allure.NUnit" Version="2.15.0" />
     <PackageVersion Include="AspNetCore.HealthChecks.Hangfire" Version="9.0.0" />
     <PackageVersion Include="AspNetCore.HealthChecks.MongoDb" Version="9.0.0" />
     <PackageVersion Include="AspNetCore.HealthChecks.Redis" Version="9.0.0" />
