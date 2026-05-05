@@ -1,8 +1,8 @@
 using System.Diagnostics;
 using System.Globalization;
 using System.Net;
+using Dosaic.Hosting.Abstractions;
 using Dosaic.Hosting.Abstractions.Exceptions;
-using Dosaic.Hosting.Abstractions.Extensions;
 using Dosaic.Plugins.Persistence.VaultSharp.Types;
 using VaultSharp.Core;
 using VaultSharp.V1.SecretsEngines.KeyValue.V2;
@@ -17,9 +17,6 @@ public class SecretStorage<TSecretBucket>(
     : ISecretStorage<TSecretBucket>
     where TSecretBucket : struct, Enum
 {
-    // ReSharper disable once StaticMemberInGenericType
-    private static readonly ActivitySource _activitySource = new("Dosaic.Plugins.Persistence.VaultSharp.Secret.SecretStorage");
-
     private static void SetSecretTags(Activity activity, SecretId<TSecretBucket> secretId)
     {
         activity?.SetTag("secret.bucket", secretId.Bucket);
@@ -30,7 +27,7 @@ public class SecretStorage<TSecretBucket>(
     public async Task<Secret> GetSecretAsync(SecretId<TSecretBucket> secretId,
         CancellationToken cancellationToken = default)
     {
-        using var activity = _activitySource.StartActivity();
+        using var activity = Tracing.StartActivity();
         SetSecretTags(activity, secretId);
 
         try
@@ -75,7 +72,7 @@ public class SecretStorage<TSecretBucket>(
 
     public Task<SecretId<TSecretBucket>> CreateSecretAsync(TSecretBucket bucket, Secret secret,
         CancellationToken cancellationToken = default) =>
-        _activitySource.TrackStatusAsync((activity) =>
+        Tracing.TrackStatusAsync((activity) =>
         {
             var newSecret = GetNewSecretIdFromSecret(bucket, secret);
             SetSecretTags(activity, newSecret);
@@ -83,14 +80,14 @@ public class SecretStorage<TSecretBucket>(
         });
 
     public Task<SecretId<TSecretBucket>> UpdateSecretAsync(SecretId<TSecretBucket> secretId, Secret secret,
-        CancellationToken cancellationToken = default) => _activitySource.TrackStatusAsync((activity) =>
+        CancellationToken cancellationToken = default) => Tracing.TrackStatusAsync((activity) =>
     {
         SetSecretTags(activity, secretId);
         return WriteSecretAsync(secretId, secret);
     });
 
     public Task DeleteSecretAsync(SecretId<TSecretBucket> secretId, CancellationToken cancellationToken = default) =>
-        _activitySource.TrackStatusAsync(async (activity) =>
+        Tracing.TrackStatusAsync(async (activity) =>
         {
             SetSecretTags(activity, secretId);
             if (secretId.Type == SecretType.UsernamePasswordTotp)

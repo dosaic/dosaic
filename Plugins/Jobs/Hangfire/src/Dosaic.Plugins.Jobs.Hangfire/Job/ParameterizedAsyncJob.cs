@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 
 namespace Dosaic.Plugins.Jobs.Hangfire.Job
@@ -10,8 +11,9 @@ namespace Dosaic.Plugins.Jobs.Hangfire.Job
 
         public Task<object> ExecuteAsync(T value, CancellationToken jobCancellationToken = default)
         {
-            return InternalExecuteAsync(async () =>
+            return InternalExecuteAsync(async activity =>
             {
+                EnrichActivity(activity, value);
                 if (Timeout == null)
                 {
                     return await ExecuteJobAsync(value, jobCancellationToken);
@@ -25,5 +27,11 @@ namespace Dosaic.Plugins.Jobs.Hangfire.Job
         }
 
         protected abstract Task<object> ExecuteJobAsync(T value, CancellationToken cancellationToken);
+
+        /// <summary>
+        ///     Override to attach span tags derived from <paramref name="value" />
+        ///     before <see cref="ExecuteJobAsync" /> runs. Default is a no-op.
+        /// </summary>
+        protected virtual void EnrichActivity(Activity activity, T value) { }
     }
 }

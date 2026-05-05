@@ -45,7 +45,7 @@ dotnet publish example/src/Dosaic.Example.Service \
 
 Built-in framework features also exercised:
 
-- **OpenTelemetry** tracing (custom `ActivitySource` on endpoints)
+- **OpenTelemetry** tracing via the shared `Tracing` static entry point on endpoints
 - **IP rate limiting** (AspNetCoreRateLimit configuration)
 - **Serilog** structured logging
 - **Vogen** strongly-typed value objects
@@ -109,19 +109,21 @@ public class ExampleWebHost : IPluginEndpointsConfiguration, IPluginServiceConfi
 
 ### OpenTelemetry tracing
 
-Endpoints create custom spans via `ActivitySource`:
+Endpoints create custom spans via the shared `Dosaic.Hosting.Abstractions.Tracing` entry point — no per-class `ActivitySource` needed:
 
 ```csharp
-var myActivitySource = new ActivitySource("WebHostSamplePlugin");
+using Dosaic.Hosting.Abstractions;
 
 endpointRouteBuilder.MapGet("/hello", () =>
 {
-    using var activity = myActivitySource.StartActivity("SayHello");
+    using var activity = Tracing.StartActivity("SayHello");
     activity?.SetTag("foo", 1);
     activity?.SetTag("bar", "Hello, World!");
     return "Hello, World!";
 });
 ```
+
+All Dosaic spans flow through one `ActivitySource` named `Dosaic`; `WebHost` already subscribes the OTLP exporter to it.
 
 To export traces/metrics/logs with a custom OpenTelemetry service name, configure `telemetry:name` together with `telemetry:endpoint` in your app settings.
 

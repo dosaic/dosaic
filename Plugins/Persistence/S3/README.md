@@ -351,7 +351,7 @@ public class FilesController(IFileStorage<MyBucket> fileStorage) : ControllerBas
 - **Bucket prefix support** to namespace all buckets per environment
 - **Automatic bucket migration** via `BlobStorageBucketMigrationService<T>` (hosted background service with retry)
 - **Opaque file IDs** using Sqids encoding (bucket + key → single URL-safe string)
-- **OpenTelemetry tracing** on all storage operations via `DosaicDiagnostic`
+- **OpenTelemetry tracing** on all storage operations via the shared `Dosaic.Hosting.Abstractions.Tracing` entry point (`Dosaic` `ActivitySource`); each operation uses `Tracing.TrackStatusAsync` so spans get `Ok`/`Error` status automatically
 - **Readiness health check** — URL probe for S3 or filesystem write-test for local mode
 - **Replaceable** `IFileTypeDefinitionResolver` and `IContentInspector` for custom MIME handling
 

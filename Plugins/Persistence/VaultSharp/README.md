@@ -229,7 +229,7 @@ var (remaining, validUntil) = TotpCodeGenerator.GetPeriodInfo(periodInSeconds: 3
 - **Opaque secret IDs** — bucket, type and key are encoded into a URL-safe Sqid string for safe external exposure
 - **First-class TOTP support** — creates/manages TOTP keys in Vault's TOTP engine; decodes live OTP codes on every read
 - **Local filesystem backend** — drop-in replacement for local development and testing; TOTP codes generated locally via RFC 6238
-- **OpenTelemetry tracing** — all storage operations are wrapped in `ActivitySource` spans with `secret.bucket`, `secret.key`, and `secret.type` tags
+- **OpenTelemetry tracing** — all storage operations emit spans on the shared `Dosaic` `ActivitySource` (via `Dosaic.Hosting.Abstractions.Tracing` / `TrackStatusAsync`) tagged with `secret.bucket`, `secret.key`, and `secret.type`; `Ok`/`Error` status is set automatically
 - **Readiness health check** — `vault` (Vault HTTP health endpoint) or `vault-local-filesystem` (directory write probe) registered automatically as a readiness check
 - **Dosaic WebHost integration** — discovered and wired automatically by the source generator; no manual bootstrap required when using `PluginWebHostBuilder`
 

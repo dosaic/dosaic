@@ -1,16 +1,40 @@
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
-namespace Dosaic.Hosting.Abstractions.Extensions
+namespace Dosaic.Hosting.Abstractions
 {
-    public static class TracingExtensions
+    /// <summary>
+    ///     Single entry point for OpenTelemetry tracing in Dosaic-based services.
+    ///     Wraps one shared <see cref="ActivitySource" /> so that consumers never
+    ///     instantiate their own. Span granularity is encoded in the span name,
+    ///     not the source name.
+    /// </summary>
+    public static class Tracing
     {
+        public const string SourceName = "Dosaic";
+
+        public static ActivitySource Source { get; } = new(SourceName);
+
+        public static Activity StartActivity(
+            [CallerMemberName] string name = "",
+            ActivityKind kind = ActivityKind.Internal)
+            => Source.StartActivity(name, kind);
+
+        public static Activity StartActivity(
+            string name,
+            ActivityKind kind,
+            ActivityContext parentContext,
+            IEnumerable<KeyValuePair<string, object>> tags = null,
+            IEnumerable<ActivityLink> links = null,
+            DateTimeOffset startTime = default)
+            => Source.StartActivity(name, kind, parentContext, tags, links, startTime);
+
         public static async Task<T> TrackStatusAsync<T>(
-            this ActivitySource activitySource,
             Func<Activity, Task<T>> func,
-            [CallerMemberName] string activityName = "")
+            [CallerMemberName] string activityName = "",
+            ActivityKind kind = ActivityKind.Internal)
         {
-            using var activity = activitySource.StartActivity(activityName);
+            using var activity = Source.StartActivity(activityName, kind);
             try
             {
                 var result = await func(activity);
@@ -25,11 +49,11 @@ namespace Dosaic.Hosting.Abstractions.Extensions
         }
 
         public static async Task TrackStatusAsync(
-            this ActivitySource activitySource,
             Func<Activity, Task> func,
-            [CallerMemberName] string activityName = "")
+            [CallerMemberName] string activityName = "",
+            ActivityKind kind = ActivityKind.Internal)
         {
-            using var activity = activitySource.StartActivity(activityName);
+            using var activity = Source.StartActivity(activityName, kind);
             try
             {
                 await func(activity);
@@ -47,7 +71,7 @@ namespace Dosaic.Hosting.Abstractions.Extensions
             if (activity is null) return null;
             foreach (var (key, value) in tags)
             {
-                activity?.SetTag($"{prefix}{key}", value);
+                activity.SetTag($"{prefix}{key}", value);
             }
 
             return activity;

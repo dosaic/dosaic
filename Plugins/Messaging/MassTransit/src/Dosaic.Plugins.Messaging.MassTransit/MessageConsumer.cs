@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Diagnostics.Metrics;
 using System.Reflection;
+using Dosaic.Hosting.Abstractions;
 using Dosaic.Hosting.Abstractions.Metrics;
 using Dosaic.Plugins.Messaging.Abstractions;
 using MassTransit;
@@ -38,14 +39,21 @@ internal class MessageConsumer<TMessage>(ILogger<MessageConsumer<TMessage>> logg
 
     private async Task<Exception> ProcessAsync(IMessageConsumer<TMessage> consumer, TMessage message, CancellationToken cancellationToken)
     {
-        var consumerTypeName = consumer.GetType().Name;
+        var consumerType = consumer.GetType();
+        var consumerTypeName = consumerType.Name;
+        using var activity = Tracing.StartActivity(
+            $"{consumerType.FullName}.Consume<{MessageTypeName}>",
+            ActivityKind.Consumer);
+        activity?.SetTag("messaging.consumer_type", consumerTypeName);
+        activity?.SetTag("messaging.message_type", MessageTypeName);
         var sw = Stopwatch.StartNew();
         try
         {
-            var timeoutSeconds = GetTimeoutSeconds(consumer.GetType());
+            var timeoutSeconds = GetTimeoutSeconds(consumerType);
 
             if (timeoutSeconds.HasValue)
             {
+                activity?.SetTag("messaging.timeout_seconds", timeoutSeconds.Value);
                 using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
                 cts.CancelAfter(TimeSpan.FromSeconds(timeoutSeconds.Value));
                 await consumer.ProcessAsync(message, cts.Token);
@@ -55,10 +63,12 @@ internal class MessageConsumer<TMessage>(ILogger<MessageConsumer<TMessage>> logg
                 await consumer.ProcessAsync(message, cancellationToken);
             }
 
+            activity?.SetOkStatus();
             return null;
         }
         catch (Exception e)
         {
+            activity?.SetErrorStatus(e);
             FailureCounter.Add(1,
                 new KeyValuePair<string, object>("consumer_type", consumerTypeName),
                 new KeyValuePair<string, object>("message_type", MessageTypeName),

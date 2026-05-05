@@ -5,7 +5,6 @@ using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
 using Dosaic.Hosting.Abstractions;
 using Dosaic.Hosting.Abstractions.Exceptions;
-using Dosaic.Hosting.Abstractions.Extensions;
 using Dosaic.Plugins.Persistence.S3.Blob;
 using Microsoft.Extensions.Logging;
 using MimeDetective;
@@ -75,7 +74,6 @@ public class FileStorage(
     S3Configuration configuration,
     IFileTypeDefinitionResolver fileTypeDefinitionResolver) : IFileStorage
 {
-    private static readonly ActivitySource _activitySource = DosaicDiagnostic.CreateSource();
     private const string ApplicationOctetStream = "application/octet-stream";
 
     private static void SetFileIdTags(Activity activity, FileId fileId)
@@ -94,7 +92,7 @@ public class FileStorage(
     }
 
     public Task<BlobFile> GetFileAsync(FileId id,
-        CancellationToken cancellationToken = default) => _activitySource.TrackStatusAsync(async (activity) =>
+        CancellationToken cancellationToken = default) => Tracing.TrackStatusAsync(async (activity) =>
     {
         SetFileIdTags(activity, id);
         var statArgs = new StatObjectArgs().WithBucket(ResolveBucketName(id.Bucket)).WithObject(id.Key);
@@ -118,7 +116,7 @@ public class FileStorage(
     });
 
     public Task DeleteFileAsync(FileId id, CancellationToken cancellationToken = default) =>
-        _activitySource.TrackStatusAsync((
+        Tracing.TrackStatusAsync((
             activity) =>
         {
             SetFileIdTags(activity, id);
@@ -133,7 +131,7 @@ public class FileStorage(
         });
 
     public Task CreateBucketAsync(string bucket, CancellationToken cancellationToken = default) =>
-        _activitySource.TrackStatusAsync(async (activity) =>
+        Tracing.TrackStatusAsync(async (activity) =>
         {
             var bucketName = ResolveBucketName(bucket);
             activity?.SetTag("s3.bucket", bucketName);
@@ -142,7 +140,7 @@ public class FileStorage(
         });
 
     public async Task ConsumeStreamAsync(FileId id, Func<Stream, CancellationToken, Task> streamConsumer,
-        CancellationToken cancellationToken = default) => await _activitySource.TrackStatusAsync(async (activity) =>
+        CancellationToken cancellationToken = default) => await Tracing.TrackStatusAsync(async (activity) =>
     {
         SetFileIdTags(activity, id);
         var getArgs = new GetObjectArgs().WithBucket(ResolveBucketName(id.Bucket)).WithObject(id.Key)
@@ -151,7 +149,7 @@ public class FileStorage(
     });
 
     public async Task<FileId> SetAsync(BlobFile file, Stream stream, FileType fileType,
-        CancellationToken cancellationToken = default) => await _activitySource.TrackStatusAsync(async (activity) =>
+        CancellationToken cancellationToken = default) => await Tracing.TrackStatusAsync(async (activity) =>
     {
         SetFileIdTags(activity, file.Id);
         if (!file.MetaData.ContainsKey(BlobFileMetaData.ContentType))

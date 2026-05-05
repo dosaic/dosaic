@@ -1,3 +1,5 @@
+using System.Diagnostics;
+using Dosaic.Hosting.Abstractions;
 using Microsoft.Extensions.Logging;
 
 namespace Dosaic.Plugins.Jobs.Hangfire.Job
@@ -8,14 +10,22 @@ namespace Dosaic.Plugins.Jobs.Hangfire.Job
         {
         }
 
-        protected async Task<object> InternalExecuteAsync(Func<Task<object>> action)
+        protected async Task<object> InternalExecuteAsync(Func<Activity, Task<object>> action)
         {
+            using var activity = Tracing.StartActivity(GetType().FullName);
+            using var scope = Logger.BeginScope(new Dictionary<string, object>
+            {
+                ["job.type"] = GetType().Name
+            });
             try
             {
-                return await action().ConfigureAwait(false);
+                var result = await action(activity).ConfigureAwait(false);
+                activity?.SetOkStatus();
+                return result;
             }
             catch (Exception exception)
             {
+                activity?.SetErrorStatus(exception);
                 Logger.LogError(exception, "Job failed");
                 throw;
             }

@@ -77,6 +77,9 @@ namespace Dosaic.Plugins.Jobs.Hangfire
             });
             serviceCollection.AddHostedService<HangfireStatisticsMetricsReporter>();
             serviceCollection.AddOpenTelemetry().WithTracing(builder => builder.AddHangfireInstrumentation());
+            // Hangfire's PostgreSQL polling generates a large volume of low-value
+            // SQL spans. Drop them before the OTLP batch exporter runs.
+            HangfireSqlNoiseProcessor.RegisterFirst(serviceCollection);
         }
 
         public void ConfigureApplication(IApplicationBuilder applicationBuilder)

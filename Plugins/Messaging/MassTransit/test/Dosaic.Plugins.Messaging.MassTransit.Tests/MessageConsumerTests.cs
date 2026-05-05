@@ -1,4 +1,6 @@
+using System.Diagnostics;
 using AwesomeAssertions;
+using Dosaic.Hosting.Abstractions;
 using Dosaic.Plugins.Messaging.Abstractions;
 using Dosaic.Testing.NUnit;
 using Dosaic.Testing.NUnit.Assertions;
@@ -104,5 +106,57 @@ public class MessageConsumerTests
         await _consumer.Consume(context);
         foreach (var consumer in _consumers)
             await consumer.Received(1).ProcessAsync(Arg.Any<TestMessageForConsumer>(), Arg.Any<CancellationToken>());
+    }
+
+    [Test]
+    public async Task ShouldEmitConsumerSpanPerConsumerWithOkStatus()
+    {
+        var stopped = new List<Activity>();
+        using var listener = new ActivityListener
+        {
+            ShouldListenTo = src => src.Name == Tracing.SourceName,
+            Sample = (ref ActivityCreationOptions<ActivityContext> _) =>
+                ActivitySamplingResult.AllDataAndRecorded,
+            ActivityStopped = stopped.Add,
+        };
+        ActivitySource.AddActivityListener(listener);
+
+        var context = Substitute.For<ConsumeContext<TestMessageForConsumer>>();
+        context.Message.Returns(new TestMessageForConsumer());
+        await _consumer.Consume(context);
+
+        stopped.Should().HaveCount(2);
+        stopped.Should().AllSatisfy(span =>
+        {
+            span.Source.Name.Should().Be(Tracing.SourceName);
+            span.Kind.Should().Be(ActivityKind.Consumer);
+            span.Status.Should().Be(ActivityStatusCode.Ok);
+            span.GetTagItem("messaging.message_type").Should().Be(nameof(TestMessageForConsumer));
+        });
+    }
+
+    [Test]
+    public async Task ShouldMarkConsumerSpanErrorOnFailure()
+    {
+        var stopped = new List<Activity>();
+        using var listener = new ActivityListener
+        {
+            ShouldListenTo = src => src.Name == Tracing.SourceName,
+            Sample = (ref ActivityCreationOptions<ActivityContext> _) =>
+                ActivitySamplingResult.AllDataAndRecorded,
+            ActivityStopped = stopped.Add,
+        };
+        ActivitySource.AddActivityListener(listener);
+
+        _consumers[0].ProcessAsync(Arg.Any<TestMessageForConsumer>(), Arg.Any<CancellationToken>())
+            .ThrowsAsync(new InvalidOperationException("boom"));
+
+        var context = Substitute.For<ConsumeContext<TestMessageForConsumer>>();
+        context.Message.Returns(new TestMessageForConsumer());
+        await _consumer.Invoking(x => x.Consume(context)).Should().ThrowAsync<AggregateException>();
+
+        stopped.Should().HaveCount(2);
+        stopped.Count(s => s.Status == ActivityStatusCode.Error).Should().Be(1);
+        stopped.Count(s => s.Status == ActivityStatusCode.Ok).Should().Be(1);
     }
 }

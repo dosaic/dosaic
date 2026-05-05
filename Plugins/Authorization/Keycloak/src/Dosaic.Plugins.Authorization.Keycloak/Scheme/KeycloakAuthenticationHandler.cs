@@ -16,7 +16,6 @@ namespace Dosaic.Plugins.Authorization.Keycloak.Scheme
 {
     internal sealed class KeycloakAuthenticationHandler : AuthenticationHandler<AuthenticationSchemeOptions>
     {
-        private readonly ActivitySource _activitySource = DosaicDiagnostic.CreateSource();
         private readonly IPublicKeyService _publicKeyService;
         private readonly ILogger _logger;
 
@@ -54,7 +53,7 @@ namespace Dosaic.Plugins.Authorization.Keycloak.Scheme
 
         protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
         {
-            using var activity = _activitySource.StartActivity(nameof(HandleAuthenticateAsync), kind: ActivityKind.Internal, parentContext: default);
+            using var activity = Tracing.StartActivity(nameof(HandleAuthenticateAsync));
             var token = Request.Headers[HeaderNames.Authorization].FirstOrDefault();
             if (string.IsNullOrWhiteSpace(token))
                 return HandleResult("Could not find header 'authorization'", activity!);

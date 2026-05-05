@@ -331,6 +331,32 @@ A Hangfire readiness health check is registered automatically and is accessible 
 
 Hangfire jobs are automatically instrumented with OpenTelemetry tracing via `OpenTelemetry.Instrumentation.Hangfire`.
 
+In addition, every `AsyncJob` / `ParameterizedAsyncJob<T>` body runs inside a wrapper span emitted on the shared `Dosaic` `ActivitySource` (`Tracing.SourceName`):
+
+- **Span name** — `GetType().FullName` of the concrete job
+- **Status** — set to `Ok` on success, `Error` (with the exception attached) on failure
+- **Log scope** — `job.type` is also pushed onto the `ILogger` scope for the duration of the job
+
+To enrich the span with business identifiers (e.g. tenant id, message id), override `EnrichActivity`:
+
+```csharp
+public class ProcessOrderJob : ParameterizedAsyncJob<OrderId>
+{
+    protected override void EnrichActivity(Activity activity, OrderId value)
+    {
+        activity?.SetTag("order.id", value.ToString());
+    }
+
+    protected override Task<object> ExecuteJobAsync(OrderId value, CancellationToken ct) { ... }
+}
+```
+
+`AsyncJob` has the same hook with the single-argument `EnrichActivity(Activity activity)` signature. Default implementation is a no-op.
+
+#### PostgreSQL polling-noise filter
+
+Hangfire's PostgreSQL job-storage polls the `hangfire.*` schema continuously, which produces a high volume of low-value SQL spans on whatever database instrumentation is enabled (Npgsql, EF Core, etc.). `HangFirePlugin` registers `HangfireSqlNoiseProcessor` as the **first** OpenTelemetry processor in the pipeline; it inspects `db.statement` / `db.query.text` / `db.statement.text` plus the activity display/operation name and clears `ActivityTraceFlags.Recorded` on any span referencing the `hangfire` schema, so the OTLP batch exporter drops them before send. No configuration knob — the filter is on whenever the Hangfire plugin is active.
+
 ### Prometheus metrics
 
 A background service (`HangfireStatisticsMetricsReporter`) collects Hangfire statistics every 60 seconds and publishes them as OpenTelemetry gauges:

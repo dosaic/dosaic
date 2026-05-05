@@ -472,52 +472,66 @@ var upDownCounter = Metrics.Meter.CreateUpDownCounter<int>("active_connections",
 
 ## Tracing
 
-### DosaicDiagnostic
+### `Tracing` static class
 
-`DosaicDiagnostic.CreateSource()` creates an `ActivitySource` named after the **calling class's fully-qualified name** using the call stack. Call it from a `static` field initializer.
+`Dosaic.Hosting.Abstractions.Tracing` is the single entry point for OpenTelemetry tracing across Dosaic services and plugins. It exposes one shared `ActivitySource` named **`Dosaic`** (`Tracing.SourceName`) — consumers never instantiate their own. Span granularity is encoded in the **span name**, not the source name.
 
 ```csharp
 using Dosaic.Hosting.Abstractions;
-using System.Diagnostics;
 
 public class MyService
 {
-    private static readonly ActivitySource _activitySource = DosaicDiagnostic.CreateSource();
-
     public async Task DoWorkAsync()
     {
-        using var activity = _activitySource.StartActivity("DoWork");
+        // Span name defaults to [CallerMemberName] ("DoWorkAsync" here)
+        using var activity = Tracing.StartActivity();
         // ... work ...
     }
 }
 ```
 
-Constants:
-
-| Constant | Value | Purpose |
-|---|---|---|
-| `DosaicDiagnostic.DosaicActivityPrefix` | `"Dosaic."` | Prefix for all Dosaic activity sources |
-| `DosaicDiagnostic.DosaicAllActivities` | `"Dosaic.*"` | Wildcard for subscribing to all Dosaic traces in OpenTelemetry |
-
-### TracingExtensions
+Override the name or `ActivityKind` when needed:
 
 ```csharp
-using Dosaic.Hosting.Abstractions.Extensions;
+using var activity = Tracing.StartActivity("ProcessOrder", ActivityKind.Consumer);
+```
 
-// Wraps an async call and auto-sets Ok/Error activity status
-var result = await _activitySource.TrackStatusAsync(async activity =>
+A second overload accepts an explicit parent `ActivityContext`, tags, links, and start time for cases where you need to stitch into an external trace (e.g. message brokers).
+
+### `TrackStatusAsync` helper
+
+Wraps an async call and auto-sets `Ok`/`Error` activity status (and re-throws):
+
+```csharp
+using Dosaic.Hosting.Abstractions;
+
+var result = await Tracing.TrackStatusAsync(async activity =>
 {
     activity?.SetTag("input", input);
     return await _service.ProcessAsync(input);
 });
 
+// Void overload
+await Tracing.TrackStatusAsync(async activity =>
+{
+    await _service.FireAndForgetAsync();
+});
+```
+
+The activity name defaults to the calling member via `[CallerMemberName]`.
+
+### Activity extension methods
+
+```csharp
 // Set tags in bulk with an optional prefix
 activity.SetTags(new Dictionary<string, string> { ["key"] = "value" }, prefix: "app.");
 
-// Manually set status
+// Manually set status (SetErrorStatus also calls Activity.AddException)
 activity.SetOkStatus();
 activity.SetErrorStatus(exception);
 ```
+
+> **Migration note.** The previous `DosaicDiagnostic.CreateSource()` / `DosaicDiagnostic.DosaicAllActivities` (`"Dosaic.*"` wildcard) and the `TracingExtensions` namespace were removed. Replace per-class `ActivitySource` fields with calls to `Tracing.StartActivity` / `Tracing.TrackStatusAsync`, and subscribe to the `Dosaic` source name in your OpenTelemetry pipeline.
 
 ---
 
