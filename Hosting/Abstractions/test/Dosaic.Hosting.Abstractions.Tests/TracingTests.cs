@@ -1,33 +1,14 @@
 using System.Diagnostics;
 using AwesomeAssertions;
+using Dosaic.Testing.NUnit;
 using NUnit.Framework;
 
 namespace Dosaic.Hosting.Abstractions.Tests
 {
     public class TracingTests
     {
-        private ActivityListener _listener;
-        private IList<Activity> _activities;
-
         [SetUp]
-        public void Setup()
-        {
-            _activities = [];
-            _listener = new ActivityListener
-            {
-                ShouldListenTo = src => src.Name == Tracing.SourceName,
-                ActivityStopped = activity => _activities.Add(activity),
-                Sample = (ref ActivityCreationOptions<ActivityContext> _) =>
-                    ActivitySamplingResult.AllDataAndRecorded,
-            };
-            ActivitySource.AddActivityListener(_listener);
-        }
-
-        [TearDown]
-        public void TearDown()
-        {
-            _listener.Dispose();
-        }
+        public void Setup() => ActivityTestBootstrapper.Setup();
 
         [Test]
         public void SourceUsesTheSharedName()
@@ -39,71 +20,76 @@ namespace Dosaic.Hosting.Abstractions.Tests
         [Test]
         public void StartActivityUsesTheSharedSource()
         {
-            using (Tracing.StartActivity("test-span"))
-            {
-                // span lives for the duration of using
-            }
+            using var act = Tracing.StartActivity("test-span");
 
-            _activities.Should().HaveCount(1);
-            _activities[0].Source.Name.Should().Be(Tracing.SourceName);
-            _activities[0].OperationName.Should().Be("test-span");
+            act.Should().NotBeNull();
+            act!.Source.Name.Should().Be(Tracing.SourceName);
+            act.OperationName.Should().Be("test-span");
         }
 
         [Test]
         public async Task TrackStatusAsyncWithResultSetsOk()
         {
+            Activity captured = null;
             var result = await Tracing.TrackStatusAsync(activity =>
             {
+                captured = activity;
                 activity.SetTags(new() { { "hello", "world" } });
                 return Task.FromResult(42);
             }, "with-result");
 
             result.Should().Be(42);
-            _activities.Should().HaveCount(1);
-            _activities[0].Status.Should().Be(ActivityStatusCode.Ok);
-            _activities[0].Tags.Should().Contain(t => t.Key == "hello" && t.Value == "world");
+            captured.Should().NotBeNull();
+            captured!.Status.Should().Be(ActivityStatusCode.Ok);
+            captured.Tags.Should().Contain(t => t.Key == "hello" && t.Value == "world");
         }
 
         [Test]
         public async Task TrackStatusAsyncWithoutResultSetsOk()
         {
+            Activity captured = null;
             await Tracing.TrackStatusAsync(activity =>
             {
+                captured = activity;
                 activity.SetTag("k", "v");
                 return Task.CompletedTask;
             }, "void");
 
-            _activities.Should().HaveCount(1);
-            _activities[0].Status.Should().Be(ActivityStatusCode.Ok);
+            captured.Should().NotBeNull();
+            captured!.Status.Should().Be(ActivityStatusCode.Ok);
         }
 
         [Test]
         public async Task TrackStatusAsyncWithResultSetsErrorOnException()
         {
+            Activity captured = null;
             var act = async () => await Tracing.TrackStatusAsync<int>(activity =>
             {
+                captured = activity;
                 activity.SetTag("hello", "world");
                 throw new InvalidOperationException("boom");
             }, "fails");
 
             await act.Should().ThrowAsync<InvalidOperationException>();
-            _activities.Should().HaveCount(1);
-            _activities[0].Status.Should().Be(ActivityStatusCode.Error);
-            _activities[0].StatusDescription.Should().Be("boom");
+            captured.Should().NotBeNull();
+            captured!.Status.Should().Be(ActivityStatusCode.Error);
+            captured.StatusDescription.Should().Be("boom");
         }
 
         [Test]
         public async Task TrackStatusAsyncWithoutResultSetsErrorOnException()
         {
+            Activity captured = null;
             var act = async () => await Tracing.TrackStatusAsync(activity =>
             {
+                captured = activity;
                 activity.SetTag("hello", "world");
                 throw new InvalidOperationException("boom");
             }, "fails-void");
 
             await act.Should().ThrowAsync<InvalidOperationException>();
-            _activities.Should().HaveCount(1);
-            _activities[0].Status.Should().Be(ActivityStatusCode.Error);
+            captured.Should().NotBeNull();
+            captured!.Status.Should().Be(ActivityStatusCode.Error);
         }
 
         [Test]
