@@ -1,5 +1,6 @@
 using Dosaic.Hosting.Abstractions;
 using Dosaic.Hosting.Abstractions.Plugins;
+using Microsoft.Extensions.Caching.StackExchangeRedis;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using OpenTelemetry.Trace;
@@ -19,15 +20,23 @@ public class RedisCachePlugin(RedisCacheConfiguration configuration) : IPluginSe
         }
         if (string.IsNullOrWhiteSpace(configuration?.ConnectionString))
             throw new ArgumentException("Configuration: redisCache.ConnectionString is required but empty");
-        serviceCollection.AddStackExchangeRedisCache(opts =>
-        {
-            opts.Configuration = configuration.ConnectionString;
-        });
         var safeConnectionString = configuration.ConnectionString.TrimEnd(',');
         if (!safeConnectionString.ToLowerInvariant().Contains("abortconnect="))
             safeConnectionString += ",abortConnect=false";
-        serviceCollection.AddOpenTelemetry().WithTracing(x => x.AddRedisInstrumentation(ConnectionMultiplexer.Connect(safeConnectionString)));
 
+        serviceCollection.AddSingleton<IConnectionMultiplexer>(_ =>
+            ConnectionMultiplexer.Connect(safeConnectionString));
+
+        serviceCollection.AddStackExchangeRedisCache(_ => { });
+        serviceCollection.AddOptions<RedisCacheOptions>()
+            .Configure<IConnectionMultiplexer>((opts, mux) =>
+                opts.ConnectionMultiplexerFactory = () => Task.FromResult(mux));
+
+        serviceCollection.AddOpenTelemetry()
+            .WithTracing(t => t
+                .AddRedisInstrumentation()
+                .ConfigureRedisInstrumentation((sp, instr) =>
+                    instr.AddConnection(sp.GetRequiredService<IConnectionMultiplexer>())));
     }
 
     public void ConfigureHealthChecks(IHealthChecksBuilder healthChecksBuilder)
