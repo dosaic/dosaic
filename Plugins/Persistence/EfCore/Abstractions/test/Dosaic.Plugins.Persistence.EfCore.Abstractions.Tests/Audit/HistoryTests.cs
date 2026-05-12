@@ -19,7 +19,6 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests.Audit
                 ChangeSet = changes.ToJson(),
                 ModifiedBy = "UserId",
                 ModifiedUtc = DateTime.UtcNow,
-                State = state,
                 Model = sampleModel
             };
             configureHistory?.Invoke(history);
@@ -32,7 +31,6 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests.Audit
             var model = GetModel();
             model.Model.Should().NotBeNull();
             model.Model.Id.Should().Be(model.ForeignId);
-            model.State.Should().Be(ChangeState.Added);
             model.ModifiedBy.Should().NotBeNull();
             model.ModifiedUtc.Should().BeWithin(TimeSpan.FromSeconds(2));
             ObjectChanges.FromJson(model.ChangeSet).Should().NotBeEmpty();

@@ -23,6 +23,21 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Audit
 
         public string ToJson() => this.Serialize();
 
+        /// <summary>
+        /// Merges another <see cref="ObjectChanges"/> into this instance. Duplicate keys throw.
+        /// </summary>
+        public ObjectChanges MergeFrom(ObjectChanges other)
+        {
+            if (other is null) return this;
+            foreach (var (key, value) in other)
+            {
+                if (ContainsKey(key))
+                    throw new InvalidOperationException($"Duplicate change-set key '{key}'.");
+                Add(key, value);
+            }
+            return this;
+        }
+
         public static ObjectChanges Calculate<T>(ChangeState state, T old, T @new) where T : class, IModel
         {
             var changes = new ObjectChanges();
@@ -44,12 +59,91 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Audit
             return changes;
         }
 
+        /// <summary>
+        /// Builds the change entries for a child entity that lives under a root history stream.
+        /// For Added / Deleted, emits a single entry at <paramref name="pathPrefix"/> carrying a snapshot dictionary.
+        /// For Modified, emits per-property entries keyed as <c>{pathPrefix}.{PropertyName}</c>.
+        /// </summary>
+        public static ObjectChanges CalculateChild<T>(ChangeState state, T old, T @new, string pathPrefix,
+            params string[] excludedProperties) where T : class, IModel
+        {
+            var changes = new ObjectChanges();
+            var skip = new HashSet<string>(excludedProperties, StringComparer.OrdinalIgnoreCase);
+            switch (state)
+            {
+                case ChangeState.Added:
+                    {
+                        var snapshot = ToSnapshot(@new, skip);
+                        changes.Add(pathPrefix, new OldNewValue { New = snapshot });
+                        break;
+                    }
+                case ChangeState.Deleted:
+                    {
+                        var snapshot = ToSnapshot(old, skip);
+                        changes.Add(pathPrefix, new OldNewValue { Old = snapshot });
+                        break;
+                    }
+                case ChangeState.Modified:
+                    {
+                        foreach (var property in GetChangeTrackedProperties<T>())
+                        {
+                            if (skip.Contains(property.Name)) continue;
+                            var newValue = property.GetValue(@new);
+                            var oldValue = property.GetValue(old);
+                            if (newValue is null && oldValue is null) continue;
+                            if (newValue is null || oldValue is null || !newValue.Equals(oldValue))
+                                changes.Add($"{pathPrefix}.{property.Name}",
+                                    new OldNewValue { Old = oldValue, New = newValue });
+                        }
+                        break;
+                    }
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(state), state, null);
+            }
+            return changes;
+        }
+
+        private static Dictionary<string, object> ToSnapshot<T>(T entity, HashSet<string> skip) where T : class, IModel
+        {
+            var dict = new Dictionary<string, object>();
+            foreach (var property in GetSnapshotProperties<T>())
+            {
+                if (skip.Contains(property.Name)) continue;
+                var value = property.GetValue(entity);
+                if (value is null) continue;
+                dict[property.Name] = value;
+            }
+            return dict;
+        }
+
         private static readonly ConcurrentDictionary<Type, PropertyInfo[]> _propertyCache = new();
+        private static readonly ConcurrentDictionary<Type, PropertyInfo[]> _snapshotPropertyCache = new();
 
         private static PropertyInfo[] GetChangeTrackedProperties<T>() =>
             _propertyCache.GetOrAdd(typeof(T), type => type.GetProperties()
                 .Where(x => x.CanRead && x.Name != nameof(IModel.Id))
+                .Where(x => !IsEntityNavigation(x.PropertyType))
                 .ToArray());
+
+        private static PropertyInfo[] GetSnapshotProperties<T>() =>
+            _snapshotPropertyCache.GetOrAdd(typeof(T), type => type.GetProperties()
+                .Where(x => x is { CanRead: true, CanWrite: true })
+                .Where(x => x.GetCustomAttribute<ExcludeFromHistoryAttribute>() is null)
+                .Where(x => !IsEntityNavigation(x.PropertyType))
+                .ToArray());
+
+        private static bool IsEntityNavigation(Type t)
+        {
+            if (typeof(IModel).IsAssignableFrom(t)) return true;
+            if (t == typeof(string)) return false;
+            if (!typeof(System.Collections.IEnumerable).IsAssignableFrom(t)) return false;
+            var elem = t.IsArray
+                ? t.GetElementType()
+                : t.IsGenericType
+                    ? t.GetGenericArguments()[0]
+                    : t.GetInterfaces().FirstOrDefault(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IEnumerable<>))?.GetGenericArguments()[0];
+            return elem is not null && typeof(IModel).IsAssignableFrom(elem);
+        }
 
         private static void WriteDeleteChanges<T>(T old, ObjectChanges changes) where T : class, IModel
         {

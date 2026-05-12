@@ -8,7 +8,6 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Audit
     {
         public required NanoId Id { get; set; }
         public required NanoId ForeignId { get; set; }
-        public ChangeState State { get; set; }
         public required string ChangeSet { get; set; }
         public DateTime ModifiedUtc { get; set; } = DateTime.UtcNow;
         public NanoId ModifiedBy { get; set; }

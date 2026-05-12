@@ -50,7 +50,7 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Interceptors
             typeof(SaveInterceptor).GetMethod(nameof(HandleAfterAsync),
                 BindingFlags.NonPublic | BindingFlags.Instance)!;
 
-        private async Task HandleAsync(MethodInfo methodInfo, ChangeSet changeSet, CancellationToken cancellationToken)
+        private async Task DispatchTriggersAsync(MethodInfo methodInfo, ChangeSet changeSet, CancellationToken cancellationToken)
         {
             foreach (var (modelType, cs) in changeSet.GetTypedChangeSets())
             {
@@ -60,12 +60,15 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Interceptors
 
         public Task BeforeSaveAsync(ChangeSet changeSet, CancellationToken cancellationToken = default)
         {
-            return HandleAsync(_handleBeforeAsyncMethod, changeSet, cancellationToken);
+            return DispatchTriggersAsync(_handleBeforeAsyncMethod, changeSet, cancellationToken);
         }
 
-        public Task AfterSaveAsync(ChangeSet changeSet, CancellationToken cancellationToken = default)
+        public async Task AfterSaveAsync(ChangeSet changeSet, CancellationToken cancellationToken = default)
         {
-            return HandleAsync(_handleAfterAsyncMethod, changeSet, cancellationToken);
+            await DispatchTriggersAsync(_handleAfterAsyncMethod, changeSet, cancellationToken);
+            var historyWriter = serviceProvider.GetService<IHistoryWriter>();
+            if (historyWriter is not null)
+                await historyWriter.WriteAsync(changeSet, db, cancellationToken);
         }
     }
 }

@@ -75,8 +75,29 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests
 
         [ExcludeFromHistory] public string Ignored { get; set; }
 
+        public virtual ICollection<TestHistoryChildModel> Children { get; set; }
+
         public static TestHistoryModel GetModel(string historyProperty = "Group 1") =>
             new() { Id = NanoId.NewId<TestHistoryModel>(), HistoryProperty = historyProperty };
+    }
+
+    [DbNanoIdPrimaryKey(NanoIdConfig.Lengths.NoLookAlikeDigitsAndLetters.L2)]
+    [HistoryParent(typeof(TestHistoryModel), nameof(ParentId), Collection = nameof(TestHistoryModel.Children))]
+    public class TestHistoryChildModel : Model
+    {
+        public NanoId ParentId { get; set; }
+        public string ChildName { get; set; }
+        public decimal Price { get; set; }
+        public virtual ICollection<TestHistoryGrandchildModel> Parts { get; set; }
+    }
+
+    [DbNanoIdPrimaryKey(NanoIdConfig.Lengths.NoLookAlikeDigitsAndLetters.L2)]
+    [HistoryParent(typeof(TestHistoryChildModel), nameof(ChildId), Collection = nameof(TestHistoryChildModel.Parts))]
+    public class TestHistoryGrandchildModel : Model
+    {
+        public NanoId ChildId { get; set; }
+        public string PartName { get; set; }
+        public int Qty { get; set; }
     }
 
     public class TestModelConfiguration : IEntityTypeConfiguration<TestModel>
@@ -127,6 +148,28 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests
             builder.HasKey(x => x.Id);
             builder.Property(x => x.HistoryProperty).HasMaxLength(64);
             builder.Property(x => x.Ignored).HasMaxLength(64);
+            builder.HasMany(x => x.Children).WithOne().HasForeignKey(x => x.ParentId);
+        }
+    }
+
+    public class TestHistoryChildModelConfiguration : IEntityTypeConfiguration<TestHistoryChildModel>
+    {
+        public void Configure(EntityTypeBuilder<TestHistoryChildModel> builder)
+        {
+            builder.ToTable(nameof(TestHistoryChildModel), "test");
+            builder.HasKey(x => x.Id);
+            builder.Property(x => x.ChildName).HasMaxLength(64);
+            builder.HasMany(x => x.Parts).WithOne().HasForeignKey(x => x.ChildId);
+        }
+    }
+
+    public class TestHistoryGrandchildModelConfiguration : IEntityTypeConfiguration<TestHistoryGrandchildModel>
+    {
+        public void Configure(EntityTypeBuilder<TestHistoryGrandchildModel> builder)
+        {
+            builder.ToTable(nameof(TestHistoryGrandchildModel), "test");
+            builder.HasKey(x => x.Id);
+            builder.Property(x => x.PartName).HasMaxLength(64);
         }
     }
 }

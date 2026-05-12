@@ -76,6 +76,7 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Models
 
         public static void ApplyHistories(this ModelBuilder builder, Type modifiedByForeignKeyModel)
         {
+            ValidateHistoryParentChains(builder);
             var historicModels = builder.Model.GetEntityTypes()
                 .Where(x => x.ClrType.GetInterfaces().Contains(typeof(IHistory)))
                 .ToArray();
@@ -85,7 +86,6 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Models
                 var entityTypeBuilder = builder.Entity(historyType.MakeGenericType(historyModel.ClrType));
                 entityTypeBuilder.ToTable($"{historyModel.GetTableName()}_history", historyModel.GetSchema());
                 entityTypeBuilder.Property<NanoId>(nameof(History.ForeignId)).IsRequired();
-                entityTypeBuilder.Property<ChangeState>(nameof(History.State)).IsRequired();
                 entityTypeBuilder.Property<string>(nameof(History.ChangeSet))
                     .HasColumnType("jsonb").IsRequired();
                 entityTypeBuilder.Property<DateTime>(nameof(History.ModifiedUtc)).IsRequired();
@@ -99,6 +99,15 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Models
                     .WithMany()
                     .HasForeignKey(nameof(History.ModifiedBy));
             }
+        }
+
+        private static void ValidateHistoryParentChains(ModelBuilder builder)
+        {
+            var entityClrTypes = builder.Model.GetEntityTypes()
+                .Select(x => x.ClrType)
+                .Where(t => t.GetCustomAttributes(typeof(HistoryParentAttribute), false).Length > 0)
+                .ToArray();
+            HistoryPathResolver.Build(entityClrTypes);
         }
 
         public static void ApplyEventSourcing(this ModelBuilder builder, Type modifiedByForeignKeyModel)

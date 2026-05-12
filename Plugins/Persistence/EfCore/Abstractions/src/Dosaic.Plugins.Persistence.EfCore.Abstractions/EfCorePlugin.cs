@@ -3,6 +3,7 @@ using System.Reflection;
 using Dosaic.Hosting.Abstractions.Extensions;
 using Dosaic.Hosting.Abstractions.Plugins;
 using Dosaic.Hosting.Abstractions.Services;
+using Dosaic.Plugins.Persistence.EfCore.Abstractions.Audit;
 using Dosaic.Plugins.Persistence.EfCore.Abstractions.Interceptors;
 using Dosaic.Plugins.Persistence.EfCore.Abstractions.Monitoring;
 using Dosaic.Plugins.Persistence.EfCore.Abstractions.Triggers;
@@ -38,6 +39,17 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions
             serviceCollection.RegisterEventProcessors(implementationResolver, logger);
             serviceCollection.RegisterTriggers(implementationResolver, typeof(IBeforeTrigger<>), logger);
             serviceCollection.RegisterTriggers(implementationResolver, typeof(IAfterTrigger<>), logger);
+            RegisterHistoryPathResolver(serviceCollection);
+        }
+
+        private void RegisterHistoryPathResolver(IServiceCollection serviceCollection)
+        {
+            var childTypes = implementationResolver.FindTypes(t =>
+                t is { IsClass: true, IsAbstract: false }
+                && t.GetCustomAttributes(typeof(HistoryParentAttribute), false).Length > 0);
+            var resolver = HistoryPathResolver.Build(childTypes, tolerateErrors: true);
+            serviceCollection.AddSingleton(resolver);
+            serviceCollection.AddScoped<IHistoryWriter, HistoryWriter>();
         }
 
         private void RegisterBusinessLogicInterceptors(IServiceCollection serviceCollection)
