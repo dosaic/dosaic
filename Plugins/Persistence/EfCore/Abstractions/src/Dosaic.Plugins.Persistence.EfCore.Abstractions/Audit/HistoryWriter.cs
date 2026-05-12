@@ -1,7 +1,9 @@
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Reflection;
 using Chronos.Abstractions;
 using Dosaic.Extensions.NanoIds;
+using Dosaic.Hosting.Abstractions;
 using Dosaic.Plugins.Persistence.EfCore.Abstractions.Database;
 
 namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Audit
@@ -64,12 +66,29 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Audit
                 GetOrCreate(buckets, path.RootType, resolvedRootId).MergeFrom(childChanges);
             }
 
+            Activity.Current?.SetTag("history.roots.count", buckets.Count);
             if (buckets.Count == 0) return;
+            var written = 0;
             foreach (var ((rootType, rootId), changes) in buckets)
             {
                 if (changes.Count == 0) continue;
-                PersistHistory(rootType, rootId, changes, db);
+                using var activity = Tracing.Source.StartActivity($"EfCore.History.Root.{rootType.Name}", ActivityKind.Internal);
+                activity?.SetTag("history.root.type", rootType.FullName);
+                activity?.SetTag("history.root.id", rootId.Value);
+                activity?.SetTag("history.root.paths.count", changes.Count);
+                try
+                {
+                    PersistHistory(rootType, rootId, changes, db);
+                    activity?.SetOkStatus();
+                    written++;
+                }
+                catch (Exception ex)
+                {
+                    activity?.SetErrorStatus(ex);
+                    throw;
+                }
             }
+            Activity.Current?.SetTag("history.rows.written", written);
             await Task.CompletedTask;
         }
 

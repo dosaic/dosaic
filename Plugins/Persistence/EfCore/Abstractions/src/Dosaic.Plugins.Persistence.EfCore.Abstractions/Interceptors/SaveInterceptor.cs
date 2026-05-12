@@ -1,4 +1,6 @@
+using System.Diagnostics;
 using System.Reflection;
+using Dosaic.Hosting.Abstractions;
 using Dosaic.Plugins.Persistence.EfCore.Abstractions.Audit;
 using Dosaic.Plugins.Persistence.EfCore.Abstractions.Database;
 using Dosaic.Plugins.Persistence.EfCore.Abstractions.Models;
@@ -18,6 +20,17 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Interceptors
                    ?? [];
         }
 
+        private static Activity StartTriggerActivity(object trigger, Type modelType, string phase, int changeSetCount)
+        {
+            var triggerType = trigger.GetType();
+            var activity = Tracing.Source.StartActivity($"EfCore.Trigger.{phase}.{triggerType.Name}", ActivityKind.Internal);
+            activity?.SetTag("trigger.type", triggerType.FullName);
+            activity?.SetTag("trigger.model", modelType.FullName);
+            activity?.SetTag("trigger.phase", phase);
+            activity?.SetTag("trigger.changeset.count", changeSetCount);
+            return activity;
+        }
+
         private async Task HandleBeforeAsync<T>(ChangeSet<T> changeSet, CancellationToken cancellationToken)
             where T : class, IModel
         {
@@ -26,7 +39,17 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Interceptors
             var context = new TriggerContext<T>(changeSet, db);
             foreach (var trigger in triggers)
             {
-                await trigger.HandleBeforeAsync(context, cancellationToken);
+                using var activity = StartTriggerActivity(trigger, typeof(T), "before", changeSet.Count);
+                try
+                {
+                    await trigger.HandleBeforeAsync(context, cancellationToken);
+                    activity?.SetOkStatus();
+                }
+                catch (Exception ex)
+                {
+                    activity?.SetErrorStatus(ex);
+                    throw;
+                }
             }
         }
 
@@ -42,7 +65,17 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Interceptors
             var context = new TriggerContext<T>(changeSet, db);
             foreach (var trigger in triggers)
             {
-                await trigger.HandleAfterAsync(context, cancellationToken);
+                using var activity = StartTriggerActivity(trigger, typeof(T), "after", changeSet.Count);
+                try
+                {
+                    await trigger.HandleAfterAsync(context, cancellationToken);
+                    activity?.SetOkStatus();
+                }
+                catch (Exception ex)
+                {
+                    activity?.SetErrorStatus(ex);
+                    throw;
+                }
             }
         }
 
@@ -67,8 +100,20 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Interceptors
         {
             await DispatchTriggersAsync(_handleAfterAsyncMethod, changeSet, cancellationToken);
             var historyWriter = serviceProvider.GetService<IHistoryWriter>();
-            if (historyWriter is not null)
+            if (historyWriter is null) return;
+            using var activity = Tracing.Source.StartActivity("EfCore.History.Write", ActivityKind.Internal);
+            activity?.SetTag("history.writer.type", historyWriter.GetType().FullName);
+            activity?.SetTag("history.changeset.count", changeSet.Count);
+            try
+            {
                 await historyWriter.WriteAsync(changeSet, db, cancellationToken);
+                activity?.SetOkStatus();
+            }
+            catch (Exception ex)
+            {
+                activity?.SetErrorStatus(ex);
+                throw;
+            }
         }
     }
 }
