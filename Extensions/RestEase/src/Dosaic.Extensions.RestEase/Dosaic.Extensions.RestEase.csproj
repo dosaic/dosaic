@@ -1,7 +1,13 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
     <ItemGroup>
-      <PackageReference Include="Microsoft.Extensions.Http.Polly" />
+      <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+      <PackageReference Include="Microsoft.Extensions.Http" />
+      <PackageReference Include="Microsoft.Extensions.Http.Resilience" />
+      <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+      <PackageReference Include="Microsoft.Extensions.Options" />
+      <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" />
+      <PackageReference Include="Polly" />
       <PackageReference Include="RestEase" />
     </ItemGroup>
 
@@ -10,6 +16,7 @@
         <_Parameter1>RestEase.RestClient.FactoryAssemblyName</_Parameter1>
         <_Parameter1_IsLiteral>true</_Parameter1_IsLiteral>
       </AssemblyAttribute>
+      <InternalsVisibleTo Include="Dosaic.Extensions.RestEase.Tests" />
     </ItemGroup>
 
 </Project>
