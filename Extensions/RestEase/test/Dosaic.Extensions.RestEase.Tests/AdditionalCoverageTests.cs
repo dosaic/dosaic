@@ -190,7 +190,7 @@ namespace Dosaic.Extensions.RestEase.Tests
                 .RespondWith(Response.Create().WithSuccess().WithBody(JsonSerializer.Serialize(resource)));
 
             var services = new ServiceCollection();
-            services.AddDosaicRestClient<ISomeApi>()
+            services.AddRestEaseApi<ISomeApi>()
                 .ConfigureOptions(o => o.BaseAddress = _server.Url)
                 .ConfigureJson(j => j.WriteIndented = true)
                 .ConfigureHttpClient(c => c.DefaultRequestHeaders.Add("X-Probe", "yes"));
@@ -215,7 +215,7 @@ namespace Dosaic.Extensions.RestEase.Tests
 
             var services = new ServiceCollection();
             services.AddSingleton<FakeTokenProvider>();
-            services.AddDosaicRestClient<ISomeApi>(o => o.BaseAddress = _server.Url)
+            services.AddRestEaseApi<ISomeApi>(o => o.BaseAddress = _server.Url)
                 .AddTokenProvider<FakeTokenProvider>();
 
             await using var sp = services.BuildServiceProvider();
@@ -247,7 +247,7 @@ namespace Dosaic.Extensions.RestEase.Tests
                 .Build();
 
             var services = new ServiceCollection();
-            services.AddDosaicRestClient<ISomeApi>(o => o.BaseAddress = _server.Url)
+            services.AddRestEaseApi<ISomeApi>(o => o.BaseAddress = _server.Url)
                 .AddResilience(pipeline);
 
             await using var sp = services.BuildServiceProvider();
@@ -264,7 +264,7 @@ namespace Dosaic.Extensions.RestEase.Tests
                 .RespondWith(Response.Create().WithSuccess().WithBody(JsonSerializer.Serialize(resource)));
 
             var services = new ServiceCollection();
-            services.AddDosaicRestClient<ISomeApi>(o => o.BaseAddress = _server.Url);
+            services.AddRestEaseApi<ISomeApi>(o => o.BaseAddress = _server.Url);
             await using var sp = services.BuildServiceProvider();
 
             var factory = sp.GetRequiredService<IRestClientFactory>();
@@ -274,10 +274,10 @@ namespace Dosaic.Extensions.RestEase.Tests
         }
 
         [Test]
-        public void AddDosaicRestClientThrowsForEmptyName()
+        public void AddRestEaseApiThrowsForEmptyName()
         {
             var services = new ServiceCollection();
-            var act = () => services.AddDosaicRestClient<ISomeApi>(name: "");
+            var act = () => services.AddRestEaseApi<ISomeApi>(name: "");
             act.Should().Throw<ArgumentException>();
         }
 
@@ -327,7 +327,7 @@ namespace Dosaic.Extensions.RestEase.Tests
             _server.Given(serverRequest).RespondWith(Response.Create().WithSuccess().WithBody("[]"));
 
             var services = new ServiceCollection();
-            services.AddDosaicRestClient<ISomeApi>(o =>
+            services.AddRestEaseApi<ISomeApi>(o =>
             {
                 o.BaseAddress = _server.Url;
                 o.Timeout = TimeSpan.FromSeconds(30);

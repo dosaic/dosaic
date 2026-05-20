@@ -1,5 +1,6 @@
 using System.Net.Http;
 using Dosaic.Extensions.RestEase.Json;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
@@ -9,11 +10,94 @@ namespace Dosaic.Extensions.RestEase.DependencyInjection
 {
     public static class ServiceCollectionExtensions
     {
-        public static IRestEaseClientBuilder AddDosaicRestClient<TApi>(this IServiceCollection services, Action<RestEaseClientOptions> configure = null)
+        public static IRestEaseClientBuilder AddRestEaseApi<TApi>(this IServiceCollection services, Action<RestEaseClientOptions> configure = null)
             where TApi : class
-            => services.AddDosaicRestClient<TApi>(typeof(TApi).FullName, configure);
+            => services.AddRestEaseApi<TApi>(typeof(TApi).FullName, configure);
 
-        public static IRestEaseClientBuilder AddDosaicRestClient<TApi>(this IServiceCollection services, string name, Action<RestEaseClientOptions> configure = null)
+        public static IRestEaseClientBuilder AddRestEaseApi<TApi>(this IServiceCollection services, RestEaseClientOptions options)
+            where TApi : class
+            => services.AddRestEaseApi<TApi>(typeof(TApi).FullName, options);
+
+        public static IRestEaseClientBuilder AddRestEaseApi<TApi>(this IServiceCollection services, string name, RestEaseClientOptions options)
+            where TApi : class
+        {
+            ArgumentNullException.ThrowIfNull(options);
+            return services.AddRestEaseApi<TApi>(name, target => ApplyTo(options, target));
+        }
+
+        public static IRestEaseClientBuilder AddRestEaseApiFromConfiguration<TApi>(this IServiceCollection services, IConfiguration configuration, string sectionKey)
+            where TApi : class
+            => services.AddRestEaseApiFromConfiguration<TApi>(typeof(TApi).FullName, configuration, sectionKey);
+
+        public static IRestEaseClientBuilder AddRestEaseApiFromConfiguration<TApi>(this IServiceCollection services, string name, IConfiguration configuration, string sectionKey)
+            where TApi : class
+        {
+            ArgumentNullException.ThrowIfNull(configuration);
+            if (string.IsNullOrWhiteSpace(sectionKey)) throw new ArgumentException("Configuration section key must be provided.", nameof(sectionKey));
+            return services.AddRestEaseApiFromConfiguration<TApi>(name, configuration.GetSection(sectionKey));
+        }
+
+        public static IRestEaseClientBuilder AddRestEaseApiFromConfiguration<TApi>(this IServiceCollection services, IConfigurationSection section)
+            where TApi : class
+            => services.AddRestEaseApiFromConfiguration<TApi>(typeof(TApi).FullName, section);
+
+        public static IRestEaseClientBuilder AddRestEaseApiFromConfiguration<TApi>(this IServiceCollection services, string name, IConfigurationSection section)
+            where TApi : class
+        {
+            ArgumentNullException.ThrowIfNull(section);
+            var builder = services.AddRestEaseApi<TApi>(name, target => section.Bind(target));
+
+            var snapshot = new RestEaseClientOptions();
+            section.Bind(snapshot);
+
+            if (snapshot.Caching?.Enabled == true)
+                builder.AddCaching();
+
+            if (snapshot.Resilience?.Enabled == true)
+            {
+                builder.AddStandardResilience(options =>
+                {
+                    var resilience = snapshot.Resilience;
+                    if (resilience.MaxRetryAttempts is { } attempts)
+                        options.Retry.MaxRetryAttempts = attempts;
+                    if (resilience.BaseDelay is { } delay)
+                        options.Retry.Delay = delay;
+                    if (resilience.AttemptTimeout is { } attempt)
+                        options.AttemptTimeout.Timeout = attempt;
+                    if (resilience.TotalRequestTimeout is { } total)
+                        options.TotalRequestTimeout.Timeout = total;
+                });
+            }
+
+            if (snapshot.RateLimits?.Enabled == true)
+            {
+                builder.AddRateLimits(c =>
+                {
+                    var src = snapshot.RateLimits;
+                    c.ThrowOnRejection = src.ThrowOnRejection;
+                    c.SlidingWindow = src.SlidingWindow;
+                    c.FixedWindow = src.FixedWindow;
+                    c.TokenBucket = src.TokenBucket;
+                    c.Concurrency = src.Concurrency;
+                });
+            }
+
+            return builder;
+        }
+
+        internal static void ApplyTo(RestEaseClientOptions source, RestEaseClientOptions target)
+        {
+            target.BaseAddress = source.BaseAddress;
+            target.Timeout = source.Timeout;
+            target.UserAgent = source.UserAgent;
+            target.Authentication = source.Authentication;
+            target.Caching = source.Caching;
+            target.JsonOptions = source.JsonOptions;
+            foreach (var (k, v) in source.DefaultHeaders)
+                target.DefaultHeaders[k] = v;
+        }
+
+        public static IRestEaseClientBuilder AddRestEaseApi<TApi>(this IServiceCollection services, string name, Action<RestEaseClientOptions> configure = null)
             where TApi : class
         {
             if (string.IsNullOrWhiteSpace(name)) throw new ArgumentException("Client name must be provided.", nameof(name));

@@ -1,6 +1,6 @@
 # Dosaic.Extensions.RestEase
 
-`Dosaic.Extensions.RestEase` builds typed HTTP API clients on top of [RestEase](https://github.com/canton7/RestEase). It plugs into `IHttpClientFactory`, uses **System.Text.Json**, supports a composable **DelegatingHandler middleware chain**, **Polly v8 resilience pipelines** (via `Microsoft.Extensions.Http.Resilience`), and ships an **OAuth2** integration with thread-safe token caching, automatic refresh-token rotation, and 401-triggered force-refresh retry.
+`Dosaic.Extensions.RestEase` builds typed HTTP API clients on top of [RestEase](https://github.com/canton7/RestEase). It plugs into `IHttpClientFactory`, uses **System.Text.Json**, supports a composable **DelegatingHandler middleware chain**, **Polly v8 resilience pipelines** (via `Microsoft.Extensions.Http.Resilience`), **response caching** via `IDistributedCache` (in-memory or Redis), and ships an **OAuth2** integration with thread-safe token caching, automatic refresh-token rotation, and 401-triggered force-refresh retry.
 
 ## Installation
 
@@ -18,10 +18,13 @@ dotnet add package Dosaic.Extensions.RestEase
 - **IHttpClientFactory integration** — proper socket pooling, DNS refresh, named-client lifetime management.
 - **DelegatingHandler middleware chain** — plug in correlation IDs, logging, custom auth, rate-limit headers, request signing, etc.
 - **Polly v8 resilience pipelines** — retry with jitter + exponential backoff, `Retry-After` honouring, timeouts, circuit breaker, hedging, bulkhead. Powered by `Microsoft.Extensions.Http.Resilience`.
+- **Response caching** — drop-in `AddCaching()` handler backed by `IDistributedCache`. In-memory by default, swap to Redis / SQL Server / NCache with one line. Honours `Cache-Control` (`max-age`, `no-store`, `no-cache`, `private`).
+- **Client-side rate limiting** — `AddRateLimits()` stacks one or more limiters (SlidingWindow / FixedWindow / TokenBucket / Concurrency) backed by `System.Threading.RateLimiting`. Returns `429` + `Retry-After` on rejection (or throws).
+- **Config auto-wire** — `AddRestEaseApiFromConfiguration<T>(...)` reads `Caching`, `Resilience`, `RateLimits` blocks and enables matching handlers automatically. No manual `AddCaching()` / `AddStandardResilience()` / `AddRateLimits()` needed.
 - **OAuth2** out of the box — `ClientCredentials` and `Password` grants; transparent refresh-token rotation; concurrent-call coalescing via `SemaphoreSlim`; 401-triggered forced refresh + retry.
 - **Pluggable `ITokenProvider`** — swap in a distributed token cache, mTLS, API key, or any custom auth strategy.
 - **System.Text.Json only** — override `JsonSerializerOptions` per-client; sane web defaults out of the box.
-- **DI builder fluent API** — `AddDosaicRestClient<TApi>()` returns `IRestEaseClientBuilder` for composition.
+- **DI builder fluent API** — `AddRestEaseApi<TApi>()` returns `IRestEaseClientBuilder` for composition.
 - **Static factory for non-DI usage** — `RestClientFactory.Create<TApi>(...)` still available.
 
 ## Quick Start (DI — recommended)
@@ -29,7 +32,7 @@ dotnet add package Dosaic.Extensions.RestEase
 ```csharp
 using Dosaic.Extensions.RestEase.DependencyInjection;
 
-services.AddDosaicRestClient<IUserApi>(o => o.BaseAddress = "https://api.example.com")
+services.AddRestEaseApi<IUserApi>(o => o.BaseAddress = "https://api.example.com")
         .AddStandardResilience();
 ```
 
@@ -41,6 +44,32 @@ public class UserService(IUserApi api)
     public Task<User> Get(Guid id, CancellationToken ct) => api.GetUserAsync(id, ct);
 }
 ```
+
+### Without the Options pattern
+
+Pass a `RestEaseClientOptions` instance directly — no lambda, no `IConfiguration` binding:
+
+```csharp
+var options = new RestEaseClientOptions
+{
+    BaseAddress = "https://api.example.com",
+    Timeout = TimeSpan.FromSeconds(30),
+    UserAgent = "my-service/1.0"
+};
+options.DefaultHeaders["X-Tenant"] = tenantId;
+
+services.AddRestEaseApi<IUserApi>(options)
+        .AddStandardResilience();
+```
+
+Overload signatures:
+
+```csharp
+AddRestEaseApi<TApi>(this IServiceCollection, RestEaseClientOptions);
+AddRestEaseApi<TApi>(this IServiceCollection, string name, RestEaseClientOptions);
+```
+
+The instance is copied into the named-options store at registration time. `IOptionsMonitor<RestEaseClientOptions>` is still wired internally (handlers depend on it) — caller does not touch it.
 
 ## Interface Definition
 
@@ -79,19 +108,72 @@ MyApi:
     ClientSecret: s3cr3t
     Scope: api.read api.write
     RefreshSkew: 00:00:30
+  Caching:
+    Enabled: true
+    DefaultTtl: 00:05:00
+    MaxTtl: 00:30:00
+    RespectCacheControl: true
+    IncludeAuthorizationInKey: false
+    KeyPrefix: "myapi:"
+    Methods: [GET, HEAD]
+    CacheableStatusCodes: [200, 404]
+  Resilience:
+    Enabled: true
+    MaxRetryAttempts: 3
+    BaseDelay: 00:00:00.200
+    AttemptTimeout: 00:00:10
+    TotalRequestTimeout: 00:00:30
+  RateLimits:
+    Enabled: true
+    ThrowOnRejection: false       # false = return 429 + Retry-After, true = throw HttpRequestException
+    SlidingWindow:
+      Enabled: true
+      PermitLimit: 50             # max requests per window
+      Window: 00:00:10            # window size
+      SegmentsPerWindow: 4        # window slices for smoothing
+      AutoReplenishment: true
+      QueueProcessingOrder: OldestFirst   # OldestFirst | NewestFirst
+      QueueLimit: 1024
+    FixedWindow:
+      Enabled: false
+      PermitLimit: 100
+      Window: 00:00:01
+      AutoReplenishment: true
+      QueueLimit: 0
+    TokenBucket:
+      Enabled: false
+      PermitLimit: 100            # token bucket capacity
+      TokensPerPeriod: 10
+      ReplenishmentPeriod: 00:00:01
+      AutoReplenishment: true
+      QueueLimit: 0
+    Concurrency:
+      Enabled: true
+      PermitLimit: 10             # max in-flight requests
+      QueueLimit: 1024
 ```
 
+Multiple limiters can be enabled simultaneously — they stack as separate `DelegatingHandler` layers. Order: `SlidingWindow → FixedWindow → TokenBucket → Concurrency` (Concurrency innermost, closest to socket).
+
 ```csharp
-services.AddDosaicRestClient<IUserApi>(o =>
-{
-    configuration.GetSection("MyApi").Bind(o);
-})
-.AddStandardResilience();
+services.AddRestEaseApiFromConfiguration<IUserApi>(configuration, "MyApi");
+// Caching, Resilience, RateLimit all wired automatically when their Enabled=true
+```
+
+Manual override of any single block still works — call `.AddCaching(...)`, `.AddStandardResilience(...)`, `.AddRateLimit(...)` after to layer on or replace.
+
+Overload signatures:
+
+```csharp
+AddRestEaseApiFromConfiguration<TApi>(IServiceCollection, IConfiguration, string sectionKey);
+AddRestEaseApiFromConfiguration<TApi>(IServiceCollection, string name, IConfiguration, string sectionKey);
+AddRestEaseApiFromConfiguration<TApi>(IServiceCollection, IConfigurationSection);
+AddRestEaseApiFromConfiguration<TApi>(IServiceCollection, string name, IConfigurationSection);
 ```
 
 ## DI Builder API
 
-`AddDosaicRestClient<TApi>()` returns an `IRestEaseClientBuilder`:
+`AddRestEaseApi<TApi>()` returns an `IRestEaseClientBuilder`:
 
 | Method | Purpose |
 |---|---|
@@ -103,13 +185,16 @@ services.AddDosaicRestClient<IUserApi>(o =>
 | `.AddStandardResilience()` | `Microsoft.Extensions.Http.Resilience` standard pipeline |
 | `.AddResilience(ResiliencePipeline<HttpResponseMessage>)` | Custom Polly v8 pipeline |
 | `.AddHandler<THandler>()` | Insert a `DelegatingHandler` into the chain |
+| `.AddCaching(Action<HttpCacheOptions>?)` | Insert response cache handler backed by `IDistributedCache` |
+| `.AddStandardResilience(Action<HttpStandardResilienceOptions>?)` | Standard resilience pipeline; optional inline tuning |
+| `.AddRateLimits(Action<RateLimitsConfig>)` | Stack one or more rate limiters (SlidingWindow / FixedWindow / TokenBucket / Concurrency) |
 
 ## OAuth2
 
 ### Client Credentials
 
 ```csharp
-services.AddDosaicRestClient<IUserApi>(o => o.BaseAddress = "https://api.example.com")
+services.AddRestEaseApi<IUserApi>(o => o.BaseAddress = "https://api.example.com")
         .AddOAuth2(a =>
         {
             a.BaseUrl = "https://auth.example.com";
@@ -158,7 +243,7 @@ public sealed class RedisTokenProvider(IConnectionMultiplexer redis) : ITokenPro
 }
 
 services.AddSingleton<RedisTokenProvider>();
-services.AddDosaicRestClient<IUserApi>(o => o.BaseAddress = "...")
+services.AddRestEaseApi<IUserApi>(o => o.BaseAddress = "...")
         .AddTokenProvider<RedisTokenProvider>();
 ```
 
@@ -189,7 +274,7 @@ var pipeline = new ResiliencePipelineBuilder<HttpResponseMessage>()
     .AddTimeout(TimeSpan.FromSeconds(30))
     .Build();
 
-services.AddDosaicRestClient<IUserApi>(o => o.BaseAddress = "...")
+services.AddRestEaseApi<IUserApi>(o => o.BaseAddress = "...")
         .AddResilience(pipeline);
 ```
 
@@ -216,13 +301,124 @@ public sealed class CorrelationIdHandler : DelegatingHandler
     }
 }
 
-services.AddDosaicRestClient<IUserApi>(o => o.BaseAddress = "...")
+services.AddRestEaseApi<IUserApi>(o => o.BaseAddress = "...")
         .AddHandler<CorrelationIdHandler>()
         .AddOAuth2(a => { /* ... */ })
         .AddStandardResilience();
 ```
 
 Handler ordering follows the `IHttpClientBuilder` chain — outer handlers wrap inner. The primary `SocketsHttpHandler` sits at the bottom and is managed by `IHttpClientFactory`.
+
+## Response Caching
+
+`AddCaching()` inserts a `DelegatingHandler` that stores successful HTTP responses in an `IDistributedCache`. Same abstraction covers in-process and out-of-process stores — swap the backing implementation, handler code stays untouched.
+
+### In-memory (default)
+
+```csharp
+services.AddRestEaseApi<IUserApi>(o => o.BaseAddress = "https://api.example.com")
+        .AddCaching(o => o.DefaultTtl = TimeSpan.FromMinutes(10));
+```
+
+If no `IDistributedCache` is already registered, `AddCaching()` auto-registers `AddDistributedMemoryCache()` (per-process, no shared state).
+
+### Redis (shared across replicas)
+
+```csharp
+services.AddStackExchangeRedisCache(o =>
+{
+    o.Configuration = "redis:6379";
+    o.InstanceName = "my-service:";
+});
+
+services.AddRestEaseApi<IUserApi>(o => o.BaseAddress = "https://api.example.com")
+        .AddCaching(o => o.DefaultTtl = TimeSpan.FromMinutes(10));
+```
+
+Any `IDistributedCache` implementation works: `Microsoft.Extensions.Caching.StackExchangeRedis`, `Microsoft.Extensions.Caching.SqlServer`, `NCache`, etc. Register **before** `AddCaching()` so the handler resolves your impl instead of the in-memory fallback.
+
+### `HttpCacheOptions`
+
+| Property | Type | Default | Description |
+|---|---|---|---|
+| `Enabled` | `bool` | `true` | Master switch |
+| `DefaultTtl` | `TimeSpan` | `5 min` | TTL when no `Cache-Control: max-age` on response |
+| `MaxTtl` | `TimeSpan?` | `null` | Upper bound — clamps server-provided `max-age` |
+| `Methods` | `HashSet<string>` | `{ "GET" }` | HTTP method names to cache (case-insensitive) |
+| `CacheableStatusCodes` | `HashSet<int>` | `200, 203, 300, 301, 404, 410` | Statuses eligible for storage |
+| `RespectCacheControl` | `bool` | `true` | Honour `no-store`, `no-cache`, `private`, `max-age` |
+| `IncludeAuthorizationInKey` | `bool` | `false` | When `true`, SHA256-hashed `Authorization` header gets folded into key |
+| `KeyPrefix` | `string` | `dosaic:restease:` | Prefix prepended to every key |
+| `KeyBuilder` | `Func<HttpRequestMessage,string>?` | `null` | Override default `method + url + auth-hash` key. **Code-only** — not bindable from config |
+| `ShouldCacheRequest` | `Func<HttpRequestMessage,bool>?` | `null` | Per-request opt-out. **Code-only** |
+| `ShouldCacheResponse` | `Func<HttpResponseMessage,bool>?` | `null` | Per-response opt-out. **Code-only** |
+
+### Config-driven caching
+
+`HttpCacheOptions` lives on `RestEaseClientOptions.Caching` — bind it from the same config section:
+
+```yaml
+Api:
+  BaseAddress: https://api.example.com
+  Caching:
+    Enabled: true
+    DefaultTtl: 00:10:00
+    KeyPrefix: "myapi:"
+    Methods: [GET, HEAD]
+```
+
+```csharp
+services.AddRestEaseApiFromConfiguration<IUserApi>(configuration, "Api")
+        .AddStandardResilience()
+        .AddCaching();
+```
+
+`AddCaching()` reads `RestEaseClientOptions.Caching` and copies it into the named `HttpCacheOptions`. Pass `Action<HttpCacheOptions>` to override / add Funcs:
+
+```csharp
+.AddCaching(o => o.KeyBuilder = req => $"v2:{req.RequestUri}");
+```
+
+### Cache-Control semantics
+
+- Request `Cache-Control: no-store` or `no-cache` → bypass cache
+- Response `Cache-Control: no-store`, `no-cache`, or `private` → not stored
+- Response `Cache-Control: max-age=N` → TTL = `min(N, MaxTtl ?? N)`
+- No `Cache-Control` on response → `DefaultTtl`
+
+### Handler ordering
+
+Order matters in the `DelegatingHandler` chain. Recommended:
+
+```csharp
+services.AddRestEaseApi<IUserApi>(o => o.BaseAddress = "...")
+        .AddCaching()              // outermost — short-circuits before auth+resilience
+        .AddOAuth2(a => { /* ... */ })
+        .AddStandardResilience();
+```
+
+`.AddCaching()` first = cache hit skips token fetch + resilience pipeline. Reverse order = always run resilience + auth, cache only the final response body.
+
+### Key construction
+
+Default key: `KeyPrefix + "{METHOD} {ABSOLUTE-URL}"`.
+
+`Authorization` header is **excluded** by default — same response served to every caller. Opt-in via `IncludeAuthorizationInKey = true` to isolate per-token (header value is SHA256-hashed, never stored raw).
+
+Custom key:
+
+```csharp
+.AddCaching(o => o.KeyBuilder = req =>
+    $"{req.Method.Method}:{req.RequestUri}:tenant={req.Headers.GetValues("X-Tenant").First()}");
+```
+
+### Storage format
+
+Each cache entry is a JSON envelope: status code, response headers, content headers, body bytes. Easy to inspect in Redis with `GET key | jq`.
+
+### Why `IDistributedCache`?
+
+One abstraction covers in-process **and** out-of-process. `IMemoryCache` would lock you into a single replica. If you only need L1, `AddDistributedMemoryCache` is a `MemoryDistributedCache` — same in-memory performance, swappable later without code change. Two-tier (L1+L2) is out of scope here — use `HybridCache` if you need it and wire your own handler.
 
 ## JSON
 
@@ -284,7 +480,7 @@ The static factory builds a fresh handler chain (`UserAgent → Resilience → O
 - **Distributed token cache**: implement `ITokenProvider` backed by Redis/Vault when you run multiple replicas — otherwise each replica holds its own copy.
 - **Don't combine `AddOAuth2` with manual `Authorization` headers** on every request. If you must override per-call, set `request.Headers.Authorization` — the handler honours it.
 - **Custom handlers stay stateless** — `IHttpClientFactory` instantiates them per request scope; per-handler state will surprise you.
-- **Use the same client name + key everywhere** — `AddDosaicRestClient<TApi>(name)` is keyed by name internally (options, token provider, http client all share it).
+- **Use the same client name + key everywhere** — `AddRestEaseApi<TApi>(name)` is keyed by name internally (options, token provider, http client all share it).
 - **Override `JsonOptions` rather than rolling your own serializer** — System.Text.Json is the only path supported.
 
 ## API Reference

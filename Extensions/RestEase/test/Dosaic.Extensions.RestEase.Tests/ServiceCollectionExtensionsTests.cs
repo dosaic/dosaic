@@ -3,6 +3,7 @@ using System.Text.Json;
 using AwesomeAssertions;
 using Dosaic.Extensions.RestEase.Authentication;
 using Dosaic.Extensions.RestEase.DependencyInjection;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using NUnit.Framework;
 using WireMock.RequestBuilders;
@@ -29,7 +30,7 @@ namespace Dosaic.Extensions.RestEase.Tests
                 .RespondWith(Response.Create().WithSuccess().WithBody(JsonSerializer.Serialize(resource)));
 
             var services = new ServiceCollection();
-            services.AddDosaicRestClient<ISomeApi>(o => o.BaseAddress = _server.Url);
+            services.AddRestEaseApi<ISomeApi>(o => o.BaseAddress = _server.Url);
 
             await using var sp = services.BuildServiceProvider();
             var client = sp.GetRequiredService<ISomeApi>();
@@ -47,7 +48,7 @@ namespace Dosaic.Extensions.RestEase.Tests
                 .RespondWith(Response.Create().WithSuccess().WithBody(JsonSerializer.Serialize(resource)));
 
             var services = new ServiceCollection();
-            services.AddDosaicRestClient<ISomeApi>(o =>
+            services.AddRestEaseApi<ISomeApi>(o =>
                 {
                     o.BaseAddress = _server.Url;
                     o.DefaultHeaders["X-Tenant"] = "tenant-1";
@@ -88,7 +89,7 @@ namespace Dosaic.Extensions.RestEase.Tests
                 .RespondWith(Response.Create().WithSuccess().WithBody("{}"));
 
             var services = new ServiceCollection();
-            services.AddDosaicRestClient<ISomeApi>(o => o.BaseAddress = _server.Url)
+            services.AddRestEaseApi<ISomeApi>(o => o.BaseAddress = _server.Url)
                 .AddStandardResilience();
 
             await using var sp = services.BuildServiceProvider();
@@ -98,10 +99,81 @@ namespace Dosaic.Extensions.RestEase.Tests
         }
 
         [Test]
+        public async Task ResolvesTypedClientFromInstanceOverload()
+        {
+            var resource = new SomeResource { Id = Guid.NewGuid(), Name = "inst" };
+            _server.Given(Request.Create().WithPath("/").UsingPost())
+                .RespondWith(Response.Create().WithSuccess().WithBody(JsonSerializer.Serialize(resource)));
+
+            var options = new RestEaseClientOptions
+            {
+                BaseAddress = _server.Url,
+                UserAgent = "instance-overload/1.0",
+                Timeout = TimeSpan.FromSeconds(15)
+            };
+            options.DefaultHeaders["X-Tenant"] = "tenant-x";
+
+            var services = new ServiceCollection();
+            services.AddRestEaseApi<ISomeApi>(options);
+
+            await using var sp = services.BuildServiceProvider();
+            var client = sp.GetRequiredService<ISomeApi>();
+            var result = await client.Create(new SomeResource(), CancellationToken.None);
+            result.Id.Should().Be(resource.Id);
+
+#pragma warning disable CA1826
+            var entry = _server.FindLogEntries(Request.Create().WithPath("/").UsingPost()).First();
+#pragma warning restore CA1826
+            entry.RequestMessage.Headers.Should().ContainKey("X-Tenant");
+        }
+
+        [Test]
+        public async Task BindsOptionsFromConfigurationSection()
+        {
+            var resource = new SomeResource { Id = Guid.NewGuid(), Name = "cfg" };
+            _server.Given(Request.Create().WithPath("/").UsingPost())
+                .RespondWith(Response.Create().WithSuccess().WithBody(JsonSerializer.Serialize(resource)));
+
+            var configuration = new ConfigurationBuilder()
+                .AddInMemoryCollection(new Dictionary<string, string>
+                {
+                    ["MyApi:BaseAddress"] = _server.Url,
+                    ["MyApi:UserAgent"] = "cfg-bind/1.0",
+                    ["MyApi:Timeout"] = "00:00:20"
+                })
+                .Build();
+
+            var services = new ServiceCollection();
+            services.AddRestEaseApiFromConfiguration<ISomeApi>(configuration, "MyApi");
+
+            await using var sp = services.BuildServiceProvider();
+            var client = sp.GetRequiredService<ISomeApi>();
+            var result = await client.Create(new SomeResource(), CancellationToken.None);
+            result.Id.Should().Be(resource.Id);
+        }
+
+        [Test]
+        public void FromConfigurationThrowsOnEmptySectionKey()
+        {
+            var services = new ServiceCollection();
+            var configuration = new ConfigurationBuilder().Build();
+            Action act = () => services.AddRestEaseApiFromConfiguration<ISomeApi>(configuration, "");
+            act.Should().Throw<ArgumentException>();
+        }
+
+        [Test]
+        public void InstanceOverloadThrowsOnNullOptions()
+        {
+            var services = new ServiceCollection();
+            Action act = () => services.AddRestEaseApi<ISomeApi>((RestEaseClientOptions)null);
+            act.Should().Throw<ArgumentNullException>();
+        }
+
+        [Test]
         public void RestClientFactoryServiceResolves()
         {
             var services = new ServiceCollection();
-            services.AddDosaicRestClient<ISomeApi>(o => o.BaseAddress = "http://localhost/");
+            services.AddRestEaseApi<ISomeApi>(o => o.BaseAddress = "http://localhost/");
             using var sp = services.BuildServiceProvider();
             sp.GetService<IRestClientFactory>().Should().NotBeNull();
         }

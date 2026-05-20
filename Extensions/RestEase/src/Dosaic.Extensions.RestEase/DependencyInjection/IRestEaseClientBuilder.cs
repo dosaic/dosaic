@@ -1,7 +1,10 @@
 using System.Net.Http;
 using System.Text.Json;
 using Dosaic.Extensions.RestEase.Authentication;
+using Dosaic.Extensions.RestEase.Caching;
+using Dosaic.Extensions.RestEase.RateLimiting;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Http.Resilience;
 using Polly;
 
 namespace Dosaic.Extensions.RestEase.DependencyInjection
@@ -17,8 +20,10 @@ namespace Dosaic.Extensions.RestEase.DependencyInjection
         IRestEaseClientBuilder ConfigureHttpClient(Action<HttpClient> configure);
         IRestEaseClientBuilder AddOAuth2(Action<AuthenticationConfig> configure);
         IRestEaseClientBuilder AddTokenProvider<TProvider>() where TProvider : class, ITokenProvider;
-        IRestEaseClientBuilder AddStandardResilience();
+        IRestEaseClientBuilder AddStandardResilience(Action<HttpStandardResilienceOptions> configure = null);
         IRestEaseClientBuilder AddResilience(ResiliencePipeline<HttpResponseMessage> pipeline);
         IRestEaseClientBuilder AddHandler<THandler>() where THandler : DelegatingHandler;
+        IRestEaseClientBuilder AddCaching(Action<HttpCacheOptions> configure = null);
+        IRestEaseClientBuilder AddRateLimits(Action<RateLimitsConfig> configure);
     }
 }
