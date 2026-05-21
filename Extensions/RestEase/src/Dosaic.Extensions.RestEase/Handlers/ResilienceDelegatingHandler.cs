@@ -3,7 +3,7 @@ using Polly;
 
 namespace Dosaic.Extensions.RestEase.Handlers
 {
-    public sealed class ResilienceDelegatingHandler : DelegatingHandler
+    internal sealed class ResilienceDelegatingHandler : DelegatingHandler
     {
         private readonly ResiliencePipeline<HttpResponseMessage> _pipeline;
 

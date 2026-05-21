@@ -45,44 +45,7 @@ namespace Dosaic.Extensions.RestEase.DependencyInjection
             where TApi : class
         {
             ArgumentNullException.ThrowIfNull(section);
-            var builder = services.AddRestEaseApi<TApi>(name, target => section.Bind(target));
-
-            var snapshot = new RestEaseClientOptions();
-            section.Bind(snapshot);
-
-            if (snapshot.Caching?.Enabled == true)
-                builder.AddCaching();
-
-            if (snapshot.Resilience?.Enabled == true)
-            {
-                builder.AddStandardResilience(options =>
-                {
-                    var resilience = snapshot.Resilience;
-                    if (resilience.MaxRetryAttempts is { } attempts)
-                        options.Retry.MaxRetryAttempts = attempts;
-                    if (resilience.BaseDelay is { } delay)
-                        options.Retry.Delay = delay;
-                    if (resilience.AttemptTimeout is { } attempt)
-                        options.AttemptTimeout.Timeout = attempt;
-                    if (resilience.TotalRequestTimeout is { } total)
-                        options.TotalRequestTimeout.Timeout = total;
-                });
-            }
-
-            if (snapshot.RateLimits?.Enabled == true)
-            {
-                builder.AddRateLimits(c =>
-                {
-                    var src = snapshot.RateLimits;
-                    c.ThrowOnRejection = src.ThrowOnRejection;
-                    c.SlidingWindow = src.SlidingWindow;
-                    c.FixedWindow = src.FixedWindow;
-                    c.TokenBucket = src.TokenBucket;
-                    c.Concurrency = src.Concurrency;
-                });
-            }
-
-            return builder;
+            return services.AddRestEaseApi<TApi>(name, target => section.Bind(target));
         }
 
         internal static void ApplyTo(RestEaseClientOptions source, RestEaseClientOptions target)
@@ -92,6 +55,8 @@ namespace Dosaic.Extensions.RestEase.DependencyInjection
             target.UserAgent = source.UserAgent;
             target.Authentication = source.Authentication;
             target.Caching = source.Caching;
+            target.Resilience = source.Resilience;
+            target.RateLimits = source.RateLimits;
             target.JsonOptions = source.JsonOptions;
             foreach (var (k, v) in source.DefaultHeaders)
                 target.DefaultHeaders[k] = v;
@@ -133,7 +98,9 @@ namespace Dosaic.Extensions.RestEase.DependencyInjection
 
             services.TryAddSingleton<IRestClientFactory, DefaultRestClientFactory>();
 
-            return new RestEaseClientBuilder(name, services, httpClientBuilder);
+            var builder = new RestEaseClientBuilder(name, services, httpClientBuilder);
+            builder.MountAutoPipeline();
+            return builder;
         }
     }
 

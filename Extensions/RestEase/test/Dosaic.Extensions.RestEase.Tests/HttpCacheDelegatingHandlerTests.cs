@@ -1,5 +1,6 @@
 using System.Text.Json;
 using AwesomeAssertions;
+using Dosaic.Extensions.RestEase.Caching;
 using Dosaic.Extensions.RestEase.DependencyInjection;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Configuration;
@@ -29,8 +30,11 @@ namespace Dosaic.Extensions.RestEase.Tests
                 .RespondWith(Response.Create().WithSuccess().WithBody(JsonSerializer.Serialize(new[] { first })));
 
             var services = new ServiceCollection();
-            services.AddRestEaseApi<ISomeApi>(o => o.BaseAddress = _server.Url)
-                .AddCaching(o => o.DefaultTtl = TimeSpan.FromMinutes(1));
+            services.AddRestEaseApi<ISomeApi>(o =>
+            {
+                o.BaseAddress = _server.Url;
+                o.Caching = new HttpCacheOptions { DefaultTtl = TimeSpan.FromMinutes(1) };
+            });
 
             await using var sp = services.BuildServiceProvider();
             var client = sp.GetRequiredService<ISomeApi>();
@@ -51,8 +55,11 @@ namespace Dosaic.Extensions.RestEase.Tests
                 .RespondWith(Response.Create().WithSuccess().WithBody(JsonSerializer.Serialize(resource)));
 
             var services = new ServiceCollection();
-            services.AddRestEaseApi<ISomeApi>(o => o.BaseAddress = _server.Url)
-                .AddCaching();
+            services.AddRestEaseApi<ISomeApi>(o =>
+            {
+                o.BaseAddress = _server.Url;
+                o.Caching = new HttpCacheOptions();
+            });
 
             await using var sp = services.BuildServiceProvider();
             var client = sp.GetRequiredService<ISomeApi>();
@@ -73,8 +80,11 @@ namespace Dosaic.Extensions.RestEase.Tests
                     .WithBody(JsonSerializer.Serialize(new[] { resource })));
 
             var services = new ServiceCollection();
-            services.AddRestEaseApi<ISomeApi>(o => o.BaseAddress = _server.Url)
-                .AddCaching();
+            services.AddRestEaseApi<ISomeApi>(o =>
+            {
+                o.BaseAddress = _server.Url;
+                o.Caching = new HttpCacheOptions();
+            });
 
             await using var sp = services.BuildServiceProvider();
             var client = sp.GetRequiredService<ISomeApi>();
@@ -92,8 +102,11 @@ namespace Dosaic.Extensions.RestEase.Tests
                 .RespondWith(Response.Create().WithSuccess().WithBody("[]"));
 
             var services = new ServiceCollection();
-            services.AddRestEaseApi<ISomeApi>(o => o.BaseAddress = _server.Url)
-                .AddCaching(o => o.Enabled = false);
+            services.AddRestEaseApi<ISomeApi>(o =>
+            {
+                o.BaseAddress = _server.Url;
+                o.Caching = new HttpCacheOptions { Enabled = false };
+            });
 
             await using var sp = services.BuildServiceProvider();
             var client = sp.GetRequiredService<ISomeApi>();
@@ -123,8 +136,7 @@ namespace Dosaic.Extensions.RestEase.Tests
                 .Build();
 
             var services = new ServiceCollection();
-            services.AddRestEaseApiFromConfiguration<ISomeApi>(configuration, "Api")
-                .AddCaching();
+            services.AddRestEaseApiFromConfiguration<ISomeApi>(configuration, "Api");
 
             await using var sp = services.BuildServiceProvider();
             var client = sp.GetRequiredService<ISomeApi>();
@@ -145,8 +157,11 @@ namespace Dosaic.Extensions.RestEase.Tests
                 .RespondWith(Response.Create().WithSuccess().WithBody("[]"));
 
             var services = new ServiceCollection();
-            services.AddRestEaseApi<ISomeApi>(o => o.BaseAddress = _server.Url)
-                .AddCaching(o => o.KeyBuilder = _ => "static-key");
+            services.AddRestEaseApi<ISomeApi>(o =>
+            {
+                o.BaseAddress = _server.Url;
+                o.Caching = new HttpCacheOptions { KeyBuilder = _ => "static-key" };
+            });
 
             await using var sp = services.BuildServiceProvider();
             var client = sp.GetRequiredService<ISomeApi>();

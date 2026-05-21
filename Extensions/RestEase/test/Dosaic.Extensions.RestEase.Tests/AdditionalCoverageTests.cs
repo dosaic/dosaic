@@ -237,18 +237,14 @@ namespace Dosaic.Extensions.RestEase.Tests
                 .WhenStateIs(1)
                 .RespondWith(Response.Create().WithSuccess().WithBody("{}"));
 
-            var pipeline = new ResiliencePipelineBuilder<HttpResponseMessage>()
-                .AddRetry(new RetryStrategyOptions<HttpResponseMessage>
+            var services = new ServiceCollection();
+            services.AddRestEaseApi<ISomeApi>(o => o.BaseAddress = _server.Url)
+                .AddPolly((pb, _) => pb.AddRetry(new RetryStrategyOptions<HttpResponseMessage>
                 {
                     MaxRetryAttempts = 1,
                     Delay = TimeSpan.Zero,
                     ShouldHandle = new PredicateBuilder<HttpResponseMessage>().HandleResult(r => r.StatusCode == HttpStatusCode.ServiceUnavailable)
-                })
-                .Build();
-
-            var services = new ServiceCollection();
-            services.AddRestEaseApi<ISomeApi>(o => o.BaseAddress = _server.Url)
-                .AddResilience(pipeline);
+                }));
 
             await using var sp = services.BuildServiceProvider();
             var client = sp.GetRequiredService<ISomeApi>();

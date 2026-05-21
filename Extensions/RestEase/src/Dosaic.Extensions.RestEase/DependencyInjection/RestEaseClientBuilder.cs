@@ -1,9 +1,10 @@
 using System.Net.Http;
 using System.Text.Json;
+using System.Threading.RateLimiting;
 using Dosaic.Extensions.RestEase.Authentication;
 using Dosaic.Extensions.RestEase.Caching;
-using Dosaic.Extensions.RestEase.Handlers;
 using Dosaic.Extensions.RestEase.RateLimiting;
+using Dosaic.Extensions.RestEase.Resilience;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -11,6 +12,8 @@ using Microsoft.Extensions.Http.Resilience;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Polly;
+using Polly.RateLimiting;
+using Polly.Timeout;
 
 namespace Dosaic.Extensions.RestEase.DependencyInjection
 {
@@ -19,6 +22,8 @@ namespace Dosaic.Extensions.RestEase.DependencyInjection
         public string Name { get; }
         public IServiceCollection Services { get; }
         public IHttpClientBuilder HttpClientBuilder { get; }
+
+        private int _customPipelineCounter;
 
         public RestEaseClientBuilder(string name, IServiceCollection services, IHttpClientBuilder httpClientBuilder)
         {
@@ -76,19 +81,6 @@ namespace Dosaic.Extensions.RestEase.DependencyInjection
             return this;
         }
 
-        public IRestEaseClientBuilder AddStandardResilience(Action<HttpStandardResilienceOptions> configure = null)
-        {
-            var resilienceBuilder = HttpClientBuilder.AddStandardResilienceHandler();
-            if (configure is not null) resilienceBuilder.Configure(configure);
-            return this;
-        }
-
-        public IRestEaseClientBuilder AddResilience(ResiliencePipeline<HttpResponseMessage> pipeline)
-        {
-            HttpClientBuilder.AddHttpMessageHandler(() => new ResilienceDelegatingHandler(pipeline));
-            return this;
-        }
-
         public IRestEaseClientBuilder AddHandler<THandler>() where THandler : DelegatingHandler
         {
             Services.TryAddTransient<THandler>();
@@ -96,78 +88,161 @@ namespace Dosaic.Extensions.RestEase.DependencyInjection
             return this;
         }
 
-        public IRestEaseClientBuilder AddRateLimits(Action<RateLimitsConfig> configure)
+        public IRestEaseClientBuilder AddResilience(Action<ResilienceConfig> configure = null)
         {
-            ArgumentNullException.ThrowIfNull(configure);
-            var config = new RateLimitsConfig();
-            configure(config);
-            ApplyRateLimits(config);
-            return this;
-        }
-
-        internal void ApplyRateLimits(RateLimitsConfig config)
-        {
-            if (config is null || !config.Enabled) return;
-
-            if (config.SlidingWindow?.Enabled == true)
+            Services.AddOptions<RestEaseClientOptions>(Name).Configure(o =>
             {
-                var limiter = RateLimitDelegatingHandler.BuildSlidingWindow(config.SlidingWindow);
-                HttpClientBuilder.AddHttpMessageHandler(() => new RateLimitDelegatingHandler(limiter, config.ThrowOnRejection));
-            }
-            if (config.FixedWindow?.Enabled == true)
-            {
-                var limiter = RateLimitDelegatingHandler.BuildFixedWindow(config.FixedWindow);
-                HttpClientBuilder.AddHttpMessageHandler(() => new RateLimitDelegatingHandler(limiter, config.ThrowOnRejection));
-            }
-            if (config.TokenBucket?.Enabled == true)
-            {
-                var limiter = RateLimitDelegatingHandler.BuildTokenBucket(config.TokenBucket);
-                HttpClientBuilder.AddHttpMessageHandler(() => new RateLimitDelegatingHandler(limiter, config.ThrowOnRejection));
-            }
-            if (config.Concurrency?.Enabled == true)
-            {
-                var limiter = RateLimitDelegatingHandler.BuildConcurrency(config.Concurrency);
-                HttpClientBuilder.AddHttpMessageHandler(() => new RateLimitDelegatingHandler(limiter, config.ThrowOnRejection));
-            }
-        }
-
-        public IRestEaseClientBuilder AddCaching(Action<HttpCacheOptions> configure = null)
-        {
-            Services.AddOptions<HttpCacheOptions>(Name)
-                .Configure<IOptionsMonitor<RestEaseClientOptions>>((target, monitor) =>
-                {
-                    var src = monitor.Get(Name).Caching;
-                    if (src is not null) CopyCachingTo(src, target);
-                });
-            if (configure is not null) Services.AddOptions<HttpCacheOptions>(Name).Configure(configure);
-
-            Services.AddDistributedMemoryCache();
-
-            HttpClientBuilder.AddHttpMessageHandler(sp =>
-            {
-                var cache = sp.GetRequiredService<IDistributedCache>();
-                var opts = sp.GetRequiredService<IOptionsMonitor<HttpCacheOptions>>().Get(Name);
-                var logger = sp.GetService<ILoggerFactory>()?.CreateLogger<HttpCacheDelegatingHandler>();
-                return new HttpCacheDelegatingHandler(cache, opts, logger);
+                o.Resilience ??= new ResilienceConfig();
+                o.Resilience.Enabled = true;
+                configure?.Invoke(o.Resilience);
             });
             return this;
         }
 
-        private static void CopyCachingTo(HttpCacheOptions source, HttpCacheOptions target)
+        public IRestEaseClientBuilder AddCaching(Action<HttpCacheOptions> configure = null)
         {
-            target.Enabled = source.Enabled;
-            target.DefaultTtl = source.DefaultTtl;
-            target.MaxTtl = source.MaxTtl;
-            target.RespectCacheControl = source.RespectCacheControl;
-            target.IncludeAuthorizationInKey = source.IncludeAuthorizationInKey;
-            target.KeyPrefix = source.KeyPrefix;
-            target.KeyBuilder = source.KeyBuilder;
-            target.ShouldCacheRequest = source.ShouldCacheRequest;
-            target.ShouldCacheResponse = source.ShouldCacheResponse;
-            if (source.Methods is { Count: > 0 })
-                target.Methods = new HashSet<string>(source.Methods, StringComparer.OrdinalIgnoreCase);
-            if (source.CacheableStatusCodes is { Count: > 0 })
-                target.CacheableStatusCodes = new HashSet<int>(source.CacheableStatusCodes);
+            Services.AddOptions<RestEaseClientOptions>(Name).Configure(o =>
+            {
+                o.Caching ??= new HttpCacheOptions();
+                o.Caching.Enabled = true;
+                configure?.Invoke(o.Caching);
+            });
+            return this;
+        }
+
+        public IRestEaseClientBuilder AddRateLimits(Action<RateLimitsConfig> configure = null)
+        {
+            Services.AddOptions<RestEaseClientOptions>(Name).Configure(o =>
+            {
+                o.RateLimits ??= new RateLimitsConfig();
+                o.RateLimits.Enabled = true;
+                configure?.Invoke(o.RateLimits);
+            });
+            return this;
+        }
+
+        public IRestEaseClientBuilder AddPolly(Action<ResiliencePipelineBuilder<HttpResponseMessage>, ResilienceHandlerContext> configure)
+        {
+            ArgumentNullException.ThrowIfNull(configure);
+            Services.AddDistributedMemoryCache();
+            var slot = Interlocked.Increment(ref _customPipelineCounter);
+            HttpClientBuilder.AddResilienceHandler($"{Name}-pipeline-custom-{slot}", configure);
+            return this;
+        }
+
+        internal void MountAutoPipeline()
+        {
+            Services.AddDistributedMemoryCache();
+            HttpClientBuilder.AddResilienceHandler($"{Name}-pipeline", (pipeline, ctx) =>
+            {
+                var opts = ctx.ServiceProvider.GetRequiredService<IOptionsMonitor<RestEaseClientOptions>>().Get(Name);
+                BuildPipeline(pipeline, opts, ctx.ServiceProvider);
+            });
+        }
+
+        internal static void BuildPipeline(ResiliencePipelineBuilder<HttpResponseMessage> pipeline, RestEaseClientOptions opts, IServiceProvider sp)
+        {
+            if (opts.Caching?.Enabled == true)
+            {
+                var cache = sp.GetRequiredService<IDistributedCache>();
+                var logger = sp.GetService<ILoggerFactory>()?.CreateLogger("Dosaic.RestEase.HttpCache");
+                pipeline.AddHttpCache(cache, opts.Caching, logger);
+            }
+
+            if (opts.RateLimits is { Enabled: true } rl)
+            {
+                if (rl.SlidingWindow?.Enabled == true)
+                    pipeline.AddRateLimiter(RateLimiterBuilders.Sliding(rl.SlidingWindow));
+                if (rl.FixedWindow?.Enabled == true)
+                    pipeline.AddRateLimiter(RateLimiterBuilders.Fixed(rl.FixedWindow));
+                if (rl.TokenBucket?.Enabled == true)
+                    pipeline.AddRateLimiter(RateLimiterBuilders.TokenBucket(rl.TokenBucket));
+                if (rl.Concurrency?.Enabled == true)
+                    pipeline.AddRateLimiter(RateLimiterBuilders.Concurrency(rl.Concurrency));
+            }
+
+            if (opts.Resilience is { Enabled: true } r)
+            {
+                if (r.TotalRequestTimeout is { } total)
+                    pipeline.AddTimeout(new TimeoutStrategyOptions { Timeout = total, Name = "TotalTimeout" });
+
+                var retry = new HttpRetryStrategyOptions
+                {
+                    MaxRetryAttempts = r.MaxRetryAttempts ?? 3,
+                    Delay = r.BaseDelay ?? TimeSpan.FromMilliseconds(500),
+                    BackoffType = DelayBackoffType.Exponential,
+                    UseJitter = true
+                };
+
+                if (r.AdditionalRetryStatusCodes is { Count: > 0 } codes)
+                {
+                    var defaultShouldHandle = retry.ShouldHandle;
+                    retry.ShouldHandle = async args =>
+                        (args.Outcome.Result is { } resp && codes.Contains(resp.StatusCode))
+                        || await defaultShouldHandle(args);
+                }
+
+                r.ConfigureRetry?.Invoke(retry);
+                pipeline.AddRetry(retry);
+
+                if (r.AttemptTimeout is { } attempt)
+                    pipeline.AddTimeout(new TimeoutStrategyOptions { Timeout = attempt, Name = "AttemptTimeout" });
+            }
+        }
+
+        private static class RateLimiterBuilders
+        {
+            public static RateLimiterStrategyOptions Concurrency(ConcurrencyLimiterConfig c)
+            {
+                var limiter = new ConcurrencyLimiter(new ConcurrencyLimiterOptions
+                {
+                    PermitLimit = c.PermitLimit,
+                    QueueLimit = c.QueueLimit,
+                    QueueProcessingOrder = c.QueueProcessingOrder
+                });
+                return new RateLimiterStrategyOptions { Name = "Concurrency", RateLimiter = args => limiter.AcquireAsync(1, args.Context.CancellationToken) };
+            }
+
+            public static RateLimiterStrategyOptions Sliding(SlidingWindowLimiterConfig c)
+            {
+                var limiter = new SlidingWindowRateLimiter(new SlidingWindowRateLimiterOptions
+                {
+                    PermitLimit = c.PermitLimit,
+                    QueueLimit = c.QueueLimit,
+                    QueueProcessingOrder = c.QueueProcessingOrder,
+                    Window = c.Window,
+                    SegmentsPerWindow = c.SegmentsPerWindow,
+                    AutoReplenishment = c.AutoReplenishment
+                });
+                return new RateLimiterStrategyOptions { Name = "SlidingWindow", RateLimiter = args => limiter.AcquireAsync(1, args.Context.CancellationToken) };
+            }
+
+            public static RateLimiterStrategyOptions Fixed(FixedWindowLimiterConfig c)
+            {
+                var limiter = new FixedWindowRateLimiter(new FixedWindowRateLimiterOptions
+                {
+                    PermitLimit = c.PermitLimit,
+                    QueueLimit = c.QueueLimit,
+                    QueueProcessingOrder = c.QueueProcessingOrder,
+                    Window = c.Window,
+                    AutoReplenishment = c.AutoReplenishment
+                });
+                return new RateLimiterStrategyOptions { Name = "FixedWindow", RateLimiter = args => limiter.AcquireAsync(1, args.Context.CancellationToken) };
+            }
+
+            public static RateLimiterStrategyOptions TokenBucket(TokenBucketLimiterConfig c)
+            {
+                var limiter = new TokenBucketRateLimiter(new TokenBucketRateLimiterOptions
+                {
+                    TokenLimit = c.PermitLimit,
+                    QueueLimit = c.QueueLimit,
+                    QueueProcessingOrder = c.QueueProcessingOrder,
+                    TokensPerPeriod = c.TokensPerPeriod,
+                    ReplenishmentPeriod = c.ReplenishmentPeriod,
+                    AutoReplenishment = c.AutoReplenishment
+                });
+                return new RateLimiterStrategyOptions { Name = "TokenBucket", RateLimiter = args => limiter.AcquireAsync(1, args.Context.CancellationToken) };
+            }
         }
     }
 }

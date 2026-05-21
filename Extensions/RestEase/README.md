@@ -18,9 +18,9 @@ dotnet add package Dosaic.Extensions.RestEase
 - **IHttpClientFactory integration** — proper socket pooling, DNS refresh, named-client lifetime management.
 - **DelegatingHandler middleware chain** — plug in correlation IDs, logging, custom auth, rate-limit headers, request signing, etc.
 - **Polly v8 resilience pipelines** — retry with jitter + exponential backoff, `Retry-After` honouring, timeouts, circuit breaker, hedging, bulkhead. Powered by `Microsoft.Extensions.Http.Resilience`.
-- **Response caching** — drop-in `AddCaching()` handler backed by `IDistributedCache`. In-memory by default, swap to Redis / SQL Server / NCache with one line. Honours `Cache-Control` (`max-age`, `no-store`, `no-cache`, `private`).
-- **Client-side rate limiting** — `AddRateLimits()` stacks one or more limiters (SlidingWindow / FixedWindow / TokenBucket / Concurrency) backed by `System.Threading.RateLimiting`. Returns `429` + `Retry-After` on rejection (or throws).
-- **Config auto-wire** — `AddRestEaseApiFromConfiguration<T>(...)` reads `Caching`, `Resilience`, `RateLimits` blocks and enables matching handlers automatically. No manual `AddCaching()` / `AddStandardResilience()` / `AddRateLimits()` needed.
+- **Response caching** — Polly v8 strategy backed by `IDistributedCache`. In-memory by default, swap to Redis / SQL Server / NCache with one line. Honours `Cache-Control` (`max-age`, `no-store`, `no-cache`, `private`).
+- **Client-side rate limiting** — Polly v8 strategies (SlidingWindow / FixedWindow / TokenBucket / Concurrency) backed by `System.Threading.RateLimiting`. Throws `RateLimiterRejectedException` on rejection.
+- **Single Polly pipeline** — caching + retry + rate limit + timeout all composed into one `ResiliencePipeline<HttpResponseMessage>` mounted via `AddResilienceHandler`. Auto-wired from `Caching` / `Resilience` / `RateLimits` config blocks. Custom strategies via `AddPolly(Action<...>)`.
 - **OAuth2** out of the box — `ClientCredentials` and `Password` grants; transparent refresh-token rotation; concurrent-call coalescing via `SemaphoreSlim`; 401-triggered forced refresh + retry.
 - **Pluggable `ITokenProvider`** — swap in a distributed token cache, mTLS, API key, or any custom auth strategy.
 - **System.Text.Json only** — override `JsonSerializerOptions` per-client; sane web defaults out of the box.
@@ -33,7 +33,7 @@ dotnet add package Dosaic.Extensions.RestEase
 using Dosaic.Extensions.RestEase.DependencyInjection;
 
 services.AddRestEaseApi<IUserApi>(o => o.BaseAddress = "https://api.example.com")
-        .AddStandardResilience();
+        .AddResilience();
 ```
 
 Resolve the typed client:
@@ -58,8 +58,7 @@ var options = new RestEaseClientOptions
 };
 options.DefaultHeaders["X-Tenant"] = tenantId;
 
-services.AddRestEaseApi<IUserApi>(options)
-        .AddStandardResilience();
+services.AddRestEaseApi<IUserApi>(options);
 ```
 
 Overload signatures:
@@ -153,14 +152,14 @@ MyApi:
       QueueLimit: 1024
 ```
 
-Multiple limiters can be enabled simultaneously — they stack as separate `DelegatingHandler` layers. Order: `SlidingWindow → FixedWindow → TokenBucket → Concurrency` (Concurrency innermost, closest to socket).
+Multiple limiters enabled simultaneously stack as Polly strategies in single pipeline. Order: `Cache → SlidingWindow → FixedWindow → TokenBucket → Concurrency → TotalTimeout → Retry → AttemptTimeout` (outermost-first).
 
 ```csharp
 services.AddRestEaseApiFromConfiguration<IUserApi>(configuration, "MyApi");
-// Caching, Resilience, RateLimit all wired automatically when their Enabled=true
+// single Polly pipeline auto-wired with cache + limiters + retry + timeouts
 ```
 
-Manual override of any single block still works — call `.AddCaching(...)`, `.AddStandardResilience(...)`, `.AddRateLimit(...)` after to layer on or replace.
+Extra Polly strategies via `.AddPolly((pb, ctx) => pb.AddHedging(...))` — stacks alongside auto-wired pipeline.
 
 Overload signatures:
 
@@ -182,12 +181,11 @@ AddRestEaseApiFromConfiguration<TApi>(IServiceCollection, string name, IConfigur
 | `.ConfigureHttpClient(Action<HttpClient>)` | Raw `HttpClient` configuration |
 | `.AddOAuth2(Action<AuthenticationConfig>)` | Enable the built-in OAuth2 token provider |
 | `.AddTokenProvider<T>()` | Plug in a custom `ITokenProvider` (registered in DI) |
-| `.AddStandardResilience()` | `Microsoft.Extensions.Http.Resilience` standard pipeline |
-| `.AddResilience(ResiliencePipeline<HttpResponseMessage>)` | Custom Polly v8 pipeline |
-| `.AddHandler<THandler>()` | Insert a `DelegatingHandler` into the chain |
-| `.AddCaching(Action<HttpCacheOptions>?)` | Insert response cache handler backed by `IDistributedCache` |
-| `.AddStandardResilience(Action<HttpStandardResilienceOptions>?)` | Standard resilience pipeline; optional inline tuning |
-| `.AddRateLimits(Action<RateLimitsConfig>)` | Stack one or more rate limiters (SlidingWindow / FixedWindow / TokenBucket / Concurrency) |
+| `.AddHandler<THandler>()` | Insert a `DelegatingHandler` into the chain (outside Polly pipeline) |
+| `.AddResilience(Action<ResilienceConfig>?)` | Enable + tune retry / timeouts |
+| `.AddCaching(Action<HttpCacheOptions>?)` | Enable + tune response cache (`IDistributedCache`-backed Polly strategy) |
+| `.AddRateLimits(Action<RateLimitsConfig>?)` | Enable + tune rate limiters (SlidingWindow / FixedWindow / TokenBucket / Concurrency) |
+| `.AddPolly(Action<ResiliencePipelineBuilder<HttpResponseMessage>, ResilienceHandlerContext>)` | Mount additional Polly v8 pipeline (separate slot, stacks with auto-pipeline) |
 
 ## OAuth2
 
@@ -204,7 +202,7 @@ services.AddRestEaseApi<IUserApi>(o => o.BaseAddress = "https://api.example.com"
             a.ClientSecret = "s3cr3t";
             a.Scope = "api.read";
         })
-        .AddStandardResilience();
+        .AddResilience();
 ```
 
 ### Resource Owner Password
@@ -249,45 +247,80 @@ services.AddRestEaseApi<IUserApi>(o => o.BaseAddress = "...")
 
 ## Resilience
 
-### Standard (recommended)
+Built on Polly v8 + `Microsoft.Extensions.Http.Resilience`. Three equivalent ways to enable:
+
+**Builder method (most concise):**
 
 ```csharp
-.AddStandardResilience();
+services.AddRestEaseApi<IUserApi>(o => o.BaseAddress = "https://api.example.com")
+        .AddResilience(r =>
+        {
+            r.MaxRetryAttempts = 3;
+            r.BaseDelay = TimeSpan.FromMilliseconds(200);
+            r.AttemptTimeout = TimeSpan.FromSeconds(10);
+            r.TotalRequestTimeout = TimeSpan.FromSeconds(30);
+        });
 ```
 
-Gives the `Microsoft.Extensions.Http.Resilience` standard pipeline: total request timeout, attempt timeout, retry with exp backoff + jitter, circuit breaker. Configurable via `IOptions`.
-
-### Custom Polly v8 pipeline
+**Inline options:**
 
 ```csharp
-var pipeline = new ResiliencePipelineBuilder<HttpResponseMessage>()
-    .AddRetry(new RetryStrategyOptions<HttpResponseMessage>
+services.AddRestEaseApi<IUserApi>(o =>
+{
+    o.BaseAddress = "https://api.example.com";
+    o.Resilience = new ResilienceConfig { Enabled = true, MaxRetryAttempts = 3 };
+});
+```
+
+**Config-driven:** see [Configuration Binding](#configuration-binding) section.
+
+Defaults: exponential backoff + jitter, `HttpRetryStrategyOptions` predicate (5xx + 408 + 429 + `HttpRequestException`, honours `Retry-After`).
+
+### `ResilienceConfig`
+
+| Property | Type | Description |
+|---|---|---|
+| `Enabled` | `bool` | Master switch (`AddResilience()` sets to `true`) |
+| `MaxRetryAttempts` | `int?` | Defaults to 3 |
+| `BaseDelay` | `TimeSpan?` | Defaults to 500ms |
+| `AttemptTimeout` | `TimeSpan?` | Per-try timeout |
+| `TotalRequestTimeout` | `TimeSpan?` | Outermost timeout across retries |
+| `AdditionalRetryStatusCodes` | `HashSet<HttpStatusCode>` | Extra retryable codes appended to default predicate |
+| `ConfigureRetry` | `Action<HttpRetryStrategyOptions>?` | Last-mile mutation of retry strategy (backoff, jitter, custom `ShouldHandle`, `OnRetry` hooks) |
+
+### Advanced retry tuning
+
+```csharp
+.AddResilience(r =>
+{
+    r.MaxRetryAttempts = 5;
+    r.AdditionalRetryStatusCodes.Add(HttpStatusCode.BadGateway);
+    r.ConfigureRetry = retry =>
     {
-        MaxRetryAttempts = 5,
-        BackoffType = DelayBackoffType.Exponential,
-        UseJitter = true,
-        Delay = TimeSpan.FromMilliseconds(200),
-        ShouldHandle = new PredicateBuilder<HttpResponseMessage>()
-            .Handle<HttpRequestException>()
-            .HandleResult(r => (int)r.StatusCode >= 500 || r.StatusCode == HttpStatusCode.TooManyRequests)
-    })
-    .AddTimeout(TimeSpan.FromSeconds(30))
-    .Build();
-
-services.AddRestEaseApi<IUserApi>(o => o.BaseAddress = "...")
-        .AddResilience(pipeline);
+        retry.BackoffType = DelayBackoffType.Exponential;
+        retry.UseJitter = true;
+        retry.MaxDelay = TimeSpan.FromSeconds(30);
+        retry.OnRetry = args => { /* log */ return default; };
+    };
+});
 ```
 
-### Default pipeline (when nothing else is configured)
+### Custom Polly pipeline (hedging / circuit breaker / etc.)
 
-When you don't call `AddStandardResilience` or `AddResilience`, the **static factory path** falls back to `RestEaseDefaults.CreateDefaultPipeline()`:
+```csharp
+services.AddRestEaseApi<IUserApi>(o => o.BaseAddress = "...")
+        .AddPolly((pb, ctx) =>
+        {
+            pb.AddHedging(new HedgingStrategyOptions<HttpResponseMessage> { MaxHedgedAttempts = 2 });
+            pb.AddCircuitBreaker(new CircuitBreakerStrategyOptions<HttpResponseMessage> { FailureRatio = 0.1 });
+        });
+```
 
-- 3 retries, exponential backoff + jitter, base delay 250 ms
-- Triggers on `HttpRequestException` and any 5xx / 408 / 429
-- `Retry-After` header honoured (both delta-seconds and HTTP-date)
-- 100 s overall timeout
+`AddPolly` mounts an additional resilience handler (separate slot — multiple calls produce stacked pipelines). Auto-pipeline (from `AddResilience` / `AddCaching` / `AddRateLimits`) always runs alongside.
 
-> Note: in the DI path nothing is added implicitly — opt in with `.AddStandardResilience()`.
+### Static factory (non-DI)
+
+`RestClientFactory.Create<T>` uses Polly directly via `ResiliencePipeline<HttpResponseMessage>` — defaults from `RestEaseDefaults.CreateDefaultPipeline()` (3 retries exp + jitter, 100s overall timeout).
 
 ## Middleware (DelegatingHandler chain)
 
@@ -304,23 +337,29 @@ public sealed class CorrelationIdHandler : DelegatingHandler
 services.AddRestEaseApi<IUserApi>(o => o.BaseAddress = "...")
         .AddHandler<CorrelationIdHandler>()
         .AddOAuth2(a => { /* ... */ })
-        .AddStandardResilience();
+        .AddResilience();
 ```
 
-Handler ordering follows the `IHttpClientBuilder` chain — outer handlers wrap inner. The primary `SocketsHttpHandler` sits at the bottom and is managed by `IHttpClientFactory`.
+Custom `DelegatingHandler` chain wraps the Polly resilience handler at the outside. Order:
+
+```
+[CorrelationId] → [OAuth2] → [Polly pipeline: cache → limiters → retry → timeout] → SocketsHttpHandler
+```
+
+Custom handlers run on every retry (since they're outside the Polly pipeline). Put cache inside the Polly pipeline (via `Caching` options) if you want hits to short-circuit auth + retries.
 
 ## Response Caching
 
-`AddCaching()` inserts a `DelegatingHandler` that stores successful HTTP responses in an `IDistributedCache`. Same abstraction covers in-process and out-of-process stores — swap the backing implementation, handler code stays untouched.
+Cache implemented as Polly v8 strategy (`HttpCacheResilienceStrategy`) backed by `IDistributedCache`. Same abstraction covers in-process and out-of-process stores — swap backing implementation, strategy code unchanged.
 
 ### In-memory (default)
 
 ```csharp
 services.AddRestEaseApi<IUserApi>(o => o.BaseAddress = "https://api.example.com")
-        .AddCaching(o => o.DefaultTtl = TimeSpan.FromMinutes(10));
+        .AddCaching(c => c.DefaultTtl = TimeSpan.FromMinutes(10));
 ```
 
-If no `IDistributedCache` is already registered, `AddCaching()` auto-registers `AddDistributedMemoryCache()` (per-process, no shared state).
+If no `IDistributedCache` is already registered, `AddDistributedMemoryCache()` is auto-registered (per-process, no shared state).
 
 ### Redis (shared across replicas)
 
@@ -332,10 +371,10 @@ services.AddStackExchangeRedisCache(o =>
 });
 
 services.AddRestEaseApi<IUserApi>(o => o.BaseAddress = "https://api.example.com")
-        .AddCaching(o => o.DefaultTtl = TimeSpan.FromMinutes(10));
+        .AddCaching(c => c.DefaultTtl = TimeSpan.FromMinutes(10));
 ```
 
-Any `IDistributedCache` implementation works: `Microsoft.Extensions.Caching.StackExchangeRedis`, `Microsoft.Extensions.Caching.SqlServer`, `NCache`, etc. Register **before** `AddCaching()` so the handler resolves your impl instead of the in-memory fallback.
+Any `IDistributedCache` implementation works: `Microsoft.Extensions.Caching.StackExchangeRedis`, `Microsoft.Extensions.Caching.SqlServer`, `NCache`, etc. Register **before** `AddRestEaseApi<T>` so the cache strategy resolves your impl instead of the in-memory fallback.
 
 ### `HttpCacheOptions`
 
@@ -355,7 +394,7 @@ Any `IDistributedCache` implementation works: `Microsoft.Extensions.Caching.Stac
 
 ### Config-driven caching
 
-`HttpCacheOptions` lives on `RestEaseClientOptions.Caching` — bind it from the same config section:
+`HttpCacheOptions` lives on `RestEaseClientOptions.Caching` — bind from same config section:
 
 ```yaml
 Api:
@@ -368,15 +407,15 @@ Api:
 ```
 
 ```csharp
-services.AddRestEaseApiFromConfiguration<IUserApi>(configuration, "Api")
-        .AddStandardResilience()
-        .AddCaching();
+services.AddRestEaseApiFromConfiguration<IUserApi>(configuration, "Api");
+// Caching block auto-wires into Polly pipeline
 ```
 
-`AddCaching()` reads `RestEaseClientOptions.Caching` and copies it into the named `HttpCacheOptions`. Pass `Action<HttpCacheOptions>` to override / add Funcs:
+For code-only fields (`KeyBuilder`, `ShouldCacheRequest`, `ShouldCacheResponse`), layer `.AddCaching(...)` after config-binding:
 
 ```csharp
-.AddCaching(o => o.KeyBuilder = req => $"v2:{req.RequestUri}");
+services.AddRestEaseApiFromConfiguration<IUserApi>(configuration, "Api")
+        .AddCaching(c => c.KeyBuilder = req => $"v2:{req.RequestUri}");
 ```
 
 ### Cache-Control semantics
@@ -386,18 +425,9 @@ services.AddRestEaseApiFromConfiguration<IUserApi>(configuration, "Api")
 - Response `Cache-Control: max-age=N` → TTL = `min(N, MaxTtl ?? N)`
 - No `Cache-Control` on response → `DefaultTtl`
 
-### Handler ordering
+### Strategy ordering (inside Polly pipeline)
 
-Order matters in the `DelegatingHandler` chain. Recommended:
-
-```csharp
-services.AddRestEaseApi<IUserApi>(o => o.BaseAddress = "...")
-        .AddCaching()              // outermost — short-circuits before auth+resilience
-        .AddOAuth2(a => { /* ... */ })
-        .AddStandardResilience();
-```
-
-`.AddCaching()` first = cache hit skips token fetch + resilience pipeline. Reverse order = always run resilience + auth, cache only the final response body.
+Pipeline order: `Cache → RateLimiters → TotalTimeout → Retry → AttemptTimeout`. Cache outermost — hit short-circuits all other strategies + the inner HTTP call. OAuth2 lives in the `DelegatingHandler` chain *outside* the Polly pipeline — cache hit skips token fetch automatically.
 
 ### Key construction
 
@@ -408,7 +438,7 @@ Default key: `KeyPrefix + "{METHOD} {ABSOLUTE-URL}"`.
 Custom key:
 
 ```csharp
-.AddCaching(o => o.KeyBuilder = req =>
+.AddCaching(c => c.KeyBuilder = req =>
     $"{req.Method.Method}:{req.RequestUri}:tenant={req.Headers.GetValues("X-Tenant").First()}");
 ```
 
@@ -474,7 +504,7 @@ The static factory builds a fresh handler chain (`UserAgent → Resilience → O
 ## Best Practices
 
 - **Use the DI path** for hosted services. The static factory is for short-lived tools and tests.
-- **Always call `.AddStandardResilience()`** (or a custom pipeline) on the DI path — there is no implicit retry/timeout otherwise.
+- **Call `.AddResilience()`** (or `.AddCaching()` / `.AddRateLimits()`, or enable equivalent option blocks) — auto-pipeline mounts unconditionally but adds zero strategies when no block is enabled.
 - **One client interface per service**. Don't reuse the same interface for two upstreams — register each with a distinct name.
 - **Set `RefreshSkew` ≥ 10 s** so tokens refresh before they expire on the wire. Default is 30 s.
 - **Distributed token cache**: implement `ITokenProvider` backed by Redis/Vault when you run multiple replicas — otherwise each replica holds its own copy.

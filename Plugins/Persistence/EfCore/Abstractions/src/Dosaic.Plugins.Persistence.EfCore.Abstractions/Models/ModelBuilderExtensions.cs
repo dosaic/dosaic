@@ -93,11 +93,13 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Models
 
                 entityTypeBuilder.HasOne("Model")
                     .WithMany()
-                    .HasForeignKey(nameof(History.ForeignId));
+                    .HasForeignKey(nameof(History.ForeignId))
+                    .OnDelete(DeleteBehavior.Cascade);
 
                 entityTypeBuilder.HasOne(modifiedByForeignKeyModel)
                     .WithMany()
-                    .HasForeignKey(nameof(History.ModifiedBy));
+                    .HasForeignKey(nameof(History.ModifiedBy))
+                    .OnDelete(DeleteBehavior.Restrict);
             }
         }
 

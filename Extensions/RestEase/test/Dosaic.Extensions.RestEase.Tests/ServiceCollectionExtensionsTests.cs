@@ -89,8 +89,16 @@ namespace Dosaic.Extensions.RestEase.Tests
                 .RespondWith(Response.Create().WithSuccess().WithBody("{}"));
 
             var services = new ServiceCollection();
-            services.AddRestEaseApi<ISomeApi>(o => o.BaseAddress = _server.Url)
-                .AddStandardResilience();
+            services.AddRestEaseApi<ISomeApi>(o =>
+            {
+                o.BaseAddress = _server.Url;
+                o.Resilience = new Dosaic.Extensions.RestEase.Resilience.ResilienceConfig
+                {
+                    Enabled = true,
+                    MaxRetryAttempts = 3,
+                    BaseDelay = TimeSpan.FromMilliseconds(10)
+                };
+            });
 
             await using var sp = services.BuildServiceProvider();
             var client = sp.GetRequiredService<ISomeApi>();
