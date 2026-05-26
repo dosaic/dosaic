@@ -92,7 +92,17 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Audit
             // Non-collection navigation or scalar
             if (index == segments.Length - 1)
             {
-                property.SetValue(host, CoerceValue(value.New, property.PropertyType));
+                if (value.New is null
+                    && property.PropertyType.IsValueType
+                    && Nullable.GetUnderlyingType(property.PropertyType) is null)
+                {
+                    // Non-nullable value-type scalar: cannot set null, fall back to default(T).
+                    property.SetValue(host, Activator.CreateInstance(property.PropertyType));
+                }
+                else
+                {
+                    property.SetValue(host, CoerceValue(value.New, property.PropertyType));
+                }
                 return;
             }
             var sub = property.GetValue(host);
