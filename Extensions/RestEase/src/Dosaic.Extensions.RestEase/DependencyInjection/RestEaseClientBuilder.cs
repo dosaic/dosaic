@@ -1,4 +1,6 @@
+using System.Net;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Text.Json;
 using System.Threading.RateLimiting;
 using Dosaic.Extensions.RestEase.Authentication;
@@ -12,6 +14,7 @@ using Microsoft.Extensions.Http.Resilience;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Polly;
+using Polly.Fallback;
 using Polly.RateLimiting;
 using Polly.Timeout;
 
@@ -151,6 +154,21 @@ namespace Dosaic.Extensions.RestEase.DependencyInjection
 
             if (opts.RateLimits is { Enabled: true } rl)
             {
+                if (!rl.ThrowOnRejection)
+                {
+                    pipeline.AddFallback(new FallbackStrategyOptions<HttpResponseMessage>
+                    {
+                        ShouldHandle = new PredicateBuilder<HttpResponseMessage>().Handle<RateLimiterRejectedException>(),
+                        FallbackAction = args =>
+                        {
+                            var response = new HttpResponseMessage((HttpStatusCode)429);
+                            if (args.Outcome.Exception is RateLimiterRejectedException { RetryAfter: { } retryAfter })
+                                response.Headers.RetryAfter = new RetryConditionHeaderValue(retryAfter);
+                            return Outcome.FromResultAsValueTask(response);
+                        }
+                    });
+                }
+
                 if (rl.SlidingWindow?.Enabled == true)
                     pipeline.AddRateLimiter(RateLimiterBuilders.Sliding(rl.SlidingWindow));
                 if (rl.FixedWindow?.Enabled == true)
