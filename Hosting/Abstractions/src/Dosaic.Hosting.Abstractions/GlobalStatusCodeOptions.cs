@@ -5,15 +5,15 @@ namespace Dosaic.Hosting.Abstractions
 {
     public class GlobalStatusCodeOptions
     {
-        public IList<int> DefaultStatusCodes { get; } = new List<int>
-        {
+        public IList<int> DefaultStatusCodes { get; } =
+        [
             StatusCodes.Status401Unauthorized,
             StatusCodes.Status404NotFound,
             StatusCodes.Status403Forbidden,
             StatusCodes.Status500InternalServerError,
             StatusCodes.Status415UnsupportedMediaType,
             StatusCodes.Status406NotAcceptable
-        };
+        ];
 
         public GlobalStatusCodeOptions Add(HttpStatusCode statusCode)
         {
