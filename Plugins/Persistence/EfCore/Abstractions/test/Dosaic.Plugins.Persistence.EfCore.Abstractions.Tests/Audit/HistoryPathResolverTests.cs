@@ -78,6 +78,13 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests.Audit
         }
 
         [Test]
+        public void ThrowsWhenExplicitCollectionDoesNotTargetChildType()
+        {
+            var act = () => HistoryPathResolver.Build([typeof(WrongTypeCollectionChild)]);
+            act.Should().Throw<InvalidOperationException>().WithMessage("*does not target*");
+        }
+
+        [Test]
         public void ResolveRootIdSingleLevel()
         {
             var resolver = HistoryPathResolver.Build([typeof(TestHistoryChildModel)]);
@@ -133,10 +140,15 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests.Audit
         }
 
         [DbNanoIdPrimaryKey(NanoIdConfig.Lengths.NoLookAlikeDigitsAndLetters.L2)]
-        [HistoryParent(typeof(TestHistoryModel), nameof(ParentId), Collection = nameof(TestHistoryModel.Children))]
+        [HistoryParent(typeof(DualRoleParent), nameof(ParentId), Collection = nameof(DualRoleParent.Items))]
         public class DualRoleEntity : Model, IHistory
         {
             public NanoId ParentId { get; set; }
+        }
+
+        public class DualRoleParent : Model, IHistory
+        {
+            public ICollection<DualRoleEntity> Items { get; set; }
         }
 
         [DbNanoIdPrimaryKey(NanoIdConfig.Lengths.NoLookAlikeDigitsAndLetters.L2)]
@@ -161,6 +173,13 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests.Audit
         [DbNanoIdPrimaryKey(NanoIdConfig.Lengths.NoLookAlikeDigitsAndLetters.L2)]
         [HistoryParent(typeof(TestHistoryModel), nameof(ParentId), Collection = "NotARealProperty")]
         public class BadCollectionChild : Model
+        {
+            public NanoId ParentId { get; set; }
+        }
+
+        [DbNanoIdPrimaryKey(NanoIdConfig.Lengths.NoLookAlikeDigitsAndLetters.L2)]
+        [HistoryParent(typeof(TestHistoryModel), nameof(ParentId), Collection = nameof(TestHistoryModel.HistoryProperty))]
+        public class WrongTypeCollectionChild : Model
         {
             public NanoId ParentId { get; set; }
         }

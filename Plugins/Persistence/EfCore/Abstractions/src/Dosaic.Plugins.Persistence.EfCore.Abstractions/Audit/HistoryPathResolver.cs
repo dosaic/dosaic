@@ -107,9 +107,13 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Audit
         {
             if (!string.IsNullOrEmpty(explicitName))
             {
-                return parentType.GetProperty(explicitName)
+                var explicitNav = parentType.GetProperty(explicitName)
                     ?? throw new InvalidOperationException(
                         $"Parent type '{parentType.FullName}' has no property '{explicitName}' (configured via Collection on [HistoryParent] of '{childType.FullName}').");
+                if (!IsNavOfType(explicitNav, childType))
+                    throw new InvalidOperationException(
+                        $"Property '{explicitName}' on '{parentType.FullName}' does not target '{childType.FullName}' (configured via Collection on [HistoryParent] of '{childType.FullName}').");
+                return explicitNav;
             }
 
             var candidates = parentType.GetProperties()
