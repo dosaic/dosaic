@@ -107,7 +107,34 @@ namespace Dosaic.Extensions.RestEase.DependencyInjection
     internal sealed class DefaultRestClientFactory : IRestClientFactory
     {
         private readonly IServiceProvider _serviceProvider;
-        public DefaultRestClientFactory(IServiceProvider serviceProvider) => _serviceProvider = serviceProvider;
-        public T Create<T>(string name = null) => _serviceProvider.GetRequiredService<T>();
+        private readonly IHttpClientFactory _httpClientFactory;
+        private readonly IOptionsMonitor<RestEaseClientOptions> _optionsMonitor;
+
+        public DefaultRestClientFactory(
+            IServiceProvider serviceProvider,
+            IHttpClientFactory httpClientFactory,
+            IOptionsMonitor<RestEaseClientOptions> optionsMonitor)
+        {
+            _serviceProvider = serviceProvider;
+            _httpClientFactory = httpClientFactory;
+            _optionsMonitor = optionsMonitor;
+        }
+
+        public T Create<T>(string name = null)
+        {
+            if (string.IsNullOrWhiteSpace(name))
+                return _serviceProvider.GetRequiredService<T>();
+
+            var http = _httpClientFactory.CreateClient(name);
+            var opts = _optionsMonitor.Get(name);
+            var jsonOptions = opts.JsonOptions ?? RestEaseDefaults.CreateDefaultJsonOptions();
+            var restClient = new RestClient(http)
+            {
+                RequestBodySerializer = new SystemTextJsonRequestBodySerializer(jsonOptions),
+                ResponseDeserializer = new SystemTextJsonResponseDeserializer(jsonOptions)
+            };
+
+            return restClient.For<T>();
+        }
     }
 }
