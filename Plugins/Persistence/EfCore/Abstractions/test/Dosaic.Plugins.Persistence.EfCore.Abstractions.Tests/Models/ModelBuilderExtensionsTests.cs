@@ -3,6 +3,7 @@ using Dosaic.Extensions.NanoIds;
 using Dosaic.Plugins.Persistence.EfCore.Abstractions.Audit;
 using Dosaic.Plugins.Persistence.EfCore.Abstractions.Database;
 using Dosaic.Plugins.Persistence.EfCore.Abstractions.Eventsourcing;
+using Dosaic.Plugins.Persistence.EfCore.Abstractions.Identifiers;
 using Dosaic.Plugins.Persistence.EfCore.Abstractions.Models;
 using Microsoft.EntityFrameworkCore;
 using NUnit.Framework;
@@ -163,6 +164,41 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests.Models
         {
             Value1,
             Value2
+        }
+
+        public class OwnedWithFk
+        {
+            public NanoId UserId { get; set; }
+        }
+
+        [DbNanoIdPrimaryKey(NanoIdConfig.Lengths.NoLookAlikeDigitsAndLetters.L2)]
+        public class OwnedFkParent : Model
+        {
+            public OwnedWithFk Owned { get; set; }
+        }
+
+        [Test]
+        public void ApplyKeysOwnedEntityWithNonOwnershipForeignKeySetsMaxLengthOnOwnedFk()
+        {
+            var builder = new ModelBuilder(new Microsoft.EntityFrameworkCore.Metadata.Conventions.ConventionSet());
+            builder.Entity<TestUserModel>();
+            builder.Entity<OwnedFkParent>()
+                .OwnsOne(p => p.Owned, owned =>
+                {
+                    owned.HasOne<TestUserModel>()
+                        .WithMany()
+                        .HasForeignKey(o => o.UserId);
+                });
+
+            builder.ApplyKeys();
+
+            var ownedEntity = builder.Model.FindEntityType(typeof(OwnedWithFk));
+            ownedEntity.Should().NotBeNull();
+            ownedEntity!.IsOwned().Should().BeTrue();
+            var fkProp = ownedEntity.FindProperty(nameof(OwnedWithFk.UserId));
+            var principalAttr = typeof(TestUserModel).GetCustomAttributes(typeof(NanoIdAttribute), false)
+                .Cast<NanoIdAttribute>().Single();
+            fkProp!.GetMaxLength().Should().Be(principalAttr.LengthWithPrefix);
         }
     }
 }

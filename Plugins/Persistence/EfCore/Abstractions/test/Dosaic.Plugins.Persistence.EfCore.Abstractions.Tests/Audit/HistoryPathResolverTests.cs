@@ -183,5 +183,58 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests.Audit
         {
             public NanoId ParentId { get; set; }
         }
+        [Test]
+        public void ResolveDetectsCyclicHistoryParentChainAndThrows()
+        {
+            var act = () => HistoryPathResolver.Build([typeof(CyclicA), typeof(CyclicB)]);
+            act.Should().Throw<InvalidOperationException>().WithMessage("*Cyclic [HistoryParent] chain detected*");
+        }
+
+        [Test]
+        public void GetCollectionElementTypeResolvesViaIEnumerableInterfaceForCustomCollection()
+        {
+            var resolver = HistoryPathResolver.Build([typeof(CustomCollectionChild)]);
+            var info = resolver.Get(typeof(CustomCollectionChild));
+            info.Should().NotBeNull();
+            info.RootType.Should().Be(typeof(CustomCollectionParent));
+            info.Links[0].CollectionOnParent.Name.Should().Be(nameof(CustomCollectionParent.Items));
+            info.Links[0].IsCollection.Should().BeTrue();
+        }
+
+        [DbNanoIdPrimaryKey(NanoIdConfig.Lengths.NoLookAlikeDigitsAndLetters.L2)]
+        [HistoryParent(typeof(CyclicB), nameof(ParentId), Collection = nameof(CyclicB.Items))]
+        public class CyclicA : Model
+        {
+            public NanoId ParentId { get; set; }
+            public ICollection<CyclicB> Items { get; set; }
+        }
+
+        [DbNanoIdPrimaryKey(NanoIdConfig.Lengths.NoLookAlikeDigitsAndLetters.L2)]
+        [HistoryParent(typeof(CyclicA), nameof(ParentId), Collection = nameof(CyclicA.Items))]
+        public class CyclicB : Model
+        {
+            public NanoId ParentId { get; set; }
+            public ICollection<CyclicA> Items { get; set; }
+        }
+
+        public class CustomCollectionParent : Model, IHistory
+        {
+            public CustomChildBag Items { get; set; }
+        }
+
+        public class CustomChildBag : System.Collections.Generic.IEnumerable<CustomCollectionChild>
+        {
+            private readonly List<CustomCollectionChild> _items = new();
+            public void Add(CustomCollectionChild c) => _items.Add(c);
+            public IEnumerator<CustomCollectionChild> GetEnumerator() => _items.GetEnumerator();
+            System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => GetEnumerator();
+        }
+
+        [DbNanoIdPrimaryKey(NanoIdConfig.Lengths.NoLookAlikeDigitsAndLetters.L2)]
+        [HistoryParent(typeof(CustomCollectionParent), nameof(ParentId))]
+        public class CustomCollectionChild : Model
+        {
+            public NanoId ParentId { get; set; }
+        }
     }
 }

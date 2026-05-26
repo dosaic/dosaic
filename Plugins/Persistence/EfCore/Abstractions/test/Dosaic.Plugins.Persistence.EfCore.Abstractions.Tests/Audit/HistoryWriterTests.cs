@@ -131,5 +131,40 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests.Audit
             changes.Should().ContainKey(nameof(TestHistoryModel.HistoryProperty));
             changes.Should().ContainKey("Children.C1");
         }
+
+        [Test]
+        public async Task RootWithZeroPathsAfterFilterSkipsPersist()
+        {
+            var entity = new TestHistoryModel { Id = "Id", HistoryProperty = "Name", Ignored = "X" };
+            var previous = new TestHistoryModel { Id = "Id", HistoryProperty = "Name", Ignored = null };
+            var changeSet = new ChangeSet { new ModelChange(ChangeState.Modified, entity, previous) };
+            await _writer.WriteAsync(changeSet, _db, CancellationToken.None);
+            _db.ChangeTracker.Entries<History<TestHistoryModel>>().Should().BeEmpty();
+        }
+
+        [Test]
+        public async Task PersistFailurePropagatesException()
+        {
+            var throwingDb = new ThrowingDb();
+            var entity = new TestHistoryModel { Id = "Id", HistoryProperty = "Name" };
+            var changeSet = new ChangeSet { new ModelChange(ChangeState.Added, entity, null) };
+            var act = async () => await _writer.WriteAsync(changeSet, throwingDb, CancellationToken.None);
+            (await act.Should().ThrowAsync<System.Reflection.TargetInvocationException>())
+                .WithInnerException<InvalidOperationException>().WithMessage("*persist-boom*");
+        }
+
+        private sealed class ThrowingDb : IDb
+        {
+            public Microsoft.EntityFrameworkCore.Metadata.IModel Model => throw new NotImplementedException();
+            public DbSet<TEntity> Get<TEntity>() where TEntity : class, Dosaic.Plugins.Persistence.EfCore.Abstractions.Models.IModel
+                => throw new InvalidOperationException("persist-boom");
+            public IQueryable<TEntity> GetQuery<TEntity>() where TEntity : class, Dosaic.Plugins.Persistence.EfCore.Abstractions.Models.IModel
+                => throw new NotImplementedException();
+            public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default) => Task.FromResult(0);
+            public Task<Microsoft.EntityFrameworkCore.Storage.IDbContextTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default)
+                => throw new NotImplementedException();
+            public ValueTask DisposeAsync() => default;
+            public void Dispose() { }
+        }
     }
 }

@@ -153,5 +153,32 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests
 
             sp.GetRequiredService<IEventProcessor<TestAggregate>>().Should().NotBeNull();
         }
+
+        public class DisposableBusinessLogic : IBusinessLogic<TestModel>, IDisposable
+        {
+            public void Dispose() { }
+        }
+
+        [Test]
+        public void ConfigureServicesRegistersOnlyIBusinessLogicInterfacesFromInterceptor()
+        {
+            var resolver = Substitute.For<IImplementationResolver>();
+            resolver.FindTypes().Returns([typeof(DisposableBusinessLogic)]);
+            resolver.FindAssemblies().Returns([typeof(EfCorePluginTests).Assembly]);
+            var plugin = new EfCorePlugin(resolver, [Substitute.For<IEfCoreConfigurator>()], _fakeLogger);
+
+            var sc = new ServiceCollection();
+            sc.AddSingleton(Substitute.For<IUserIdProvider>());
+            sc.AddSingleton(Substitute.For<IDateTimeProvider>());
+            plugin.ConfigureServices(sc);
+
+            sc.Where(d => d.ImplementationType == typeof(DisposableBusinessLogic))
+                .Select(d => d.ServiceType)
+                .Should()
+                .ContainSingle()
+                .Which.Should().Be(typeof(IBusinessLogic<TestModel>));
+            sc.Should().NotContain(d => d.ServiceType == typeof(IDisposable)
+                                        && d.ImplementationType == typeof(DisposableBusinessLogic));
+        }
     }
 }
