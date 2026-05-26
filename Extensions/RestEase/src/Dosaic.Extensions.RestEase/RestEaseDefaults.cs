@@ -44,7 +44,9 @@ namespace Dosaic.Extensions.RestEase
         {
             if (retryAfter is null) return null;
             if (retryAfter.Delta.HasValue) return retryAfter.Delta.Value;
-            return retryAfter.Date!.Value - DateTimeOffset.UtcNow;
+
+            var delay = retryAfter.Date!.Value - DateTimeOffset.UtcNow;
+            return delay <= TimeSpan.Zero ? TimeSpan.Zero : delay;
         }
 
         private static bool IsTransient(HttpResponseMessage response)
