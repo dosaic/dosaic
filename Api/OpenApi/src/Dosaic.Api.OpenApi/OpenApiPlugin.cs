@@ -2,7 +2,7 @@ using Dosaic.Api.OpenApi.Filters.Document;
 using Dosaic.Api.OpenApi.Filters.Operation;
 using Dosaic.Api.OpenApi.Filters.Schema;
 using Dosaic.Api.OpenApi.Schema;
-using Dosaic.Hosting.Abstractions.Attributes;
+using Dosaic.Hosting.Abstractions.Extensions;
 using Dosaic.Hosting.Abstractions.Plugins;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
@@ -14,39 +14,32 @@ using Microsoft.OpenApi;
 
 namespace Dosaic.Api.OpenApi
 {
-    [Configuration("openapi")]
-    public class OpenApiConfiguration
-    {
-        public OpenApiAuthConfiguration Auth { get; set; }
-
-        public class OpenApiAuthConfiguration
-        {
-            public bool Enabled { get; set; }
-            public string TokenUrl { get; set; }
-            public string AuthUrl { get; set; }
-        }
-    }
 
     public class OpenApiPlugin : IPluginApplicationConfiguration, IPluginServiceConfiguration,
         IPluginEndpointsConfiguration
     {
         private readonly OpenApiConfiguration _configuration;
         private readonly IHostEnvironment _environment;
+        private readonly IOpenApiConfigurator[] _configurators;
 
-        public OpenApiPlugin(OpenApiConfiguration configuration, IHostEnvironment environment)
+        public OpenApiPlugin(OpenApiConfiguration configuration, IHostEnvironment environment, IOpenApiConfigurator[] configurators)
         {
             _environment = environment;
             _configuration = configuration;
+            _configurators = configurators;
         }
 
         public void ConfigureApplication(IApplicationBuilder applicationBuilder)
         {
-            applicationBuilder.UseSwagger();
+            applicationBuilder.UseSwagger(
+                options => _configurators.ForEach(x => x.UseSwagger(options))
+            );
             applicationBuilder.UseSwaggerUI(options =>
             {
                 options.SwaggerEndpoint("swagger/v1/swagger.json", _environment.ApplicationName);
                 options.RoutePrefix = string.Empty;
                 options.DisplayRequestDuration();
+                _configurators.ForEach(x => x.UseSwaggerUI(options));
             });
         }
 
@@ -70,31 +63,34 @@ namespace Dosaic.Api.OpenApi
 
                 options.EnableAnnotations();
                 var authEnabled = _configuration.Auth?.Enabled ?? false;
-                if (!authEnabled) return;
-                var tokenUrl = new Uri(_configuration.Auth!.TokenUrl!);
-                var authUrl = new Uri(_configuration.Auth!.AuthUrl!);
-                options.AddSecurityDefinition("bearer",
-                    new OpenApiSecurityScheme
-                    {
-                        Scheme = "bearer",
-                        BearerFormat = "JWT",
-                        Description = "JWT Authorization header using the Bearer scheme.",
-                        Type = SecuritySchemeType.OAuth2,
-                        In = ParameterLocation.Header,
-                        Flows = new OpenApiOAuthFlows
-                        {
-                            AuthorizationCode =
-                                new OpenApiOAuthFlow { TokenUrl = tokenUrl, AuthorizationUrl = authUrl },
-                            ClientCredentials = new OpenApiOAuthFlow { TokenUrl = tokenUrl },
-                            Password = new OpenApiOAuthFlow { TokenUrl = tokenUrl },
-                            Implicit = new OpenApiOAuthFlow { AuthorizationUrl = authUrl }
-                        }
-                    });
-
-                options.AddSecurityRequirement(document => new OpenApiSecurityRequirement
+                if (authEnabled)
                 {
-                    [new OpenApiSecuritySchemeReference("bearer", document)] = []
-                });
+                    var tokenUrl = new Uri(_configuration.Auth!.TokenUrl!);
+                    var authUrl = new Uri(_configuration.Auth!.AuthUrl!);
+                    options.AddSecurityDefinition("bearer",
+                        new OpenApiSecurityScheme
+                        {
+                            Scheme = "bearer",
+                            BearerFormat = "JWT",
+                            Description = "JWT Authorization header using the Bearer scheme.",
+                            Type = SecuritySchemeType.OAuth2,
+                            In = ParameterLocation.Header,
+                            Flows = new OpenApiOAuthFlows
+                            {
+                                AuthorizationCode =
+                                    new OpenApiOAuthFlow { TokenUrl = tokenUrl, AuthorizationUrl = authUrl },
+                                ClientCredentials = new OpenApiOAuthFlow { TokenUrl = tokenUrl },
+                                Password = new OpenApiOAuthFlow { TokenUrl = tokenUrl },
+                                Implicit = new OpenApiOAuthFlow { AuthorizationUrl = authUrl },
+                            }
+                        });
+
+                    options.AddSecurityRequirement(document => new OpenApiSecurityRequirement
+                    {
+                        [new OpenApiSecuritySchemeReference("bearer", document)] = []
+                    });
+                }
+                _configurators.ForEach(x => x.AddSwaggerGen(options));
             });
         }
 

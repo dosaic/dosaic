@@ -19,11 +19,15 @@ namespace Dosaic.Api.OpenApi.Tests
     public class OpenApiPluginTest
     {
         private readonly IHostEnvironment _environment = Substitute.For<IHostEnvironment>();
+        private IOpenApiConfigurator _configurator;
 
-        private OpenApiPlugin GetPlugin(OpenApiConfiguration configuration)
+        [SetUp]
+        public void Up()
         {
-            return new OpenApiPlugin(configuration, _environment);
+            _configurator = Substitute.For<IOpenApiConfigurator>();
         }
+
+        private OpenApiPlugin GetPlugin(OpenApiConfiguration configuration) => new(configuration, _environment, [_configurator]);
 
         [Test]
         public void SwaggerUiUsesExampleDesignByDefault()
@@ -48,6 +52,9 @@ namespace Dosaic.Api.OpenApi.Tests
             swaggerUiOptions.Value.RoutePrefix.Should().BeEmpty();
             swaggerUiOptions.Value.ConfigObject.DisplayRequestDuration.Should().BeTrue();
             swaggerUiOptions.Value.ConfigObject.Urls.Should().Contain(x => x.Url == "swagger/v1/swagger.json" && x.Name == "AwesomeApp");
+
+            _configurator.Received(1).UseSwagger(Arg.Any<SwaggerOptions>());
+            _configurator.Received(1).UseSwaggerUI(Arg.Any<SwaggerUIOptions>());
         }
 
         [Test]
@@ -116,6 +123,8 @@ namespace Dosaic.Api.OpenApi.Tests
                 .Contain(x => x.Type == typeof(XmlCommentsOperationFilter));
             swaggerGenOptions.RequestBodyFilterDescriptors.Should()
                 .Contain(x => x.Type == typeof(XmlCommentsRequestBodyFilter));
+            _configurator.Received(1).AddSwaggerGen(Arg.Any<SwaggerGenOptions>());
+
         }
 
         [Test]
