@@ -14,7 +14,7 @@ using WireMock.Server;
 
 namespace Dosaic.Extensions.RestEase.Tests
 {
-    public sealed class BuilderSugarTests
+    public sealed class RestEaseApiBuilderTests
     {
         private WireMockServer _server;
 
