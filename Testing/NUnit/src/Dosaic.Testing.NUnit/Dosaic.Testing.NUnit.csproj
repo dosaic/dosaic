@@ -16,6 +16,7 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <PackageReference Include="NaughtyStrings.Bogus" />
+    <PackageReference Include="NetEscapades.Configuration.Yaml" />
     <PackageReference Include="NUnit" />
     <PackageReference Include="Allure.NUnit" />
     <PackageReference Include="Chronos.Net" />
