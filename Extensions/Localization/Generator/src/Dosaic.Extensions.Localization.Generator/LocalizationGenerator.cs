@@ -1,5 +1,7 @@
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
+using System.IO;
 using System.Linq;
 using System.Text;
 using Microsoft.CodeAnalysis;
@@ -36,9 +38,20 @@ namespace Dosaic.Extensions.Localization.Generator
                     (ctx, _) => ExtractInfo(ctx))
                 .Where(p => p != null);
 
-            context.RegisterSourceOutput(properties.Collect(), (spc, props) =>
+            var combined = properties.Collect().Combine(context.AnalyzerConfigOptionsProvider);
+
+            context.RegisterSourceOutput(combined, (spc, source) =>
             {
+                var (props, options) = source;
                 spc.AddSource("EntityPropertyLabels.g.cs", GenerateLookupClass(props));
+
+                options.GlobalOptions.TryGetValue("build_property.LocalizationJsonDeOutputPath", out var dePath);
+                options.GlobalOptions.TryGetValue("build_property.LocalizationJsonEnOutputPath", out var enPath);
+
+                if (!string.IsNullOrWhiteSpace(dePath))
+                    WriteJsonFile(dePath, props, "de");
+                if (!string.IsNullOrWhiteSpace(enPath))
+                    WriteJsonFile(enPath, props, "en");
             });
         }
 
@@ -108,6 +121,56 @@ namespace Dosaic.Extensions.Localization.Generator
             return sb.ToString();
         }
 
+        private static void WriteJsonFile(string path, ImmutableArray<PropertyInfo> props, string culture)
+        {
+            var grouped = new Dictionary<string, List<PropertyInfo>>();
+            foreach (var prop in props)
+            {
+                if (prop == null) continue;
+                if (!grouped.TryGetValue(prop.TypeName, out var list))
+                    grouped[prop.TypeName] = list = new List<PropertyInfo>();
+                list.Add(prop);
+            }
+
+            var sb = new StringBuilder();
+            sb.AppendLine("{");
+
+            var types = new List<string>(grouped.Keys);
+            for (var i = 0; i < types.Count; i++)
+            {
+                var typeName = types[i];
+                var members = grouped[typeName];
+                sb.AppendLine($"  \"{EscapeJson(typeName)}\": {{");
+
+                for (var j = 0; j < members.Count; j++)
+                {
+                    var prop = members[j];
+                    var translation = GetTranslation(prop, culture);
+                    var comma = j < members.Count - 1 ? "," : "";
+                    sb.AppendLine($"    \"{EscapeJson(prop.PropertyName)}\": \"{EscapeJson(translation)}\"{comma}");
+                }
+
+                var typeComma = i < types.Count - 1 ? "," : "";
+                sb.AppendLine($"  }}{typeComma}");
+            }
+
+            sb.Append("}");
+
+#pragma warning disable RS1035
+            var dir = Path.GetDirectoryName(path);
+            if (!string.IsNullOrEmpty(dir))
+                Directory.CreateDirectory(dir);
+            File.WriteAllText(path, sb.ToString());
+#pragma warning restore RS1035
+        }
+
+        private static string GetTranslation(PropertyInfo prop, string culture)
+        {
+            if (culture == "en") return prop.En;
+            if (culture == "de") return prop.De;
+            return prop.PropertyName;
+        }
+
         private static PropertyInfo ExtractInfo(GeneratorAttributeSyntaxContext ctx)
         {
             if (!(ctx.TargetSymbol is IPropertySymbol property))
@@ -142,5 +205,8 @@ namespace Dosaic.Extensions.Localization.Generator
 
         private static string Escape(string value)
             => value.Replace("\\", "\\\\").Replace("\"", "\\\"");
+
+        private static string EscapeJson(string value)
+            => value.Replace("\\", "\\\\").Replace("\"", "\\\"").Replace("\n", "\\n").Replace("\r", "\\r").Replace("\t", "\\t");
     }
 }

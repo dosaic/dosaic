@@ -103,15 +103,6 @@ services.AddSwaggerGen(options =>
 });
 ```
 
-### File-upload endpoints
-
-Endpoints with `IFormFile` parameters are automatically converted to a `multipart/form-data` request body schema — no extra attributes required:
-
-```csharp
-[HttpPost("upload")]
-public IActionResult Upload(IFormFile file) { ... }
-```
-
 ### Value-object properties
 
 Properties (or types) decorated with `[Vogen.ValueObject]` are transparently flattened in the generated schema to their underlying primitive type. The `ValueObjectSchemaFilter` handles the schema rewrite, and the `ValueObjectDocumentFilter` cleans up any leftover component schemas, so the generated OpenAPI document is accurate and free of `$ref` noise.

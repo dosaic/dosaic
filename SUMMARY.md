@@ -44,6 +44,9 @@
 
 ## Extensions
 
+* Localization
+  * [Attributes](Extensions/Localization/README.md)
+  * [Generator](Extensions/Localization/Generator/README.md)
 * [NanoId](Extensions/NanoId/README.md)
 * [RestEase](Extensions/RestEase/README.md)
 * [Sqids](Extensions/Sqids/README.md)
