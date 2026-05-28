@@ -1,29 +1,30 @@
-using Newtonsoft.Json;
+using System.Text.Json.Serialization;
 
 namespace Dosaic.Extensions.RestEase.Authentication
 {
     internal class OAuth2Model
     {
-        [JsonProperty("access_token")]
+        [JsonPropertyName("access_token")]
         public string AccessToken { get; set; }
 
-        [JsonProperty("refresh_token")]
+        [JsonPropertyName("refresh_token")]
         public string RefreshToken { get; set; }
 
-        [JsonProperty("token_type")]
+        [JsonPropertyName("token_type")]
         public string TokenType { get; set; }
 
-        [JsonProperty("expires_in")]
+        [JsonPropertyName("expires_in")]
         public int ExpiresIn { get; set; }
 
-        [JsonProperty("refresh_expires_in")]
+        [JsonPropertyName("refresh_expires_in")]
         public int RefreshExpiresIn { get; set; }
 
-        [JsonIgnore] public DateTime Created { get; set; } = DateTime.UtcNow.AddSeconds(-1);
+        [JsonIgnore]
+        public DateTime Created { get; set; } = DateTime.UtcNow.AddSeconds(-1);
 
-        public bool ShouldCreateToken() => IsExpired() && IsRefreshExpired();
-        public bool ShouldRefreshToken() => IsExpired() && !IsRefreshExpired();
-        private bool IsExpired() => Created.AddSeconds(ExpiresIn) < DateTime.UtcNow;
-        private bool IsRefreshExpired() => Created.AddSeconds(RefreshExpiresIn) < DateTime.UtcNow;
+        public bool ShouldCreateToken(TimeSpan skew) => IsExpired(skew) && IsRefreshExpired(skew);
+        public bool ShouldRefreshToken(TimeSpan skew) => IsExpired(skew) && !IsRefreshExpired(skew);
+        private bool IsExpired(TimeSpan skew) => Created.AddSeconds(ExpiresIn) - skew < DateTime.UtcNow;
+        private bool IsRefreshExpired(TimeSpan skew) => RefreshExpiresIn <= 0 || Created.AddSeconds(RefreshExpiresIn) - skew < DateTime.UtcNow;
     }
 }

@@ -1,10 +1,11 @@
 using System.Net;
 using System.Net.Http;
+using System.Text.Json;
 using AwesomeAssertions;
 using Dosaic.Extensions.RestEase.Authentication;
-using Newtonsoft.Json;
 using NUnit.Framework;
 using Polly;
+using Polly.Retry;
 using RestEase;
 using WireMock.RequestBuilders;
 using WireMock.ResponseBuilders;
@@ -14,8 +15,8 @@ namespace Dosaic.Extensions.RestEase.Tests
 {
     public sealed class RestClientFactoryTests
     {
-        private const string AuthorizationHeader = @"Authorization";
-        private const string TokenPath = @"/auth/token";
+        private const string AuthorizationHeader = "Authorization";
+        private const string TokenPath = "/auth/token";
 
         private string _baseAddress;
         private WireMockServer _server;
@@ -23,7 +24,7 @@ namespace Dosaic.Extensions.RestEase.Tests
         [SetUp]
         public void Load()
         {
-            _server = WireMockServer.Start(8087);
+            _server = WireMockServer.Start();
             _baseAddress = _server.Url;
         }
 
@@ -40,16 +41,17 @@ namespace Dosaic.Extensions.RestEase.Tests
             var returnObj = new SomeResource { Id = Guid.NewGuid(), Name = name };
             var serverRequest = Request.Create().WithPath("/").UsingPost();
             _server.Given(serverRequest)
-                .RespondWith(Response.Create().WithSuccess().WithBody(JsonConvert.SerializeObject(returnObj)));
+                .RespondWith(Response.Create().WithSuccess().WithBody(JsonSerializer.Serialize(returnObj)));
+
             var client = RestClientFactory.Create<ISomeApi>(_baseAddress);
             client.Should().NotBeNull();
             var result = await client.Create(new SomeResource { Name = name }, CancellationToken.None);
             result.Id.Should().Be(returnObj.Id);
             result.Name.Should().Be(returnObj.Name);
+
 #pragma warning disable CA1826
-            var logEntry = _server.FindLogEntries(serverRequest).FirstOrDefault()!;
+            var logEntry = _server.FindLogEntries(serverRequest).First();
 #pragma warning restore CA1826
-            logEntry.Should().NotBeNull();
             logEntry.RequestMessage.Headers.Should().NotContainKey(AuthorizationHeader);
         }
 
@@ -59,11 +61,13 @@ namespace Dosaic.Extensions.RestEase.Tests
             var name = "the name";
             var token = "abc";
 
-            _server.Given(Request.Create().WithPath(TokenPath).UsingPost()).RespondWith(Response.Create().WithSuccess().WithBodyAsJson(new OAuth2Model { TokenType = "Bearer", AccessToken = token }));
+            _server.Given(Request.Create().WithPath(TokenPath).UsingPost())
+                .RespondWith(Response.Create().WithSuccess().WithBodyAsJson(new { token_type = "Bearer", access_token = token, expires_in = 60 }));
             var returnObj = new SomeResource { Id = Guid.NewGuid(), Name = name };
             var serverRequest = Request.Create().WithPath("/").UsingPost();
             _server.Given(serverRequest)
-                .RespondWith(Response.Create().WithSuccess().WithHeader(AuthorizationHeader, "Bearer", token).WithBody(JsonConvert.SerializeObject(returnObj)));
+                .RespondWith(Response.Create().WithSuccess().WithBody(JsonSerializer.Serialize(returnObj)));
+
             var authConfig = new AuthenticationConfig
             {
                 Enabled = true,
@@ -71,75 +75,79 @@ namespace Dosaic.Extensions.RestEase.Tests
                 BaseUrl = _baseAddress,
                 ClientId = "clientId",
                 ClientSecret = "ClientSecret",
-                GrantType = GrantType.Code,
-                Username = "test",
-                Password = "tester"
+                GrantType = GrantType.ClientCredentials
             };
             var client = RestClientFactory.Create<ISomeApi>(_baseAddress, authConfig);
             client.Should().NotBeNull();
             var result = await client.Create(new SomeResource { Name = name }, CancellationToken.None);
             result.Id.Should().Be(returnObj.Id);
             result.Name.Should().Be(returnObj.Name);
+
 #pragma warning disable CA1826
-            var logEntry = _server.FindLogEntries(serverRequest).FirstOrDefault()!;
+            var logEntry = _server.FindLogEntries(serverRequest).First();
 #pragma warning restore CA1826
-            logEntry.Should().NotBeNull();
             logEntry.RequestMessage.Headers.Should().ContainKey(AuthorizationHeader);
-            var authHeader = logEntry.RequestMessage.Headers[AuthorizationHeader].Single();
-            authHeader.Should().Be("Bearer " + token);
+            logEntry.RequestMessage.Headers[AuthorizationHeader].Single().Should().Be("Bearer " + token);
         }
 
         [Test]
-        public async Task DefaultRetryPolicyReruns()
+        public async Task DefaultPipelineRetriesOn500()
         {
             var id = Guid.NewGuid();
             var requestMatcher = Request.Create().WithPath($"/{id}").UsingDelete();
             _server.Given(requestMatcher)
-                .InScenario("test")
+                .InScenario("retry")
                 .WillSetStateTo(1)
                 .RespondWith(Response.Create().WithStatusCode(500));
             _server.Given(requestMatcher)
-                .InScenario("test")
+                .InScenario("retry")
                 .WhenStateIs(1)
                 .RespondWith(Response.Create().WithSuccess());
+
             var client = RestClientFactory.Create<ISomeApi>(_baseAddress);
             await client.Delete(id, CancellationToken.None);
-            var entries = _server.FindLogEntries(requestMatcher).ToList();
-            entries.Should().HaveCount(2);
+            _server.FindLogEntries(requestMatcher).Should().HaveCount(2);
         }
 
         [Test]
-        public void ExceptionsGetsThrownOnFailedRequests()
+        public void ExceptionsGetThrownOnFailedRequests()
         {
             var id = Guid.NewGuid();
             var requestMatcher = Request.Create().WithPath($"/{id}").UsingPut();
-            _server.Given(requestMatcher)
-                .RespondWith(Response.Create().WithStatusCode(500));
+            _server.Given(requestMatcher).RespondWith(Response.Create().WithStatusCode(500));
+
             var client = RestClientFactory.Create<ISomeApi>(_baseAddress);
             var apiException = Assert.ThrowsAsync<ApiException>(async () => await client.Update(id, new SomeResource(), CancellationToken.None))!;
             apiException.StatusCode.Should().Be(HttpStatusCode.InternalServerError);
-            var entries = _server.FindLogEntries(requestMatcher).ToList();
-            entries.Should().HaveCount(3);
+            _server.FindLogEntries(requestMatcher).Should().HaveCount(4);
         }
 
         [Test]
-        public async Task CustomPolicyCanBeApplied()
+        public async Task CustomPipelineCanBeApplied()
         {
             var id = Guid.NewGuid();
             var requestMatcher = Request.Create().WithPath($"/{id}").UsingDelete();
             _server.Given(requestMatcher)
-                .InScenario("test")
+                .InScenario("custom")
                 .WillSetStateTo(1)
                 .RespondWith(Response.Create().WithStatusCode(409));
             _server.Given(requestMatcher)
-                .InScenario("test")
+                .InScenario("custom")
                 .WhenStateIs(1)
                 .RespondWith(Response.Create().WithSuccess());
-            var policy = Policy.HandleResult<HttpResponseMessage>(r => r.StatusCode == HttpStatusCode.Conflict).RetryAsync(2);
-            var client = RestClientFactory.Create<ISomeApi>(_baseAddress, policy);
+
+            var pipeline = new ResiliencePipelineBuilder<HttpResponseMessage>()
+                .AddRetry(new RetryStrategyOptions<HttpResponseMessage>
+                {
+                    MaxRetryAttempts = 2,
+                    Delay = TimeSpan.Zero,
+                    ShouldHandle = new PredicateBuilder<HttpResponseMessage>().HandleResult(r => r.StatusCode == HttpStatusCode.Conflict)
+                })
+                .Build();
+
+            var client = RestClientFactory.Create<ISomeApi>(_baseAddress, pipeline);
             await client.Delete(id, CancellationToken.None);
-            var entries = _server.FindLogEntries(requestMatcher).ToList();
-            entries.Should().HaveCount(2);
+            _server.FindLogEntries(requestMatcher).Should().HaveCount(2);
         }
 
         [Test]
@@ -151,34 +159,37 @@ namespace Dosaic.Extensions.RestEase.Tests
                 TokenUrlPath = TokenPath,
                 BaseUrl = _baseAddress,
                 ClientId = "test",
-                ClientSecret = "testing-secret",
+                ClientSecret = "secret",
                 GrantType = GrantType.Password,
-                Username = "test",
-                Password = "tester"
+                Username = "u",
+                Password = "p",
+                RefreshSkew = TimeSpan.Zero
             };
-            var refreshToken = "refreshX";
+
             _server.Given(Request.Create()
                     .WithPath(TokenPath)
                     .WithBody((string content) => content.Contains("grant_type=password"))
                     .UsingPost())
-                .RespondWith(Response.Create().WithSuccess().WithBodyAsJson(new OAuth2Model { TokenType = "Bearer", AccessToken = "123", ExpiresIn = 1, RefreshExpiresIn = 70, RefreshToken = refreshToken }));
+                .RespondWith(Response.Create().WithSuccess().WithBodyAsJson(new { token_type = "Bearer", access_token = "123", expires_in = 1, refresh_expires_in = 70, refresh_token = "refreshX" }));
             _server.Given(Request.Create()
                     .WithPath(TokenPath)
                     .WithBody((string content) => content.Contains("grant_type=refresh_token"))
                     .UsingPost())
-                .RespondWith(Response.Create().WithSuccess().WithBodyAsJson(new OAuth2Model { TokenType = "Bearer", AccessToken = "new123", ExpiresIn = 60, Created = DateTime.UtcNow.AddSeconds(-61), RefreshExpiresIn = 70, RefreshToken = refreshToken }));
-            var returnObj = new SomeResource { Id = Guid.NewGuid(), Name = "the name" };
-            _server.Given(Request.Create()
-                    .WithPath("/").WithHeader(AuthorizationHeader, "Bearer 123").UsingPost())
-                .RespondWith(Response.Create().WithSuccess().WithBodyAsJson(new SomeResource()));
-            _server.Given(Request.Create()
-                    .WithPath("/").WithHeader(AuthorizationHeader, "Bearer new123").UsingPost())
-                .RespondWith(Response.Create().WithSuccess().WithBodyAsJson(returnObj));
+                .RespondWith(Response.Create().WithSuccess().WithBodyAsJson(new { token_type = "Bearer", access_token = "new123", expires_in = 60, refresh_expires_in = 70, refresh_token = "refreshX" }));
+
+            var first = new SomeResource { Id = Guid.NewGuid(), Name = "first" };
+            var second = new SomeResource { Id = Guid.NewGuid(), Name = "second" };
+            _server.Given(Request.Create().WithPath("/").WithHeader(AuthorizationHeader, "Bearer 123").UsingPost())
+                .RespondWith(Response.Create().WithSuccess().WithBody(JsonSerializer.Serialize(first)));
+            _server.Given(Request.Create().WithPath("/").WithHeader(AuthorizationHeader, "Bearer new123").UsingPost())
+                .RespondWith(Response.Create().WithSuccess().WithBody(JsonSerializer.Serialize(second)));
+
             var client = RestClientFactory.Create<ISomeApi>(_baseAddress, authConfig);
-            await client.Create(new SomeResource(), CancellationToken.None);
-            var secondCallResult = await client.Create(new SomeResource(), CancellationToken.None);
-            secondCallResult.Id.Should().Be(returnObj.Id);
-            secondCallResult.Name.Should().Be(returnObj.Name);
+            var firstResult = await client.Create(new SomeResource(), CancellationToken.None);
+            firstResult.Name.Should().Be("first");
+            await Task.Delay(1100);
+            var secondResult = await client.Create(new SomeResource(), CancellationToken.None);
+            secondResult.Name.Should().Be("second");
         }
     }
 }
