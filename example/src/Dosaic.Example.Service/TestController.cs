@@ -1,5 +1,7 @@
-using System.ComponentModel.DataAnnotations;
+
 using System.Diagnostics.CodeAnalysis;
+using Dosaic.Hosting.Abstractions.Extensions;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 using Vogen;
@@ -31,8 +33,16 @@ namespace Dosaic.Example.Service
         [SwaggerResponse(200, "the manipulated object", typeof(Entry))]
         public Entry Create([FromBody] Entry entry, [FromQuery] EntryId idToSet)
         {
-            entry.EntryId = idToSet;
             return entry;
+        }
+
+        [HttpPost("upload")]
+        public ActionResult FileUpload(IFormFile file)
+        {
+            var stream = file.OpenReadStream();
+            stream.Position = 0;
+            var content = new StreamReader(stream).ReadToEnd();
+            return Ok(new {content, file=file}.Serialize());
         }
     }
 
@@ -47,11 +57,6 @@ namespace Dosaic.Example.Service
 
     public class Entry
     {
-        /// <summary>
-        /// The identifier
-        /// </summary>
-        [Required, NotNull]
-        public EntryId EntryId { get; set; }
 
         /// <summary>
         /// The name
@@ -59,15 +64,7 @@ namespace Dosaic.Example.Service
         [NotNull]
         public string Name { get; set; }
 
-        public IList<EntryId> Ids { get; set; }
-
-        public IList<Entry2> Dentries { get; set; }
         public Guid Id { get; set; }
         public Guid NewId() => Guid.NewGuid();
-    }
-
-    public class Entry2
-    {
-        public IList<EntryId> OtherIds { get; set; }
     }
 }

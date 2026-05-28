@@ -263,11 +263,6 @@
             Converts a EntryId to or from JSON.
             </summary>
         </member>
-        <member name="P:Dosaic.Example.Service.Entry.EntryId">
-            <summary>
-            The identifier
-            </summary>
-        </member>
         <member name="P:Dosaic.Example.Service.Entry.Name">
             <summary>
             The name

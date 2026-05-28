@@ -1,8 +1,10 @@
+using System.Text.Json.Serialization.Metadata;
 using Dosaic.Hosting.Abstractions;
 using Dosaic.Hosting.Abstractions.Extensions;
 using Dosaic.Hosting.Abstractions.Plugins;
 using Dosaic.Hosting.Abstractions.Services;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http.Json;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -72,6 +74,23 @@ namespace Dosaic.Example.Service
         {
             var x = _implementationResolver.FindAndResolve<IPluginActivateable>();
             _logger.LogDebug("Found {ItemCount} plugins", x.Count);
+
+            serviceCollection.PostConfigure<JsonOptions>(options =>
+       {
+           var chain = options.SerializerOptions.TypeInfoResolverChain;
+           if (chain.Count == 0)
+           {
+               chain.Add(new DefaultJsonTypeInfoResolver());
+           }
+       });
+            serviceCollection.PostConfigure<Microsoft.AspNetCore.Mvc.JsonOptions>(options =>
+            {
+                var chain = options.JsonSerializerOptions.TypeInfoResolverChain;
+                if (chain.Count == 0)
+                {
+                    chain.Add(new DefaultJsonTypeInfoResolver());
+                }
+            });
         }
     }
 }

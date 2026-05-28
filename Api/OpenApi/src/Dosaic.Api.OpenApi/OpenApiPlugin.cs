@@ -1,5 +1,4 @@
 using Dosaic.Api.OpenApi.Filters.Document;
-using Dosaic.Api.OpenApi.Filters.Operation;
 using Dosaic.Api.OpenApi.Filters.Schema;
 using Dosaic.Api.OpenApi.Schema;
 using Dosaic.Hosting.Abstractions.Extensions;
@@ -59,7 +58,6 @@ namespace Dosaic.Api.OpenApi
                 options.SchemaFilter<EnumSummarySchemaFilter>(new object[] { documentationFiles });
                 options.SchemaFilter<ValueObjectSchemaFilter>(new object[] { documentationFiles });
                 options.DocumentFilter<ValueObjectDocumentFilter>();
-                options.OperationFilter<FormFileFilter>();
 
                 options.EnableAnnotations();
                 var authEnabled = _configuration.Auth?.Enabled ?? false;
