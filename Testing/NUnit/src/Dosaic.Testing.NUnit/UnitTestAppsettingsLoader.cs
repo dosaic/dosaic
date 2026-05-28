@@ -40,8 +40,6 @@ namespace Dosaic.Testing.NUnit
                 configurationManager.AddYamlFile(file, optional, reloadOnChange);
         }
 
-
-
         private static List<string> FindAllRootAppsettingFiles()
         {
             return FindAppSettingFiles("json", "yaml", "yml").ToList();

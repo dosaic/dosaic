@@ -1,5 +1,6 @@
 
 using System.Diagnostics.CodeAnalysis;
+using Dosaic.Extensions.Localization;
 using Dosaic.Hosting.Abstractions.Extensions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -14,13 +15,13 @@ namespace Dosaic.Example.Service
         [HttpGet]
         public Entry Get()
         {
-            return new Entry() { Name = "test" };
+            return new Entry() { Source = "test" };
         }
 
         [HttpDelete]
         public Entry Delete()
         {
-            return new Entry() { Name = "test" };
+            return new Entry() { Source = "test" };
         }
 
         /// <summary>
@@ -42,7 +43,7 @@ namespace Dosaic.Example.Service
             var stream = file.OpenReadStream();
             stream.Position = 0;
             var content = new StreamReader(stream).ReadToEnd();
-            return Ok(new {content, file=file}.Serialize());
+            return Ok(new { content, file = file }.Serialize());
         }
     }
 
@@ -59,10 +60,11 @@ namespace Dosaic.Example.Service
     {
 
         /// <summary>
-        /// The name
+        /// The source
         /// </summary>
         [NotNull]
-        public string Name { get; set; }
+        [LocalizedName(de: "Quelle", en: "Source")]
+        public string Source { get; set; }
 
         public Guid Id { get; set; }
         public Guid NewId() => Guid.NewGuid();

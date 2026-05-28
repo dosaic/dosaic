@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization.Metadata;
+using Dosaic.Extensions.Localization;
 using Dosaic.Hosting.Abstractions;
 using Dosaic.Hosting.Abstractions.Extensions;
 using Dosaic.Hosting.Abstractions.Plugins;
@@ -91,6 +92,13 @@ namespace Dosaic.Example.Service
                     chain.Add(new DefaultJsonTypeInfoResolver());
                 }
             });
+            EntityPropertyLabels.DefaultCulture = "de";
+            _logger.LogDebug(EntityPropertyLabels.Get<Entry>(x => x.Source));
+            _logger.LogDebug(EntityPropertyLabels.Get<Entry>(x => x.Source, "en"));
+            _logger.LogDebug(EntityPropertyLabels.Get<Entry>(x => x.Source, "de"));
+            _logger.LogDebug(EntityPropertyLabels.Get("Entry", "Source"));
+            _logger.LogDebug(EntityPropertyLabels.Get("Entry", "Source", "en"));
+            _logger.LogDebug(EntityPropertyLabels.Get("Entry", "Source", "de"));
         }
     }
 }

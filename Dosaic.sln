@@ -311,6 +311,14 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dosaic.Plugins.Authorizatio
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dosaic.Plugins.Authorization.Zitadel.Tests", "Plugins\Authorization\Zitadel\test\Dosaic.Plugins.Authorization.Zitadel.Tests\Dosaic.Plugins.Authorization.Zitadel.Tests.csproj", "{A0FEE898-E335-4052-9534-91543820D679}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Localization", "Localization", "{D9109790-E885-F3BC-3A8C-7780DEA21549}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{C5847E11-F2D6-5C2D-C7B7-DA52E33207C7}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dosaic.Extensions.Localization.Generator", "Extensions\Localization\src\Dosaic.Extensions.Localization.Generator\Dosaic.Extensions.Localization.Generator.csproj", "{37315575-3BB4-4B4F-9E90-396E160236BA}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dosaic.Extensions.Localization", "Extensions\Localization\src\Dosaic.Extensions.Localization\Dosaic.Extensions.Localization.csproj", "{62EF9477-5CB2-41A1-B22A-17CF2CFAB9C8}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -933,6 +941,30 @@ Global
 		{A0FEE898-E335-4052-9534-91543820D679}.Release|x64.Build.0 = Release|Any CPU
 		{A0FEE898-E335-4052-9534-91543820D679}.Release|x86.ActiveCfg = Release|Any CPU
 		{A0FEE898-E335-4052-9534-91543820D679}.Release|x86.Build.0 = Release|Any CPU
+		{37315575-3BB4-4B4F-9E90-396E160236BA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{37315575-3BB4-4B4F-9E90-396E160236BA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{37315575-3BB4-4B4F-9E90-396E160236BA}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{37315575-3BB4-4B4F-9E90-396E160236BA}.Debug|x64.Build.0 = Debug|Any CPU
+		{37315575-3BB4-4B4F-9E90-396E160236BA}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{37315575-3BB4-4B4F-9E90-396E160236BA}.Debug|x86.Build.0 = Debug|Any CPU
+		{37315575-3BB4-4B4F-9E90-396E160236BA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{37315575-3BB4-4B4F-9E90-396E160236BA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{37315575-3BB4-4B4F-9E90-396E160236BA}.Release|x64.ActiveCfg = Release|Any CPU
+		{37315575-3BB4-4B4F-9E90-396E160236BA}.Release|x64.Build.0 = Release|Any CPU
+		{37315575-3BB4-4B4F-9E90-396E160236BA}.Release|x86.ActiveCfg = Release|Any CPU
+		{37315575-3BB4-4B4F-9E90-396E160236BA}.Release|x86.Build.0 = Release|Any CPU
+		{62EF9477-5CB2-41A1-B22A-17CF2CFAB9C8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{62EF9477-5CB2-41A1-B22A-17CF2CFAB9C8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{62EF9477-5CB2-41A1-B22A-17CF2CFAB9C8}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{62EF9477-5CB2-41A1-B22A-17CF2CFAB9C8}.Debug|x64.Build.0 = Debug|Any CPU
+		{62EF9477-5CB2-41A1-B22A-17CF2CFAB9C8}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{62EF9477-5CB2-41A1-B22A-17CF2CFAB9C8}.Debug|x86.Build.0 = Debug|Any CPU
+		{62EF9477-5CB2-41A1-B22A-17CF2CFAB9C8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{62EF9477-5CB2-41A1-B22A-17CF2CFAB9C8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{62EF9477-5CB2-41A1-B22A-17CF2CFAB9C8}.Release|x64.ActiveCfg = Release|Any CPU
+		{62EF9477-5CB2-41A1-B22A-17CF2CFAB9C8}.Release|x64.Build.0 = Release|Any CPU
+		{62EF9477-5CB2-41A1-B22A-17CF2CFAB9C8}.Release|x86.ActiveCfg = Release|Any CPU
+		{62EF9477-5CB2-41A1-B22A-17CF2CFAB9C8}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -1074,5 +1106,9 @@ Global
 		{E87729D6-FDC4-43E9-988B-4DE20CEB6111} = {EC9D35F0-2F2A-4F89-83FB-7F1AA2CA2675}
 		{8EBC47FA-2BB7-437D-87F2-7891C3526CCD} = {484B0DA7-51F5-418F-8294-EE6EFD437E18}
 		{A0FEE898-E335-4052-9534-91543820D679} = {E87729D6-FDC4-43E9-988B-4DE20CEB6111}
+		{D9109790-E885-F3BC-3A8C-7780DEA21549} = {BFB04E81-1645-4FAE-8277-62FD0E607CC4}
+		{C5847E11-F2D6-5C2D-C7B7-DA52E33207C7} = {D9109790-E885-F3BC-3A8C-7780DEA21549}
+		{37315575-3BB4-4B4F-9E90-396E160236BA} = {C5847E11-F2D6-5C2D-C7B7-DA52E33207C7}
+		{62EF9477-5CB2-41A1-B22A-17CF2CFAB9C8} = {C5847E11-F2D6-5C2D-C7B7-DA52E33207C7}
 	EndGlobalSection
 EndGlobal

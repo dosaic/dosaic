@@ -263,9 +263,9 @@
             Converts a EntryId to or from JSON.
             </summary>
         </member>
-        <member name="P:Dosaic.Example.Service.Entry.Name">
+        <member name="P:Dosaic.Example.Service.Entry.Source">
             <summary>
-            The name
+            The source
             </summary>
         </member>
         <member name="T:Program">
