@@ -13,6 +13,7 @@
 * Authorization
   * [Abstractions](Plugins/Authorization/Abstractions/README.md)
   * [Keycloak](Plugins/Authorization/Keycloak/README.md)
+  * [Zitadel](Plugins/Authorization/Zitadel/README.md)
 * Caching
   * [Redis](Plugins/Caching/Redis/README.md)
 * Endpoints
