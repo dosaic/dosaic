@@ -13,17 +13,19 @@ namespace Dosaic.Extensions.Localization.Generator
     [ExcludeFromCodeCoverage]
     public class LocalizationGenerator : IIncrementalGenerator
     {
-        private sealed class PropertyInfo
+        private sealed class LabelInfo
         {
-            public string TypeName { get; }
-            public string PropertyName { get; }
+            public string GroupName { get; }   // type name — used for grouping and as key prefix
+            public string MemberName { get; }  // null for class/enum level entries
             public string En { get; }
             public string De { get; }
 
-            public PropertyInfo(string typeName, string propertyName, string en, string de)
+            public string Key => MemberName != null ? $"{GroupName}.{MemberName}" : GroupName;
+
+            public LabelInfo(string groupName, string memberName, string en, string de)
             {
-                TypeName = typeName;
-                PropertyName = propertyName;
+                GroupName = groupName;
+                MemberName = memberName;
                 En = en;
                 De = de;
             }
@@ -31,27 +33,33 @@ namespace Dosaic.Extensions.Localization.Generator
 
         public void Initialize(IncrementalGeneratorInitializationContext context)
         {
-            var properties = context.SyntaxProvider
+            var labels = context.SyntaxProvider
                 .ForAttributeWithMetadataName(
                     "Dosaic.Extensions.Localization.LocalizedNameAttribute",
-                    (node, _) => node is PropertyDeclarationSyntax,
+                    (node, _) => node is PropertyDeclarationSyntax
+                              || node is FieldDeclarationSyntax
+                              || node is EnumMemberDeclarationSyntax
+                              || node is ClassDeclarationSyntax
+                              || node is RecordDeclarationSyntax
+                              || node is StructDeclarationSyntax
+                              || node is EnumDeclarationSyntax,
                     (ctx, _) => ExtractInfo(ctx))
                 .Where(p => p != null);
 
-            var combined = properties.Collect().Combine(context.AnalyzerConfigOptionsProvider);
+            var combined = labels.Collect().Combine(context.AnalyzerConfigOptionsProvider);
 
             context.RegisterSourceOutput(combined, (spc, source) =>
             {
-                var (props, options) = source;
-                spc.AddSource("EntityPropertyLabels.g.cs", GenerateLookupClass(props));
+                var (infos, options) = source;
+                spc.AddSource("EntityPropertyLabels.g.cs", GenerateLookupClass(infos));
 
                 options.GlobalOptions.TryGetValue("build_property.LocalizationJsonDeOutputPath", out var dePath);
                 options.GlobalOptions.TryGetValue("build_property.LocalizationJsonEnOutputPath", out var enPath);
 
                 if (!string.IsNullOrWhiteSpace(dePath))
-                    WriteJsonFile(dePath, props, "de");
+                    WriteJsonFile(dePath, infos, "de");
                 if (!string.IsNullOrWhiteSpace(enPath))
-                    WriteJsonFile(enPath, props, "en");
+                    WriteJsonFile(enPath, infos, "en");
             });
         }
 
@@ -64,7 +72,7 @@ namespace Dosaic.Extensions.Localization.Generator
             {
                 public static partial class EntityPropertyLabels
                 {
-                    private static readonly Dictionary<string, Dictionary<string, string>> Labels =
+                    public static readonly Dictionary<string, Dictionary<string, string>> Labels =
                         new Dictionary<string, Dictionary<string, string>>()
                         {
             """;
@@ -73,85 +81,100 @@ namespace Dosaic.Extensions.Localization.Generator
             """
                         };
 
-                    public static string DefaultCulture = "en";
+                    public static Locale DefaultCulture = Locale.En;
 
-                    public static string Get(string typeName, string propertyName)
-                        => Get(typeName, propertyName, DefaultCulture);
+                    private static string ToCode(Locale culture) => culture == Locale.En ? "en" : "de";
 
-                    public static string Get(string typeName, string propertyName, string culture)
+                    public static string Get(string key)
+                        => Get(key, DefaultCulture);
+
+                    public static string Get(string key, Locale culture)
                     {
-                        var key = typeName + "." + propertyName;
+                        var code = ToCode(culture);
                         return Labels.TryGetValue(key, out var cultures) &&
-                               cultures.TryGetValue(culture, out var label) ? label : propertyName;
+                               cultures.TryGetValue(code, out var label) ? label : key;
                     }
 
-                    public static string Get<T>(System.Linq.Expressions.Expression<System.Func<T, object>> propertySelector)
-                        => Get<T>(propertySelector, DefaultCulture);
+                    public static string Get<T>()
+                        => Get(typeof(T).Name, DefaultCulture);
 
-                    public static string Get<T>(System.Linq.Expressions.Expression<System.Func<T, object>> propertySelector, string culture)
+                    public static string Get<T>(Locale culture)
+                        => Get(typeof(T).Name, culture);
+
+                    public static string Get(System.Enum value)
+                        => Get(value, DefaultCulture);
+
+                    public static string Get(System.Enum value, Locale culture)
+                        => Get(value.GetType().Name + "." + value.ToString(), culture);
+
+                    public static string Get<T>(System.Linq.Expressions.Expression<System.Func<T, object>> memberSelector)
+                        => Get<T>(memberSelector, DefaultCulture);
+
+                    public static string Get<T>(System.Linq.Expressions.Expression<System.Func<T, object>> memberSelector, Locale culture)
                     {
                         System.Linq.Expressions.MemberExpression member;
-                        if (propertySelector.Body is System.Linq.Expressions.MemberExpression direct)
+                        if (memberSelector.Body is System.Linq.Expressions.MemberExpression direct)
                             member = direct;
-                        else if (propertySelector.Body is System.Linq.Expressions.UnaryExpression unary &&
+                        else if (memberSelector.Body is System.Linq.Expressions.UnaryExpression unary &&
                                  unary.Operand is System.Linq.Expressions.MemberExpression unaryMember)
                             member = unaryMember;
                         else
-                            throw new System.ArgumentException("Expression must be a property access.", nameof(propertySelector));
-                        return Get(typeof(T).Name, member.Member.Name, culture);
+                            throw new System.ArgumentException("Expression must be a member access.", nameof(memberSelector));
+                        return Get(typeof(T).Name + "." + member.Member.Name, culture);
                     }
                 }
             }
             """;
 
-        private static string GenerateLookupClass(ImmutableArray<PropertyInfo> props)
+        private static string GenerateLookupClass(ImmutableArray<LabelInfo> infos)
         {
             var sb = new StringBuilder();
             sb.AppendLine(ClassHeader);
 
-            foreach (var prop in props)
+            foreach (var info in infos)
             {
-                if (prop == null) continue;
+                if (info == null) continue;
                 sb.AppendLine(
-                    $"                [\"{prop.TypeName}.{prop.PropertyName}\"] = " +
-                    $"new Dictionary<string, string> {{ [\"en\"] = \"{Escape(prop.En)}\", [\"de\"] = \"{Escape(prop.De)}\" }},");
+                    $"                [\"{info.Key}\"] = " +
+                    $"new Dictionary<string, string> {{ [\"en\"] = \"{Escape(info.En)}\", [\"de\"] = \"{Escape(info.De)}\" }},");
             }
 
             sb.Append(ClassFooter);
             return sb.ToString();
         }
 
-        private static void WriteJsonFile(string path, ImmutableArray<PropertyInfo> props, string culture)
+        private static void WriteJsonFile(string path, ImmutableArray<LabelInfo> infos, string culture)
         {
-            var grouped = new Dictionary<string, List<PropertyInfo>>();
-            foreach (var prop in props)
+            var grouped = new Dictionary<string, List<LabelInfo>>();
+            foreach (var info in infos)
             {
-                if (prop == null) continue;
-                if (!grouped.TryGetValue(prop.TypeName, out var list))
-                    grouped[prop.TypeName] = list = new List<PropertyInfo>();
-                list.Add(prop);
+                if (info == null) continue;
+                if (!grouped.TryGetValue(info.GroupName, out var list))
+                    grouped[info.GroupName] = list = new List<LabelInfo>();
+                list.Add(info);
             }
 
             var sb = new StringBuilder();
             sb.AppendLine("{");
 
-            var types = new List<string>(grouped.Keys);
-            for (var i = 0; i < types.Count; i++)
+            var groups = new List<string>(grouped.Keys);
+            for (var i = 0; i < groups.Count; i++)
             {
-                var typeName = types[i];
-                var members = grouped[typeName];
-                sb.AppendLine($"  \"{EscapeJson(typeName)}\": {{");
+                var groupName = groups[i];
+                var members = grouped[groupName];
+                sb.AppendLine($"  \"{EscapeJson(groupName)}\": {{");
 
                 for (var j = 0; j < members.Count; j++)
                 {
-                    var prop = members[j];
-                    var translation = GetTranslation(prop, culture);
+                    var info = members[j];
+                    var memberKey = info.MemberName != null ? EscapeJson(info.MemberName) : "$";
+                    var translation = GetTranslation(info, culture);
                     var comma = j < members.Count - 1 ? "," : "";
-                    sb.AppendLine($"    \"{EscapeJson(prop.PropertyName)}\": \"{EscapeJson(translation)}\"{comma}");
+                    sb.AppendLine($"    \"{memberKey}\": \"{EscapeJson(translation)}\"{comma}");
                 }
 
-                var typeComma = i < types.Count - 1 ? "," : "";
-                sb.AppendLine($"  }}{typeComma}");
+                var groupComma = i < groups.Count - 1 ? "," : "";
+                sb.AppendLine($"  }}{groupComma}");
             }
 
             sb.Append("}");
@@ -164,25 +187,17 @@ namespace Dosaic.Extensions.Localization.Generator
 #pragma warning restore RS1035
         }
 
-        private static string GetTranslation(PropertyInfo prop, string culture)
+        private static string GetTranslation(LabelInfo info, string culture)
         {
-            if (culture == "en") return prop.En;
-            if (culture == "de") return prop.De;
-            return prop.PropertyName;
+            if (culture == "en") return info.En;
+            if (culture == "de") return info.De;
+            return info.MemberName ?? info.GroupName;
         }
 
-        private static PropertyInfo ExtractInfo(GeneratorAttributeSyntaxContext ctx)
+        private static LabelInfo ExtractInfo(GeneratorAttributeSyntaxContext ctx)
         {
-            if (!(ctx.TargetSymbol is IPropertySymbol property))
-                return null;
-
-            var typeName = property.ContainingType?.Name;
-            if (typeName == null)
-                return null;
-
             var attr = ctx.Attributes.FirstOrDefault();
-            if (attr == null)
-                return null;
+            if (attr == null) return null;
 
             var en = "";
             var de = "";
@@ -200,7 +215,22 @@ namespace Dosaic.Extensions.Localization.Generator
                     de = named.Value.Value as string ?? de;
             }
 
-            return new PropertyInfo(typeName, property.Name, en, de);
+            if (ctx.TargetSymbol is IPropertySymbol prop)
+            {
+                var typeName = prop.ContainingType?.Name;
+                return typeName == null ? null : new LabelInfo(typeName, prop.Name, en, de);
+            }
+
+            if (ctx.TargetSymbol is IFieldSymbol field)
+            {
+                var typeName = field.ContainingType?.Name;
+                return typeName == null ? null : new LabelInfo(typeName, field.Name, en, de);
+            }
+
+            if (ctx.TargetSymbol is INamedTypeSymbol namedType)
+                return new LabelInfo(namedType.Name, null, en, de);
+
+            return null;
         }
 
         private static string Escape(string value)

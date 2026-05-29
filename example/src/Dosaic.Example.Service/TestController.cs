@@ -56,6 +56,7 @@ namespace Dosaic.Example.Service
         private static Validation Validate(int input) => input < 1 ? Validation.Invalid("lower as one") : Validation.Ok;
     }
 
+    [LocalizedName(de: "Eintrag")]
     public class Entry
     {
 
@@ -68,5 +69,14 @@ namespace Dosaic.Example.Service
 
         public Guid Id { get; set; }
         public Guid NewId() => Guid.NewGuid();
+    }
+
+    [LocalizedName(de: "Mein Enum", en: "My Enum")]
+    public enum MyEnum
+    {
+        [LocalizedName(de: "Erster Wert")]
+        FirstValue,
+        [LocalizedName(de: "Zweiter Wert")]
+        SecondValue
     }
 }

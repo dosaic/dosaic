@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json.Serialization.Metadata;
 #pragma warning disable IDE0005
 using Dosaic.Extensions.Localization;
@@ -94,13 +95,16 @@ namespace Dosaic.Example.Service
                     chain.Add(new DefaultJsonTypeInfoResolver());
                 }
             });
-            EntityPropertyLabels.DefaultCulture = "de";
+            EntityPropertyLabels.DefaultCulture = Locale.De;
+            _logger.LogDebug(EntityPropertyLabels.Get<Entry>());
             _logger.LogDebug(EntityPropertyLabels.Get<Entry>(x => x.Source));
-            _logger.LogDebug(EntityPropertyLabels.Get<Entry>(x => x.Source, "en"));
-            _logger.LogDebug(EntityPropertyLabels.Get<Entry>(x => x.Source, "de"));
-            _logger.LogDebug(EntityPropertyLabels.Get("Entry", "Source"));
-            _logger.LogDebug(EntityPropertyLabels.Get("Entry", "Source", "en"));
-            _logger.LogDebug(EntityPropertyLabels.Get("Entry", "Source", "de"));
+            _logger.LogDebug(EntityPropertyLabels.Get<Entry>(x => x.Source, Locale.En));
+            _logger.LogDebug(EntityPropertyLabels.Get<Entry>(x => x.Source, Locale.De));
+            _logger.LogDebug(EntityPropertyLabels.Get("Entry.Source"));
+            _logger.LogDebug(EntityPropertyLabels.Get("Entry.Source", Locale.En));
+            _logger.LogDebug(EntityPropertyLabels.Get("Entry.Source", Locale.De));
+            _logger.LogDebug(EntityPropertyLabels.Get<MyEnum>());
+            _logger.LogDebug(EntityPropertyLabels.Get(MyEnum.FirstValue));
         }
     }
 }

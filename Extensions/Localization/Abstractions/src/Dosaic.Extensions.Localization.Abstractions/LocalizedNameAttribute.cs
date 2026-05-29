@@ -1,7 +1,7 @@
 
 namespace Dosaic.Extensions.Localization
 {
-    [AttributeUsage(AttributeTargets.Property)]
+    [AttributeUsage(AttributeTargets.Property | AttributeTargets.Field | AttributeTargets.Class | AttributeTargets.Enum)]
     public sealed class LocalizedNameAttribute : Attribute
     {
         public string En { get; set; }
