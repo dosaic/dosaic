@@ -28,7 +28,7 @@ Or as `PackageReference` entries in your `.csproj`:
 - **`Locale` enum** — type-safe culture values (`Locale.En`, `Locale.De`) replace magic strings in all API calls
 - **Compile-time resolution** — labels are embedded into the generated lookup class; no reflection at runtime
 - **Type-safe lookup** — expression-based and generic overloads resolve labels without magic strings
-- **Configurable default culture** — set `EntityPropertyLabels.DefaultCulture` once at startup
+- **Configurable default culture** — set `EntityLabels.DefaultCulture` once at startup
 - **Fallback** — returns the member or type name when no translation exists for the requested culture
 - **JSON export** — optionally write translation files per culture during build (see [Generator](Generator/README.md))
 
@@ -64,34 +64,34 @@ public enum OrderStatus
 
 ### Resolving labels
 
-After adding the generator the `EntityPropertyLabels` class is available in the `Dosaic.Extensions.Localization` namespace:
+After adding the generator the `EntityLabels` class is available in the `Dosaic.Extensions.Localization` namespace:
 
 ```csharp
 using Dosaic.Extensions.Localization;
 
 // Type label — class or enum
-EntityPropertyLabels.Get<Order>();                        // "Bestellung" (DefaultCulture)
-EntityPropertyLabels.Get<OrderStatus>(Locale.En);         // "Order Status"
+EntityLabels.Get<Order>();                        // "Bestellung" (DefaultCulture)
+EntityLabels.Get<OrderStatus>(Locale.En);         // "Order Status"
 
 // Property / field — expression-based
-EntityPropertyLabels.Get<Order>(x => x.OrderNumber);             // "Bestellnummer"
-EntityPropertyLabels.Get<Order>(x => x.OrderNumber, Locale.En);  // "Order Number"
+EntityLabels.Get<Order>(x => x.OrderNumber);             // "Bestellnummer"
+EntityLabels.Get<Order>(x => x.OrderNumber, Locale.En);  // "Order Number"
 
 // Enum member — pass the value directly
-EntityPropertyLabels.Get(OrderStatus.Active);             // "Aktiv"
-EntityPropertyLabels.Get(OrderStatus.Active, Locale.En);  // "Active"
+EntityLabels.Get(OrderStatus.Active);             // "Aktiv"
+EntityLabels.Get(OrderStatus.Active, Locale.En);  // "Active"
 
 // Raw key — when type is not known at compile time
-EntityPropertyLabels.Get("Order");                        // "Bestellung"
-EntityPropertyLabels.Get("Order.OrderNumber");            // "Bestellnummer"
-EntityPropertyLabels.Get("Order.OrderNumber", Locale.En); // "Order Number"
+EntityLabels.Get("Order");                        // "Bestellung"
+EntityLabels.Get("Order.OrderNumber");            // "Bestellnummer"
+EntityLabels.Get("Order.OrderNumber", Locale.En); // "Order Number"
 ```
 
 ### Changing the default culture
 
 ```csharp
 // Set once at application startup
-EntityPropertyLabels.DefaultCulture = Locale.De;
+EntityLabels.DefaultCulture = Locale.De;
 ```
 
 **Default:** `Locale.En`

@@ -95,16 +95,16 @@ namespace Dosaic.Example.Service
                     chain.Add(new DefaultJsonTypeInfoResolver());
                 }
             });
-            EntityPropertyLabels.DefaultCulture = Locale.De;
-            _logger.LogDebug(EntityPropertyLabels.Get<Entry>());
-            _logger.LogDebug(EntityPropertyLabels.Get<Entry>(x => x.Source));
-            _logger.LogDebug(EntityPropertyLabels.Get<Entry>(x => x.Source, Locale.En));
-            _logger.LogDebug(EntityPropertyLabels.Get<Entry>(x => x.Source, Locale.De));
-            _logger.LogDebug(EntityPropertyLabels.Get("Entry.Source"));
-            _logger.LogDebug(EntityPropertyLabels.Get("Entry.Source", Locale.En));
-            _logger.LogDebug(EntityPropertyLabels.Get("Entry.Source", Locale.De));
-            _logger.LogDebug(EntityPropertyLabels.Get<MyEnum>());
-            _logger.LogDebug(EntityPropertyLabels.Get(MyEnum.FirstValue));
+            EntityLabels.DefaultCulture = Locale.De;
+            _logger.LogDebug(EntityLabels.Get<Entry>());
+            _logger.LogDebug(EntityLabels.Get<Entry>(x => x.Source));
+            _logger.LogDebug(EntityLabels.Get<Entry>(x => x.Source, Locale.En));
+            _logger.LogDebug(EntityLabels.Get<Entry>(x => x.Source, Locale.De));
+            _logger.LogDebug(EntityLabels.Get("Entry.Source"));
+            _logger.LogDebug(EntityLabels.Get("Entry.Source", Locale.En));
+            _logger.LogDebug(EntityLabels.Get("Entry.Source", Locale.De));
+            _logger.LogDebug(EntityLabels.Get<MyEnum>());
+            _logger.LogDebug(EntityLabels.Get(MyEnum.FirstValue));
         }
     }
 }

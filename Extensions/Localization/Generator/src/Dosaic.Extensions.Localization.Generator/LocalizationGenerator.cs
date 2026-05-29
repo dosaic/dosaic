@@ -51,7 +51,7 @@ namespace Dosaic.Extensions.Localization.Generator
             context.RegisterSourceOutput(combined, (spc, source) =>
             {
                 var (infos, options) = source;
-                spc.AddSource("EntityPropertyLabels.g.cs", GenerateLookupClass(infos));
+                spc.AddSource("EntityLabels.g.cs", GenerateLookupClass(infos));
 
                 options.GlobalOptions.TryGetValue("build_property.LocalizationJsonDeOutputPath", out var dePath);
                 options.GlobalOptions.TryGetValue("build_property.LocalizationJsonEnOutputPath", out var enPath);
@@ -70,7 +70,7 @@ namespace Dosaic.Extensions.Localization.Generator
 
             namespace Dosaic.Extensions.Localization
             {
-                public static partial class EntityPropertyLabels
+                public static partial class EntityLabels
                 {
                     public static readonly Dictionary<string, Dictionary<string, string>> Labels =
                         new Dictionary<string, Dictionary<string, string>>()
