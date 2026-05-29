@@ -1,0 +1,9 @@
+<Project>
+  <ItemGroup>
+    <CompilerVisibleProperty Include="DosaicTracingMode" />
+    <CompilerVisibleProperty Include="DosaicTracingCaptureArgs" />
+    <CompilerVisibleProperty Include="DosaicTracingCaptureArgsOnError" />
+    <CompilerVisibleProperty Include="DosaicTracingInclude" />
+    <CompilerVisibleProperty Include="DosaicTracingExclude" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+    <!-- Compile this fixture with the global fabric ACTIVE so the integration tests can observe it. -->
+    <DosaicTracingMode>AllPublic</DosaicTracingMode>
+    <DosaicTracingExclude>**.Excluded.*</DosaicTracingExclude>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <CompilerVisibleProperty Include="DosaicTracingMode" />
+    <CompilerVisibleProperty Include="DosaicTracingExclude" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Metalama.Framework" />
+    <ProjectReference Include="..\..\src\Dosaic.Extensions.Tracing\Dosaic.Extensions.Tracing.csproj" />
+  </ItemGroup>
+
+</Project>
