@@ -23,8 +23,8 @@ namespace Dosaic.Extensions.Tracing
 
             var defaultCapture = GetEnum(amender, "DosaicTracingCaptureArgs", ArgCaptureMode.None);
             var errorCapture = GetEnum(amender, "DosaicTracingCaptureArgsOnError", ArgCaptureMode.ToString);
-            var includes = GetGlobs(amender, "DosaicTracingInclude");
-            var excludes = GetGlobs(amender, "DosaicTracingExclude");
+            var includes = GetGlobs(amender, "DosaicTracingInclude") ?? [];
+            var excludes = GetGlobs(amender, "DosaicTracingExclude") ?? [];
 
             amender
                 .SelectTypes()

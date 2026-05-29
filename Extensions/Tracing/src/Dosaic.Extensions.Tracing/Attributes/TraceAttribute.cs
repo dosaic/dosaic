@@ -98,17 +98,19 @@ namespace Dosaic.Extensions.Tracing
                         // mask the method's real exception on the error path.
                         try
                         {
+                            var value = p.Value;
                             if (mode == ArgCaptureMode.ToString)
                             {
+                                var stringValue = value == null ? null : value.ToString();
                                 // Reference / Nullable<T> arguments may be null; value types never are.
                                 if (p.Type.IsReferenceType != false || p.Type.IsNullable == true)
-                                    activity?.SetTag($"arg.{p.Name}", p.Value?.ToString());
+                                    activity?.SetTag($"arg.{p.Name}", stringValue);
                                 else
-                                    activity?.SetTag($"arg.{p.Name}", p.Value.ToString());
+                                    activity?.SetTag($"arg.{p.Name}", stringValue);
                             }
                             else if (mode == ArgCaptureMode.Json)
                             {
-                                activity?.SetTag($"arg.{p.Name}", SerializationExtensions.Serialize(p.Value));
+                                activity?.SetTag($"arg.{p.Name}", SerializationExtensions.Serialize(value));
                             }
                         }
                         catch (Exception captureError)
