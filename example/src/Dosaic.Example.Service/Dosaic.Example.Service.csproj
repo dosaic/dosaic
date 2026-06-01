@@ -19,6 +19,8 @@
     <ProjectReference Include="..\..\..\Hosting\Generator\src\Dosaic.Hosting.Generator\Dosaic.Hosting.Generator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
     <ProjectReference Include="..\..\..\Hosting\WebHost\src\Dosaic.Hosting.WebHost\Dosaic.Hosting.WebHost.csproj" />
     <ProjectReference Include="..\..\..\Plugins\Jobs\Hangfire\src\Dosaic.Plugins.Jobs.Hangfire\Dosaic.Plugins.Jobs.Hangfire.csproj" />
+    <ProjectReference Include="..\..\..\Extensions\Localization\Abstractions\src\Dosaic.Extensions.Localization.Abstractions\Dosaic.Extensions.Localization.Abstractions.csproj" />
+    <ProjectReference Include="..\..\..\Extensions\Localization\Generator\src\Dosaic.Extensions.Localization.Generator\Dosaic.Extensions.Localization.Generator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
   </ItemGroup>
 
   <ItemGroup>

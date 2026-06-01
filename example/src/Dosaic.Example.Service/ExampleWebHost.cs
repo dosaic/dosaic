@@ -1,8 +1,11 @@
+using System.Text.Json.Serialization.Metadata;
+using Dosaic.Extensions.Localization;
 using Dosaic.Hosting.Abstractions;
 using Dosaic.Hosting.Abstractions.Extensions;
 using Dosaic.Hosting.Abstractions.Plugins;
 using Dosaic.Hosting.Abstractions.Services;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http.Json;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -72,6 +75,33 @@ namespace Dosaic.Example.Service
         {
             var x = _implementationResolver.FindAndResolve<IPluginActivateable>();
             _logger.LogDebug("Found {ItemCount} plugins", x.Count);
+
+            serviceCollection.PostConfigure<JsonOptions>(options =>
+       {
+           var chain = options.SerializerOptions.TypeInfoResolverChain;
+           if (chain.Count == 0)
+           {
+               chain.Add(new DefaultJsonTypeInfoResolver());
+           }
+       });
+            serviceCollection.PostConfigure<Microsoft.AspNetCore.Mvc.JsonOptions>(options =>
+            {
+                var chain = options.JsonSerializerOptions.TypeInfoResolverChain;
+                if (chain.Count == 0)
+                {
+                    chain.Add(new DefaultJsonTypeInfoResolver());
+                }
+            });
+            EntityLabels.DefaultCulture = Locale.De;
+            _logger.LogDebug(EntityLabels.Get<Entry>());
+            _logger.LogDebug(EntityLabels.Get<Entry>(x => x.Source));
+            _logger.LogDebug(EntityLabels.Get<Entry>(x => x.Source, Locale.En));
+            _logger.LogDebug(EntityLabels.Get<Entry>(x => x.Source, Locale.De));
+            _logger.LogDebug(EntityLabels.Get("Entry.Source"));
+            _logger.LogDebug(EntityLabels.Get("Entry.Source", Locale.En));
+            _logger.LogDebug(EntityLabels.Get("Entry.Source", Locale.De));
+            _logger.LogDebug(EntityLabels.Get<MyEnum>());
+            _logger.LogDebug(EntityLabels.Get(MyEnum.FirstValue));
         }
     }
 }

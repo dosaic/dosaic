@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Description>Localization attributes for Dosaic source generator</Description>
+    <IsPackable>true</IsPackable>
+  </PropertyGroup>
+
+</Project>
