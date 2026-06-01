@@ -1,8 +1,5 @@
-using System.Globalization;
 using System.Text.Json.Serialization.Metadata;
-#pragma warning disable IDE0005
 using Dosaic.Extensions.Localization;
-#pragma warning restore IDE0005
 using Dosaic.Hosting.Abstractions;
 using Dosaic.Hosting.Abstractions.Extensions;
 using Dosaic.Hosting.Abstractions.Plugins;
