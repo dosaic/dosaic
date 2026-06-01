@@ -35,10 +35,11 @@ namespace Dosaic.Hosting.WebHost.Tests
             result.Value.Should().Be("test-value");
         }
 
-        [Configuration("TestSettings")]
-        private class TestSettings
-        {
-            public string Value { get; set; }
-        }
+    }
+
+    [Configuration("TestSettings")]
+    public class TestSettings
+    {
+        public string Value { get; set; }
     }
 }
