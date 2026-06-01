@@ -42,6 +42,7 @@ namespace Dosaic.Api.OpenApi.Tests
             swaggerUiOptions.Value.Returns(new SwaggerUIOptions());
             services.AddSingleton(swaggerOptions);
             services.AddSingleton(swaggerUiOptions);
+            services.AddSingleton(Substitute.For<IWebHostEnvironment>());
             services.AddMvc();
             var serviceProvider = services.BuildServiceProvider();
             applicationBuilder.ApplicationServices.Returns(serviceProvider);
@@ -70,6 +71,7 @@ namespace Dosaic.Api.OpenApi.Tests
             swaggerUiOptions.Value.Returns(new SwaggerUIOptions());
             services.AddSingleton(swaggerOptions);
             services.AddSingleton(swaggerUiOptions);
+            services.AddSingleton(Substitute.For<IWebHostEnvironment>());
             services.AddMvc();
             var serviceProvider = services.BuildServiceProvider();
             applicationBuilder.ApplicationServices.Returns(serviceProvider);
