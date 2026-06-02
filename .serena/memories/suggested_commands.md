@@ -6,7 +6,7 @@
 dotnet restore
 
 # Build solution
-dotnet build ./Dosaic.sln
+dotnet build ./Dosaic.slnx
 
 # Build in Release mode
 dotnet build -c Release
@@ -18,7 +18,7 @@ dotnet run --project example/src/Dosaic.Example.Service
 ## Testing
 ```bash
 # Run all tests
-dotnet test ./Dosaic.sln
+dotnet test ./Dosaic.slnx
 
 # Run tests with coverage
 dotnet test --collect "Code Coverage;Format=Xml;CoverageFileName=coverage.xml" --results-directory "./test-results" --no-restore --nologo -c Release --logger trx

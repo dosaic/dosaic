@@ -1,5 +1,5 @@
 {
     "svg.preview.background": "dark-transparent",
-    "dotnet.solution.autoOpen": "Dosaic.sln",
+    "dotnet.solution.autoOpen": "Dosaic.slnx",
     "dotnet.preferCSharpExtension": false
 }

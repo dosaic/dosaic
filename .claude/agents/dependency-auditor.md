@@ -8,8 +8,8 @@ model: sonnet
 Central package management via `Directory.Packages.props`. `PackageReference` entries MUST NOT carry a `Version=`.
 
 ## Steps
-1. `dotnet list ./Dosaic.sln package --outdated` — outdated transitive + direct.
-2. `dotnet list ./Dosaic.sln package --vulnerable --include-transitive` — CVE check.
+1. `dotnet list ./Dosaic.slnx package --outdated` — outdated transitive + direct.
+2. `dotnet list ./Dosaic.slnx package --vulnerable --include-transitive` — CVE check.
 3. Cross-reference with `Directory.Packages.props`.
 4. Group findings:
    - **Security** — vulnerable, prioritize.

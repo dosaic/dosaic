@@ -240,7 +240,7 @@ Defined in `PluginActivateableExtensions.GetSortOrderForPlugin`:
 dotnet restore
 
 # Build
-dotnet build ./Dosaic.sln
+dotnet build ./Dosaic.slnx
 
 # Format check (CI uses this — must pass before merge)
 dotnet format --verify-no-changes --no-restore
@@ -249,7 +249,7 @@ dotnet format --verify-no-changes --no-restore
 dotnet format
 
 # Run all tests
-dotnet test ./Dosaic.sln
+dotnet test ./Dosaic.slnx
 
 # Run tests with coverage
 dotnet test --collect "Code Coverage;Format=Xml;CoverageFileName=coverage.xml" \
@@ -406,7 +406,7 @@ The repository includes MCP (Model Context Protocol) servers for AI-assisted dev
 | `Directory.Build.props` | Shared build properties, global usings, test assembly attributes, NuGet metadata |
 | `Directory.Packages.props` | Central package version management |
 | `.editorconfig` | Code style rules, naming conventions, diagnostic severities |
-| `Dosaic.sln` | Solution file |
+| `Dosaic.slnx` | Solution file |
 | `Hosting/Abstractions/src/Dosaic.Hosting.Abstractions/Plugins/` | All plugin interfaces |
 | `Hosting/Abstractions/src/Dosaic.Hosting.Abstractions/Services/IImplementationResolver.cs` | Plugin resolution contract |
 | `Hosting/Abstractions/src/Dosaic.Hosting.Abstractions/Extensions/PluginActivateableExtensions.cs` | Plugin discovery + sort order |
