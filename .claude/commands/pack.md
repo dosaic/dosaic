@@ -5,7 +5,7 @@ allowed-tools: Bash(dotnet pack:*), Bash(dotnet restore:*), Bash(dotnet build:*)
 ---
 
 ```
-dotnet pack ${1:-./Dosaic.sln} -c Release --nologo
+dotnet pack ${1:-./Dosaic.slnx} -c Release --nologo
 ```
 
 Report produced `.nupkg` paths and their sizes. Never run `dotnet nuget push` — that is release-workflow only.

@@ -5,7 +5,7 @@ When completing a coding task in the Dosaic repository:
 ## Before Submitting
 1. **Format check:** `dotnet format --verify-no-changes --no-restore`
 2. **Build check:** `dotnet build -c Release`
-3. **Test run:** `dotnet test ./Dosaic.sln` (or specific test project)
+3. **Test run:** `dotnet test ./Dosaic.slnx` (or specific test project)
 4. **Coverage:** Ensure 80%+ line coverage for new/modified code
 
 ## Code Quality
