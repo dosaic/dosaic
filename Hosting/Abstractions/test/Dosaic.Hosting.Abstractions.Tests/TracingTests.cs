@@ -127,5 +127,73 @@ namespace Dosaic.Hosting.Abstractions.Tests
             act.GetTagItem("x.a").Should().Be("1");
             act.GetTagItem("x.b").Should().Be("2");
         }
+
+        [Test]
+        public void DisplayNameStripsArityAndRendersGenericArguments()
+        {
+            typeof(int).DisplayName().Should().Be("Int32");
+            typeof(List<string>).DisplayName().Should().Be("List<String>");
+            typeof(Dictionary<string, int>).DisplayName().Should().Be("Dictionary<String, Int32>");
+            typeof(List<Dictionary<string, int>>).DisplayName().Should().Be("List<Dictionary<String, Int32>>");
+            ((Type)null).DisplayName().Should().BeNull();
+        }
+
+        [Test]
+        public void DisplayNameWithFullNameIncludesNamespace()
+        {
+            typeof(string).DisplayName(fullName: true).Should().Be("System.String");
+            typeof(List<string>).DisplayName(fullName: true)
+                .Should().Be("System.Collections.Generic.List<System.String>");
+        }
+
+        [Test]
+        public void SuppressForLinkingCapturesTraceParentAndRestoresOnDispose()
+        {
+            using var act = Tracing.StartActivity("sender");
+            act.Should().NotBeNull();
+            var expected = act!.Id;
+
+            using (var scope = Tracing.SuppressForLinking())
+            {
+                Activity.Current.Should().BeNull("the ambient activity is suppressed inside the scope");
+                scope.TraceParent.Should().Be(expected);
+            }
+
+            Activity.Current.Should().Be(act, "the ambient activity is restored on dispose");
+        }
+
+        [Test]
+        public void SuppressForLinkingHasNullTraceParentWhenNoAmbientActivity()
+        {
+            Activity.Current.Should().BeNull();
+            using var scope = Tracing.SuppressForLinking();
+            scope.TraceParent.Should().BeNull();
+        }
+
+        [Test]
+        public void AddTraceLinkAttachesLinkFromTraceParent()
+        {
+            using var sender = Tracing.StartActivity("sender");
+            var traceParent = sender!.Id;
+            using var consumer = Tracing.StartActivity("consumer");
+
+            consumer!.AddTraceLink(traceParent);
+
+            consumer.Links.Should().ContainSingle(l =>
+                l.Context.TraceId == sender.TraceId && l.Context.SpanId == sender.SpanId);
+        }
+
+        [Test]
+        public void AddTraceLinkIsNullAndGarbageSafe()
+        {
+            Activity a = null;
+            // ReSharper disable once ExpressionIsAlwaysNull
+            a.AddTraceLink("00-x-y-01").Should().BeNull();
+
+            using var act = Tracing.StartActivity("noise");
+            act!.AddTraceLink("not-a-traceparent");
+            act.AddTraceLink(42);
+            act.Links.Should().BeEmpty();
+        }
     }
 }

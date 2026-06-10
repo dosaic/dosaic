@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using AwesomeAssertions;
 using Chronos.Abstractions;
 using Dosaic.Plugins.Messaging.Abstractions;
@@ -19,6 +20,7 @@ public class MessageSenderTests
     private ISendEndpoint _sendEndpoint;
     private IMessageDeduplicateKeyProvider _deduplicateKeyProvider;
     private IQueueResolver _queueResolver;
+    private MessageBusConfiguration _configuration;
     private static readonly DateTime _now = DateTime.UtcNow;
 
     [SetUp]
@@ -38,7 +40,8 @@ public class MessageSenderTests
                 Host = "localhost"
             });
         _queueResolver = new QueueResolver(new MessageBusConfiguration { Host = "localhost" }, []);
-        _messageBus = new MessageSender(_dateTimeProvider, _sendEndpointProvider, _messageValidator, _scheduler, _deduplicateKeyProvider, _queueResolver);
+        _configuration = new MessageBusConfiguration();
+        _messageBus = new MessageSender(_dateTimeProvider, _sendEndpointProvider, _messageValidator, _scheduler, _deduplicateKeyProvider, _queueResolver, _configuration);
     }
 
     [Test]
@@ -84,7 +87,7 @@ public class MessageSenderTests
     [Test]
     public async Task ThrowsExceptionWhenSchedulerIsNotPresent()
     {
-        _messageBus = new MessageSender(_dateTimeProvider, _sendEndpointProvider, _messageValidator, null, _deduplicateKeyProvider, _queueResolver);
+        _messageBus = new MessageSender(_dateTimeProvider, _sendEndpointProvider, _messageValidator, null, _deduplicateKeyProvider, _queueResolver, _configuration);
         await _messageBus.Invoking(x => x.ScheduleAsync(new TestMessage(123), TimeSpan.FromSeconds(1)))
             .Should().ThrowAsync<InvalidOperationException>();
     }
@@ -270,6 +273,174 @@ public class MessageSenderTests
         dedupe.Should().Be(_deduplicateKeyProvider.TryGetKey(message));
     }
 
+    private static ActivityListener StartListener(List<Activity> started = null)
+    {
+        var listener = new ActivityListener
+        {
+            ShouldListenTo = _ => true,
+            Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllDataAndRecorded,
+            SampleUsingParentId = (ref ActivityCreationOptions<string> _) => ActivitySamplingResult.AllDataAndRecorded,
+            ActivityStarted = a => { if (a.OperationName.EndsWith(" send")) started?.Add(a); }
+        };
+        ActivitySource.AddActivityListener(listener);
+        return listener;
+    }
+
+    [Test]
+    public async Task SendAsyncCreatesSendSpanUnderCallerAndLinksConsumerViaHeader()
+    {
+        _messageValidator.HasConsumers(typeof(TestMessage)).Returns(true);
+        var started = new List<Activity>();
+        using var listener = StartListener(started);
+        using var source = new ActivitySource("test-sender-send");
+        using var ambient = source.StartActivity("job");
+        ambient.Should().NotBeNull();
+
+        DictionarySendHeaders observedHeaders = null!;
+        Activity duringSend = null;
+        _sendEndpoint
+            .When(x => x.Send(Arg.Any<object>(), Arg.Any<IPipe<SendContext>>(), Arg.Any<CancellationToken>()))
+            .Do(ci =>
+            {
+                duringSend = Activity.Current;
+                observedHeaders = ExecutePipeOnSendContext((IPipe<SendContext>)ci[1], out _);
+            });
+
+        await _messageBus.SendAsync(typeof(TestMessage), new TestMessage(1));
+
+        var sendSpan = started.Single(a => a.OperationName == "MSG TestMessage send");
+        sendSpan.Kind.Should().Be(ActivityKind.Producer);
+        sendSpan.Parent.Should().Be(ambient, "the send span lives in the caller's trace");
+        duringSend.Should().BeNull("the ambient activity is suppressed during the transport call");
+        Activity.Current.Should().Be(ambient, "the ambient activity is restored afterwards");
+        observedHeaders.TryGetHeader(MessageBusConstants.TraceLinkHeader, out var link).Should().BeTrue();
+        link.Should().Be(sendSpan.Id);
+    }
+
+    [Test]
+    public async Task SendAsyncCreatesRootSendSpanWhenNoAmbientActivity()
+    {
+        _messageValidator.HasConsumers(typeof(TestMessage)).Returns(true);
+        var started = new List<Activity>();
+        using var listener = StartListener(started);
+        Activity.Current.Should().BeNull();
+
+        DictionarySendHeaders observedHeaders = null!;
+        _sendEndpoint
+            .When(x => x.Send(Arg.Any<object>(), Arg.Any<IPipe<SendContext>>(), Arg.Any<CancellationToken>()))
+            .Do(ci => observedHeaders = ExecutePipeOnSendContext((IPipe<SendContext>)ci[1], out _));
+
+        await _messageBus.SendAsync(typeof(TestMessage), new TestMessage(1));
+
+        var sendSpan = started.Single(a => a.OperationName == "MSG TestMessage send");
+        sendSpan.Parent.Should().BeNull("with no caller the send span is its own root");
+        observedHeaders.TryGetHeader(MessageBusConstants.TraceLinkHeader, out var link).Should().BeTrue();
+        link.Should().Be(sendSpan.Id);
+    }
+
+    [Test]
+    public async Task ScheduleAsyncCreatesSendSpanUnderCallerAndLinksConsumerViaHeader()
+    {
+        _messageValidator.HasConsumers(typeof(TestMessage)).Returns(true);
+        var started = new List<Activity>();
+        using var listener = StartListener(started);
+        using var source = new ActivitySource("test-sender-schedule");
+        using var ambient = source.StartActivity("job");
+        ambient.Should().NotBeNull();
+
+        DictionarySendHeaders observedHeaders = null!;
+        Activity duringSend = null;
+        _scheduler
+            .When(s => s.ScheduleSend(Arg.Any<Uri>(), Arg.Any<DateTime>(), Arg.Any<object>(), Arg.Any<Type>(),
+                Arg.Any<IPipe<SendContext>>(), Arg.Any<CancellationToken>()))
+            .Do(ci =>
+            {
+                duringSend = Activity.Current;
+                observedHeaders = ExecutePipeOnSendContext((IPipe<SendContext>)ci[4], out _);
+            });
+
+        await _messageBus.ScheduleAsync(new TestMessage(1), TimeSpan.FromSeconds(1));
+
+        var sendSpan = started.Single(a => a.OperationName == "MSG TestMessage send");
+        sendSpan.Parent.Should().Be(ambient);
+        duringSend.Should().BeNull();
+        Activity.Current.Should().Be(ambient);
+        observedHeaders.TryGetHeader(MessageBusConstants.TraceLinkHeader, out var link).Should().BeTrue();
+        link.Should().Be(sendSpan.Id);
+    }
+
+    [Test]
+    public async Task SendAsyncUsesParentHeaderWhenTraceLinksDisabled()
+    {
+        _messageBus = new MessageSender(_dateTimeProvider, _sendEndpointProvider, _messageValidator, _scheduler,
+            _deduplicateKeyProvider, _queueResolver, new MessageBusConfiguration { UseTraceLinks = false });
+        _messageValidator.HasConsumers(typeof(TestMessage)).Returns(true);
+        var started = new List<Activity>();
+        using var listener = StartListener(started);
+        using var source = new ActivitySource("test-sender-disabled");
+        using var ambient = source.StartActivity("job");
+
+        DictionarySendHeaders observedHeaders = null!;
+        _sendEndpoint
+            .When(x => x.Send(Arg.Any<object>(), Arg.Any<IPipe<SendContext>>(), Arg.Any<CancellationToken>()))
+            .Do(ci => observedHeaders = ExecutePipeOnSendContext((IPipe<SendContext>)ci[1], out _));
+
+        await _messageBus.SendAsync(typeof(TestMessage), new TestMessage(1));
+
+        var sendSpan = started.Single(a => a.OperationName == "MSG TestMessage send");
+        sendSpan.Parent.Should().Be(ambient, "the send span still lives in the caller's trace");
+        observedHeaders.TryGetHeader(MessageBusConstants.TraceParentHeader, out var parent).Should().BeTrue();
+        parent.Should().Be(sendSpan.Id);
+        observedHeaders.TryGetHeader(MessageBusConstants.TraceLinkHeader, out _).Should().BeFalse();
+    }
+
+    [Test]
+    public async Task SendAsyncUsesParentHeaderWhenMessageTypeOptsOut()
+    {
+        _messageValidator.HasConsumers(typeof(NoLinkMessage)).Returns(true);
+        var started = new List<Activity>();
+        using var listener = StartListener(started);
+        using var source = new ActivitySource("test-sender-optout");
+        using var ambient = source.StartActivity("job");
+
+        DictionarySendHeaders observedHeaders = null!;
+        _sendEndpoint
+            .When(x => x.Send(Arg.Any<object>(), Arg.Any<IPipe<SendContext>>(), Arg.Any<CancellationToken>()))
+            .Do(ci => observedHeaders = ExecutePipeOnSendContext((IPipe<SendContext>)ci[1], out _));
+
+        await _messageBus.SendAsync(typeof(NoLinkMessage), new NoLinkMessage(1));
+
+        var sendSpan = started.Single(a => a.OperationName == "MSG NoLinkMessage send");
+        observedHeaders.TryGetHeader(MessageBusConstants.TraceParentHeader, out var parent).Should().BeTrue();
+        parent.Should().Be(sendSpan.Id, "[TraceLink(false)] overrides the enabled default");
+        observedHeaders.TryGetHeader(MessageBusConstants.TraceLinkHeader, out _).Should().BeFalse();
+    }
+
+    [Test]
+    public async Task SendAsyncUsesLinkHeaderWhenMessageTypeOptsInDespiteDisabledConfig()
+    {
+        _messageBus = new MessageSender(_dateTimeProvider, _sendEndpointProvider, _messageValidator, _scheduler,
+            _deduplicateKeyProvider, _queueResolver, new MessageBusConfiguration { UseTraceLinks = false });
+        _messageValidator.HasConsumers(typeof(ForceLinkMessage)).Returns(true);
+        var started = new List<Activity>();
+        using var listener = StartListener(started);
+        using var source = new ActivitySource("test-sender-optin");
+        using var ambient = source.StartActivity("job");
+        ambient.Should().NotBeNull();
+
+        DictionarySendHeaders observedHeaders = null!;
+        _sendEndpoint
+            .When(x => x.Send(Arg.Any<object>(), Arg.Any<IPipe<SendContext>>(), Arg.Any<CancellationToken>()))
+            .Do(ci => observedHeaders = ExecutePipeOnSendContext((IPipe<SendContext>)ci[1], out _));
+
+        await _messageBus.SendAsync(typeof(ForceLinkMessage), new ForceLinkMessage(1));
+
+        var sendSpan = started.Single(a => a.OperationName == "MSG ForceLinkMessage send");
+        observedHeaders.TryGetHeader(MessageBusConstants.TraceLinkHeader, out var link).Should().BeTrue();
+        link.Should().Be(sendSpan.Id);
+        observedHeaders.TryGetHeader(MessageBusConstants.TraceParentHeader, out _).Should().BeFalse();
+    }
+
     private static DictionarySendHeaders ExecutePipeOnSendContext<TCtx>(IPipe<TCtx> pipe, out bool durableWasSet)
         where TCtx : class, SendContext
     {
@@ -294,7 +465,7 @@ public class MessageSenderTests
         var quorumResolver = new QueueResolver(
             new MessageBusConfiguration { Host = "localhost", UseQuorumQueues = true },
             [(listenAddress, [typeof(TestMessage)])]);
-        _messageBus = new MessageSender(_dateTimeProvider, _sendEndpointProvider, _messageValidator, _scheduler, _deduplicateKeyProvider, quorumResolver);
+        _messageBus = new MessageSender(_dateTimeProvider, _sendEndpointProvider, _messageValidator, _scheduler, _deduplicateKeyProvider, quorumResolver, _configuration);
         _messageValidator.HasConsumers(typeof(TestMessage)).Returns(true);
         _deduplicateKeyProvider = Substitute.For<IMessageDeduplicateKeyProvider>();
         await _messageBus.SendAsync(new TestMessage(1));
@@ -317,11 +488,17 @@ public class MessageSenderTests
         var quorumResolver = new QueueResolver(
             new MessageBusConfiguration { Host = "localhost", UseQuorumQueues = true },
             [(listenAddress, [typeof(TestMessage)])]);
-        _messageBus = new MessageSender(_dateTimeProvider, _sendEndpointProvider, _messageValidator, _scheduler, _deduplicateKeyProvider, quorumResolver);
+        _messageBus = new MessageSender(_dateTimeProvider, _sendEndpointProvider, _messageValidator, _scheduler, _deduplicateKeyProvider, quorumResolver, _configuration);
         _messageValidator.HasConsumers(typeof(TestMessage)).Returns(true);
         await _messageBus.ScheduleAsync(new TestMessage(1), TimeSpan.FromSeconds(1));
         await _scheduler.Received(1).ScheduleSend(Arg.Is<Uri>(u => u.Scheme == "exchange"), Arg.Any<DateTime>(), Arg.Any<object>(), typeof(TestMessage), Arg.Any<IPipe<SendContext>>(), Arg.Any<CancellationToken>());
     }
 
     private record TestMessage(int Id) : IMessage;
+
+    [TraceLink(false)]
+    private record NoLinkMessage(int Id) : IMessage;
+
+    [TraceLink]
+    private record ForceLinkMessage(int Id) : IMessage;
 }

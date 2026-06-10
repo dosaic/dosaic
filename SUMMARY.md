@@ -51,6 +51,7 @@
 * [NanoId](Extensions/NanoId/README.md)
 * [RestEase](Extensions/RestEase/README.md)
 * [Sqids](Extensions/Sqids/README.md)
+* [Tracing](Extensions/Tracing/README.md)
 
 ## API
 

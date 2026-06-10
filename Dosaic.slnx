@@ -29,6 +29,13 @@
   <Folder Name="/Extensions/Abstractions/src/">
     <Project Path="Extensions/Abstractions/src/Dosaic.Extensions.Abstractions/Dosaic.Extensions.Abstractions.csproj" />
   </Folder>
+  <Folder Name="/Extensions/Tracing/" />
+  <Folder Name="/Extensions/Tracing/src/">
+    <Project Path="Extensions/Tracing/src/Dosaic.Extensions.Tracing/Dosaic.Extensions.Tracing.csproj" />
+  </Folder>
+  <Folder Name="/Extensions/Tracing/test/">
+    <Project Path="Extensions/Tracing/test/Dosaic.Extensions.Tracing.Tests/Dosaic.Extensions.Tracing.Tests.csproj" />
+  </Folder>
   <Folder Name="/Extensions/Abstractions/test/">
     <Project Path="Extensions/Abstractions/test/Dosaic.Extensions.Abstractions.Tests/Dosaic.Extensions.Abstractions.Tests.csproj" />
   </Folder>

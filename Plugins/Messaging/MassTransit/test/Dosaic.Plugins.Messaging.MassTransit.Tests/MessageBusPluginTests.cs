@@ -53,7 +53,6 @@ public class MessageBusPluginTests
         var sc = TestingDefaults.ServiceCollection();
         _plugin.ConfigureServices(sc);
         var sp = sc.BuildServiceProvider();
-        sp.Should().RegisterSources("MassTransit");
         sp.GetRequiredService<IMessageBus>().Should().BeOfType<MessageSender>();
         sp.GetRequiredService<IMessageValidator>().Should().BeOfType<MessageValidator>();
         sp.GetRequiredService<IMessageConsumer<TestMessage>>().Should().BeOfType<TestConsumer>();
@@ -92,7 +91,6 @@ public class MessageBusPluginTests
         var sc = TestingDefaults.ServiceCollection();
         plugin.ConfigureServices(sc);
         var sp = sc.BuildServiceProvider();
-        sp.Should().RegisterSources("MassTransit");
         sp.GetRequiredService<IMessageBus>().Should().BeOfType<MessageSender>();
         sp.GetRequiredService<IMessageValidator>().Should().BeOfType<MessageValidator>();
         sp.GetRequiredService<IMessageConsumer<TestMessage>>().Should().BeOfType<TestConsumer>();

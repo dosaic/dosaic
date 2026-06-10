@@ -12,7 +12,6 @@ namespace Dosaic.Plugins.Messaging.MassTransit;
 
 public class MessageBusPlugin(IImplementationResolver implementationResolver, MessageBusConfiguration configuration, IMessageBusConfigurator[] configurators) : IPluginServiceConfiguration
 {
-    private const string OpenTelemetrySourceName = "MassTransit";
     private record QueueMessageTypes(Uri Queue, Type[] MessageTypes, Type[] ConsumerTypes);
     private IList<Type> GetMessageConsumers()
     {
@@ -58,12 +57,11 @@ public class MessageBusPlugin(IImplementationResolver implementationResolver, Me
             sp.GetRequiredService<ISendEndpointProvider>(),
             sp.GetRequiredService<IMessageValidator>(),
             sp.GetService<IMessageScheduler>(), sp.GetRequiredService<IMessageDeduplicateKeyProvider>(),
-            sp.GetRequiredService<IQueueResolver>()));
+            sp.GetRequiredService<IQueueResolver>(), configuration));
         ConfigureMassTransit(serviceCollection, messageTypes, queueGroups);
-        serviceCollection.AddOpenTelemetry().WithTracing(builder =>
-        {
-            builder.AddSource(OpenTelemetrySourceName);
-        });
+        // MassTransit's own ActivitySource is intentionally NOT exported: it propagates the trace
+        // context across the transport (parent-child explosion). Instead the sender/consumer own the
+        // "MSG ..." spans and link traces explicitly (see MessageSender / MessageConsumer).
     }
 
     private static int? GetConcurrencyLimitFromConsumers(Type[] consumerTypes)
