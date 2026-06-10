@@ -25,4 +25,5 @@ public class MessageBusConfiguration
     public bool UseQuorumQueues { get; set; }
     public int? QuorumQueueReplicationFactor { get; set; }
     public int? DeliveryLimit { get; set; }
+    public bool UseTraceLinks { get; set; } = true;
 }

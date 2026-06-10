@@ -40,6 +40,7 @@ messageBus:
   useQuorumQueues: false
   quorumQueueReplicationFactor: null
   deliveryLimit: null
+  useTraceLinks: true
 ```
 
 | Property | Type | Default | Description |
@@ -64,6 +65,7 @@ messageBus:
 | `useQuorumQueues` | `bool` | `false` | Enable RabbitMQ quorum queues for all consumers |
 | `quorumQueueReplicationFactor` | `int?` | `null` | Replication factor for quorum queues (when `null`, uses RabbitMQ default) |
 | `deliveryLimit` | `int?` | `null` | Sets `x-delivery-limit` queue argument on quorum queues — controls how many times a message can be redelivered before being dead-lettered |
+| `useTraceLinks` | `bool` | `true` | Default trace-linking behaviour (see [Trace Linking](#trace-linking)). Override per message type with `[TraceLink]` |
 
 > **Note:** When `useInMemory` is `true`, all RabbitMQ settings are ignored.
 
@@ -198,6 +200,36 @@ public class LongRunningConsumer : IMessageConsumer<HeavyReport>
 }
 ```
 
+### Trace Linking
+
+Out of the box MassTransit propagates the trace context across the transport (the W3C `traceparent` header), so a job that publishes N messages produces one giant trace with every downstream consumer span hanging off it — the "parent-child explosion".
+
+This plugin owns its spans instead and **does not export MassTransit's own `ActivitySource`** (no `send`/`receive`/`process` spans). On send it creates a `MSG <type> send` (Producer) span **under the caller**, so the parent trace shows that a send happened, and stamps that span's context into a header. The consumer reads it and:
+
+- **Linking mode** (`useTraceLinks: true`, default) — header `x-trace-link`. The consume span `MSG <Consumer>.Consume<T>` starts a **fresh root trace** and attaches the send span as an [`ActivityLink`](https://learn.microsoft.com/dotnet/api/system.diagnostics.activitylink). The two traces stay navigable via the link, without nesting.
+- **Parent mode** (`useTraceLinks: false`) — header `x-trace-parent`. The consume span **continues the send span's trace** as a child (one trace end to end).
+
+```
+linking mode:
+  caller trace:   caller → MSG ImportShipment send      (link ⇢)
+  receive trace:  MSG …ImportShipmentConsumer.Consume<>  (root, ⇠ linked)
+                    └ ProcessAsync
+```
+
+> **Trade-off:** MassTransit's built-in transport spans (`receive`/`process`/retry timings) are no longer exported. The `Dosaic` metrics (`messaging.consumer.*`) are unaffected.
+
+Toggle the default globally with `useTraceLinks`, or override per message type with `[TraceLink]` (the attribute takes precedence over configuration):
+
+```csharp
+using Dosaic.Plugins.Messaging.MassTransit;
+
+[TraceLink(false)] // parent mode: consume span continues the send's trace
+public record AuditLogged(Guid Id) : IMessage;
+
+[TraceLink] // force linking even when useTraceLinks is false
+public record OrderPlaced(Guid OrderId) : IMessage;
+```
+
 ### Sending Messages
 
 Inject `IMessageBus` and call `SendAsync`:
@@ -310,7 +342,8 @@ public class MyBusConfigurator : IMessageBusConfigurator
 - **Message deduplication** — SHA-256 content hash (or custom factory) written to `x-deduplication-header`.
 - **Queue name customisation** — automatic resolution from type name; `[QueueName("...")]` attribute for explicit overrides; generic types produce hyphen-joined segment names.
 - **In-memory transport** — set `useInMemory: true` for integration tests without a running RabbitMQ broker.
-- **Observability** — MassTransit activity source registered with OpenTelemetry `TracerProvider`; `messaging.consumer.duration` (histogram) and `messaging.consumer.failures` (counter) metrics emitted per consumer invocation with `consumer_type` and `message_type` tags.
+- **Observability** — `messaging.consumer.duration` (histogram) and `messaging.consumer.failures` (counter) metrics emitted per consumer invocation with `consumer_type` and `message_type` tags. Spans are emitted on the shared `Dosaic` activity source; MassTransit's own source is intentionally not exported (see [Trace Linking](#trace-linking)).
+- **Trace linking** — a `MSG <type> send` span is created under the caller (parent trace) and the consumer either starts its own linked root trace (`useTraceLinks: true`) or continues it as a child (`false`). Toggle globally with `useTraceLinks` or per message type with `[TraceLink]` (attribute wins over configuration).
 - **Health checks** — a MassTransit health check named `message-bus` is registered under the `readiness` tag; reports `Unhealthy` on failure.
 - **Extensible** — `IMessageBusConfigurator` allows full access to the MassTransit configuration API for advanced scenarios. The `ConfigureReceiveEndpoint` overload now provides the consumer types registered on each endpoint.
 

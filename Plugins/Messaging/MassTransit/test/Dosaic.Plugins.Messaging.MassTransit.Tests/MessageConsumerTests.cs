@@ -117,7 +117,7 @@ public class MessageConsumerTests
             ShouldListenTo = src => src.Name == Tracing.SourceName,
             Sample = (ref ActivityCreationOptions<ActivityContext> _) =>
                 ActivitySamplingResult.AllDataAndRecorded,
-            ActivityStopped = stopped.Add,
+            ActivityStopped = a => { if (a.OperationName.Contains("TestMessageForConsumer")) stopped.Add(a); },
         };
         ActivitySource.AddActivityListener(listener);
 
@@ -144,7 +144,7 @@ public class MessageConsumerTests
             ShouldListenTo = src => src.Name == Tracing.SourceName,
             Sample = (ref ActivityCreationOptions<ActivityContext> _) =>
                 ActivitySamplingResult.AllDataAndRecorded,
-            ActivityStopped = stopped.Add,
+            ActivityStopped = a => { if (a.OperationName.Contains("TestMessageForConsumer")) stopped.Add(a); },
         };
         ActivitySource.AddActivityListener(listener);
 
@@ -158,5 +158,131 @@ public class MessageConsumerTests
         stopped.Should().HaveCount(2);
         stopped.Count(s => s.Status == ActivityStatusCode.Error).Should().Be(1);
         stopped.Count(s => s.Status == ActivityStatusCode.Ok).Should().Be(1);
+    }
+
+    [Test]
+    public async Task ShouldLinkConsumerSpanToSendingSpanWhenLinkHeaderPresent()
+    {
+        var stopped = new List<Activity>();
+        using var listener = new ActivityListener
+        {
+            ShouldListenTo = src => src.Name == Tracing.SourceName,
+            Sample = (ref ActivityCreationOptions<ActivityContext> _) =>
+                ActivitySamplingResult.AllDataAndRecorded,
+            ActivityStopped = a => { if (a.OperationName.Contains("TestMessageForConsumer")) stopped.Add(a); },
+        };
+        ActivitySource.AddActivityListener(listener);
+
+        var traceId = ActivityTraceId.CreateRandom();
+        var spanId = ActivitySpanId.CreateRandom();
+        var traceparent = $"00-{traceId}-{spanId}-01";
+        var context = Substitute.For<ConsumeContext<TestMessageForConsumer>>();
+        context.Message.Returns(new TestMessageForConsumer());
+        context.Headers.TryGetHeader(MessageBusConstants.TraceLinkHeader, out Arg.Any<object>())
+            .Returns(ci => { ci[1] = traceparent; return true; });
+
+        // An ambient activity must NOT be inherited as the parent: a default parentContext is ignored
+        // by ActivitySource when Activity.Current is set, which would silently break the root trace.
+        using var ambient = Tracing.StartActivity("ambient-job");
+        ambient.Should().NotBeNull();
+
+        await _consumer.Consume(context);
+
+        stopped.Should().HaveCount(2);
+        stopped.Should().AllSatisfy(span =>
+        {
+            span.Parent.Should().BeNull("link mode starts a fresh root trace");
+            span.TraceId.Should().NotBe(traceId, "the consume span is its own trace, only linked to the sender");
+            span.TraceId.Should().NotBe(ambient.TraceId, "the consume span must not inherit the ambient activity");
+            span.TraceId.ToHexString().Should().NotBe("00000000000000000000000000000000", "the root trace id must be valid");
+            span.Links.Should().ContainSingle(l => l.Context.TraceId == traceId && l.Context.SpanId == spanId);
+        });
+    }
+
+    [Test]
+    public async Task ShouldParentConsumerSpanToSendingSpanWhenParentHeaderPresent()
+    {
+        var stopped = new List<Activity>();
+        using var listener = new ActivityListener
+        {
+            ShouldListenTo = src => src.Name == Tracing.SourceName,
+            Sample = (ref ActivityCreationOptions<ActivityContext> _) =>
+                ActivitySamplingResult.AllDataAndRecorded,
+            SampleUsingParentId = (ref ActivityCreationOptions<string> _) =>
+                ActivitySamplingResult.AllDataAndRecorded,
+            ActivityStopped = a => { if (a.OperationName.Contains("TestMessageForConsumer")) stopped.Add(a); },
+        };
+        ActivitySource.AddActivityListener(listener);
+
+        var traceId = ActivityTraceId.CreateRandom();
+        var spanId = ActivitySpanId.CreateRandom();
+        var traceparent = $"00-{traceId}-{spanId}-01";
+        var context = Substitute.For<ConsumeContext<TestMessageForConsumer>>();
+        context.Message.Returns(new TestMessageForConsumer());
+        context.Headers.TryGetHeader(MessageBusConstants.TraceParentHeader, out Arg.Any<object>())
+            .Returns(ci => { ci[1] = traceparent; return true; });
+
+        await _consumer.Consume(context);
+
+        stopped.Should().HaveCount(2);
+        stopped.Should().AllSatisfy(span =>
+        {
+            span.TraceId.Should().Be(traceId, "parent mode continues the sender's trace");
+            span.ParentSpanId.Should().Be(spanId);
+            span.Links.Should().BeEmpty();
+        });
+    }
+
+    [Test]
+    public async Task ShouldNotLinkConsumerSpanWhenLinkHeaderAbsent()
+    {
+        var stopped = new List<Activity>();
+        using var listener = new ActivityListener
+        {
+            ShouldListenTo = src => src.Name == Tracing.SourceName,
+            Sample = (ref ActivityCreationOptions<ActivityContext> _) =>
+                ActivitySamplingResult.AllDataAndRecorded,
+            ActivityStopped = a => { if (a.OperationName.Contains("TestMessageForConsumer")) stopped.Add(a); },
+        };
+        ActivitySource.AddActivityListener(listener);
+
+        var context = Substitute.For<ConsumeContext<TestMessageForConsumer>>();
+        context.Message.Returns(new TestMessageForConsumer());
+
+        await _consumer.Consume(context);
+
+        stopped.Should().HaveCount(2);
+        stopped.Should().AllSatisfy(span => span.Links.Should().BeEmpty());
+    }
+
+    public record EntityChange<T>(T Payload) : IMessage;
+
+    [Test]
+    public async Task ShouldRenderGenericMessageNameInSpanAndTag()
+    {
+        var stopped = new List<Activity>();
+        using var listener = new ActivityListener
+        {
+            ShouldListenTo = src => src.Name == Tracing.SourceName,
+            Sample = (ref ActivityCreationOptions<ActivityContext> _) =>
+                ActivitySamplingResult.AllDataAndRecorded,
+            ActivityStopped = a => { if (a.OperationName.Contains("EntityChange")) stopped.Add(a); },
+        };
+        ActivitySource.AddActivityListener(listener);
+
+        var consumers = new List<IMessageConsumer<EntityChange<TestMessageForConsumer>>>
+        {
+            Substitute.For<IMessageConsumer<EntityChange<TestMessageForConsumer>>>()
+        };
+        var consumer = new MessageConsumer<EntityChange<TestMessageForConsumer>>(
+            new FakeLogger<MessageConsumer<EntityChange<TestMessageForConsumer>>>(), consumers);
+        var context = Substitute.For<ConsumeContext<EntityChange<TestMessageForConsumer>>>();
+        context.Message.Returns(new EntityChange<TestMessageForConsumer>(new TestMessageForConsumer()));
+
+        await consumer.Consume(context);
+
+        stopped.Should().ContainSingle();
+        stopped[0].OperationName.Should().Be("MSG EntityChange<TestMessageForConsumer> consume");
+        stopped[0].GetTagItem("messaging.message_type").Should().Be("EntityChange<TestMessageForConsumer>");
     }
 }
