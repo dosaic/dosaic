@@ -62,3 +62,7 @@ sampleConfig:
   name: example
   number: 42
   numberAsString: "42"
+
+
+testSettings:
+  value: ""

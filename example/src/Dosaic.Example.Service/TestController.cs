@@ -1,5 +1,8 @@
-using System.ComponentModel.DataAnnotations;
+
 using System.Diagnostics.CodeAnalysis;
+using Dosaic.Extensions.Localization;
+using Dosaic.Hosting.Abstractions.Extensions;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 using Vogen;
@@ -12,13 +15,13 @@ namespace Dosaic.Example.Service
         [HttpGet]
         public Entry Get()
         {
-            return new Entry() { Name = "test" };
+            return new Entry() { Source = "test" };
         }
 
         [HttpDelete]
         public Entry Delete()
         {
-            return new Entry() { Name = "test" };
+            return new Entry() { Source = "test" };
         }
 
         /// <summary>
@@ -31,8 +34,16 @@ namespace Dosaic.Example.Service
         [SwaggerResponse(200, "the manipulated object", typeof(Entry))]
         public Entry Create([FromBody] Entry entry, [FromQuery] EntryId idToSet)
         {
-            entry.EntryId = idToSet;
             return entry;
+        }
+
+        [HttpPost("upload")]
+        public ActionResult FileUpload(IFormFile file)
+        {
+            var stream = file.OpenReadStream();
+            stream.Position = 0;
+            var content = new StreamReader(stream).ReadToEnd();
+            return Ok(new { content, file = file }.Serialize());
         }
     }
 
@@ -45,29 +56,27 @@ namespace Dosaic.Example.Service
         private static Validation Validate(int input) => input < 1 ? Validation.Invalid("lower as one") : Validation.Ok;
     }
 
+    [LocalizedName(de: "Eintrag")]
     public class Entry
     {
-        /// <summary>
-        /// The identifier
-        /// </summary>
-        [Required, NotNull]
-        public EntryId EntryId { get; set; }
 
         /// <summary>
-        /// The name
+        /// The source
         /// </summary>
         [NotNull]
-        public string Name { get; set; }
+        [LocalizedName(de: "Quelle", en: "Source")]
+        public string Source { get; set; }
 
-        public IList<EntryId> Ids { get; set; }
-
-        public IList<Entry2> Dentries { get; set; }
         public Guid Id { get; set; }
         public Guid NewId() => Guid.NewGuid();
     }
 
-    public class Entry2
+    [LocalizedName(de: "Mein Enum", en: "My Enum")]
+    public enum MyEnum
     {
-        public IList<EntryId> OtherIds { get; set; }
+        [LocalizedName(de: "Erster Wert")]
+        FirstValue,
+        [LocalizedName(de: "Zweiter Wert")]
+        SecondValue
     }
 }

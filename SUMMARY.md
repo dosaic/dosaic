@@ -13,6 +13,7 @@
 * Authorization
   * [Abstractions](Plugins/Authorization/Abstractions/README.md)
   * [Keycloak](Plugins/Authorization/Keycloak/README.md)
+  * [Zitadel](Plugins/Authorization/Zitadel/README.md)
 * Caching
   * [Redis](Plugins/Caching/Redis/README.md)
 * Endpoints
@@ -44,6 +45,9 @@
 
 ## Extensions
 
+* Localization
+  * [Abstractions](Extensions/Localization/README.md)
+  * [Generator](Extensions/Localization/Generator/README.md)
 * [NanoId](Extensions/NanoId/README.md)
 * [RestEase](Extensions/RestEase/README.md)
 * [Sqids](Extensions/Sqids/README.md)

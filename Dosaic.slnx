@@ -1,0 +1,236 @@
+<Solution>
+  <Configurations>
+    <Platform Name="Any CPU" />
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Folder Name="/Api/" />
+  <Folder Name="/Api/OpenApi/" />
+  <Folder Name="/Api/OpenApi/src/">
+    <Project Path="Api/OpenApi/src/Dosaic.Api.OpenApi/Dosaic.Api.OpenApi.csproj" />
+  </Folder>
+  <Folder Name="/Api/OpenApi/test/">
+    <Project Path="Api/OpenApi/test/Dosaic.Api.OpenApi.Tests/Dosaic.Api.OpenApi.Tests.csproj" />
+  </Folder>
+  <Folder Name="/DevTools/" />
+  <Folder Name="/DevTools/Seeding/" />
+  <Folder Name="/DevTools/Seeding/src/">
+    <Project Path="DevTools/Seeding/src/Dosaic.DevTools.Seeding/Dosaic.DevTools.Seeding.csproj" />
+  </Folder>
+  <Folder Name="/DevTools/Seeding/test/">
+    <Project Path="DevTools/Seeding/test/Dosaic.DevTools.Seeding.Tests/Dosaic.DevTools.Seeding.Tests.csproj" />
+  </Folder>
+  <Folder Name="/example/" />
+  <Folder Name="/example/src/">
+    <Project Path="example/src/Dosaic.Example.Service/Dosaic.Example.Service.csproj" />
+  </Folder>
+  <Folder Name="/Extensions/" />
+  <Folder Name="/Extensions/Abstractions/" />
+  <Folder Name="/Extensions/Abstractions/src/">
+    <Project Path="Extensions/Abstractions/src/Dosaic.Extensions.Abstractions/Dosaic.Extensions.Abstractions.csproj" />
+  </Folder>
+  <Folder Name="/Extensions/Tracing/" />
+  <Folder Name="/Extensions/Tracing/src/">
+    <Project Path="Extensions/Tracing/src/Dosaic.Extensions.Tracing/Dosaic.Extensions.Tracing.csproj" />
+  </Folder>
+  <Folder Name="/Extensions/Tracing/test/">
+    <Project Path="Extensions/Tracing/test/Dosaic.Extensions.Tracing.Tests/Dosaic.Extensions.Tracing.Tests.csproj" />
+  </Folder>
+  <Folder Name="/Extensions/Abstractions/test/">
+    <Project Path="Extensions/Abstractions/test/Dosaic.Extensions.Abstractions.Tests/Dosaic.Extensions.Abstractions.Tests.csproj" />
+  </Folder>
+  <Folder Name="/Extensions/Localization/" />
+  <Folder Name="/Extensions/Localization/Abstractions/" />
+  <Folder Name="/Extensions/Localization/Abstractions/src/">
+    <Project Path="Extensions/Localization/Abstractions/src/Dosaic.Extensions.Localization.Abstractions/Dosaic.Extensions.Localization.Abstractions.csproj" />
+  </Folder>
+  <Folder Name="/Extensions/Localization/Generator/" />
+  <Folder Name="/Extensions/Localization/Generator/src/">
+    <Project Path="Extensions/Localization/Generator/src/Dosaic.Extensions.Localization.Generator/Dosaic.Extensions.Localization.Generator.csproj" />
+  </Folder>
+  <Folder Name="/Extensions/NanoId/">
+    <Project Path="Extensions/NanoId/src/Dosaic.Extensions.NanoIds/Dosaic.Extensions.NanoIds.csproj" />
+    <Project Path="Extensions/NanoId/test/Dosaic.Extensions.NanoIds.Tests/Dosaic.Extensions.NanoIds.Tests.csproj" />
+  </Folder>
+  <Folder Name="/Extensions/RestEase/" />
+  <Folder Name="/Extensions/RestEase/src/">
+    <Project Path="Extensions/RestEase/src/Dosaic.Extensions.RestEase/Dosaic.Extensions.RestEase.csproj" />
+  </Folder>
+  <Folder Name="/Extensions/RestEase/test/">
+    <Project Path="Extensions/RestEase/test/Dosaic.Extensions.RestEase.Tests/Dosaic.Extensions.RestEase.Tests.csproj" />
+  </Folder>
+  <Folder Name="/Extensions/Sqids/">
+    <Project Path="Extensions/Sqids/src/Dosaic.Extensions.Sqids/Dosaic.Extensions.Sqids.csproj" />
+    <Project Path="Extensions/Sqids/test/Dosaic.Extensions.Sqids.Tests/Dosaic.Extensions.Sqids.Tests.csproj" />
+  </Folder>
+  <Folder Name="/Hosting/" />
+  <Folder Name="/Hosting/Abstractions/" />
+  <Folder Name="/Hosting/Abstractions/src/">
+    <Project Path="Hosting/Abstractions/src/Dosaic.Hosting.Abstractions/Dosaic.Hosting.Abstractions.csproj" />
+  </Folder>
+  <Folder Name="/Hosting/Abstractions/test/">
+    <Project Path="Hosting/Abstractions/test/Dosaic.Hosting.Abstractions.Tests/Dosaic.Hosting.Abstractions.Tests.csproj" />
+  </Folder>
+  <Folder Name="/Hosting/Generator/" />
+  <Folder Name="/Hosting/Generator/src/">
+    <Project Path="Hosting/Generator/src/Dosaic.Hosting.Generator/Dosaic.Hosting.Generator.csproj" />
+  </Folder>
+  <Folder Name="/Hosting/WebHost/" />
+  <Folder Name="/Hosting/WebHost/src/">
+    <Project Path="Hosting/WebHost/src/Dosaic.Hosting.WebHost/Dosaic.Hosting.WebHost.csproj" />
+  </Folder>
+  <Folder Name="/Hosting/WebHost/test/">
+    <Project Path="Hosting/WebHost/test/Dosaic.Hosting.WebHost.Tests/Dosaic.Hosting.WebHost.Tests.csproj" />
+  </Folder>
+  <Folder Name="/Plugins/" />
+  <Folder Name="/Plugins/Authorization/" />
+  <Folder Name="/Plugins/Authorization/Abstractions/" />
+  <Folder Name="/Plugins/Authorization/Abstractions/src/">
+    <Project Path="Plugins/Authorization/Abstractions/src/Dosaic.Plugins.Authorization.Abstractions/Dosaic.Plugins.Authorization.Abstractions.csproj" />
+  </Folder>
+  <Folder Name="/Plugins/Authorization/Keycloak/" />
+  <Folder Name="/Plugins/Authorization/Keycloak/src/">
+    <Project Path="Plugins/Authorization/Keycloak/src/Dosaic.Plugins.Authorization.Keycloak/Dosaic.Plugins.Authorization.Keycloak.csproj" />
+  </Folder>
+  <Folder Name="/Plugins/Authorization/Keycloak/test/">
+    <Project Path="Plugins/Authorization/Keycloak/test/Dosaic.Plugins.Authorization.Keycloak.Tests/Dosaic.Plugins.Authorization.Keycloak.Tests.csproj" />
+  </Folder>
+  <Folder Name="/Plugins/Authorization/Zitadel/" />
+  <Folder Name="/Plugins/Authorization/Zitadel/src/">
+    <Project Path="Plugins/Authorization/Zitadel/src/Dosaic.Plugins.Authorization.Zitadel/Dosaic.Plugins.Authorization.Zitadel.csproj" />
+  </Folder>
+  <Folder Name="/Plugins/Authorization/Zitadel/test/">
+    <Project Path="Plugins/Authorization/Zitadel/test/Dosaic.Plugins.Authorization.Zitadel.Tests/Dosaic.Plugins.Authorization.Zitadel.Tests.csproj" />
+  </Folder>
+  <Folder Name="/Plugins/Caching/" />
+  <Folder Name="/Plugins/Caching/Redis/" />
+  <Folder Name="/Plugins/Caching/Redis/src/">
+    <Project Path="Plugins/Caching/Redis/src/Dosaic.Plugins.Caching.Redis/Dosaic.Plugins.Caching.Redis.csproj" />
+  </Folder>
+  <Folder Name="/Plugins/Caching/Redis/test/">
+    <Project Path="Plugins/Caching/Redis/test/Dosaic.Plugins.Caching.Redis.Tests/Dosaic.Plugins.Caching.Redis.Tests.csproj" />
+  </Folder>
+  <Folder Name="/Plugins/Jobs/" />
+  <Folder Name="/Plugins/Jobs/Hangfire/" />
+  <Folder Name="/Plugins/Jobs/Hangfire/src/">
+    <Project Path="Plugins/Jobs/Hangfire/src/Dosaic.Plugins.Jobs.Hangfire/Dosaic.Plugins.Jobs.Hangfire.csproj" />
+  </Folder>
+  <Folder Name="/Plugins/Jobs/Hangfire/test/">
+    <Project Path="Plugins/Jobs/Hangfire/test/Dosaic.Plugins.Jobs.Hangfire.Tests/Dosaic.Plugins.Jobs.Hangfire.Tests.csproj" />
+  </Folder>
+  <Folder Name="/Plugins/Management/" />
+  <Folder Name="/Plugins/Management/Unleash/" />
+  <Folder Name="/Plugins/Management/Unleash/src/">
+    <Project Path="Plugins/Management/Unleash/src/Dosaic.Plugins.Management.Unleash/Dosaic.Plugins.Management.Unleash.csproj" />
+  </Folder>
+  <Folder Name="/Plugins/Management/Unleash/test/">
+    <Project Path="Plugins/Management/Unleash/test/Dosaic.Plugins.Management.Unleash.Tests/Dosaic.Plugins.Management.Unleash.Tests.csproj" />
+  </Folder>
+  <Folder Name="/Plugins/Mapping/" />
+  <Folder Name="/Plugins/Mapping/Mapster/" />
+  <Folder Name="/Plugins/Mapping/Mapster/src/">
+    <Project Path="Plugins/Mapping/Mapster/src/Dosaic.Plugins.Mapping.Mapster/Dosaic.Plugins.Mapping.Mapster.csproj" />
+  </Folder>
+  <Folder Name="/Plugins/Mapping/Mapster/test/">
+    <Project Path="Plugins/Mapping/Mapster/test/Dosaic.Plugins.Mapping.Mapster.Tests/Dosaic.Plugins.Mapping.Mapster.Tests.csproj" />
+  </Folder>
+  <Folder Name="/Plugins/Messaging/" />
+  <Folder Name="/Plugins/Messaging/Abstractions/" />
+  <Folder Name="/Plugins/Messaging/Abstractions/src/">
+    <Project Path="Plugins/Messaging/Abstractions/src/Dosaic.Plugins.Messaging.Abstractions/Dosaic.Plugins.Messaging.Abstractions.csproj" />
+  </Folder>
+  <Folder Name="/Plugins/Messaging/MassTransit/" />
+  <Folder Name="/Plugins/Messaging/MassTransit/src/">
+    <Project Path="Plugins/Messaging/MassTransit/src/Dosaic.Plugins.Messaging.MassTransit/Dosaic.Plugins.Messaging.MassTransit.csproj" />
+  </Folder>
+  <Folder Name="/Plugins/Messaging/MassTransit/test/">
+    <Project Path="Plugins/Messaging/MassTransit/test/Dosaic.Plugins.Messaging.MassTransit.Tests/Dosaic.Plugins.Messaging.MassTransit.Tests.csproj" />
+  </Folder>
+  <Folder Name="/Plugins/Persistence/" />
+  <Folder Name="/Plugins/Persistence/EfCore/" />
+  <Folder Name="/Plugins/Persistence/EfCore/Abstractions/" />
+  <Folder Name="/Plugins/Persistence/EfCore/Abstractions/src/">
+    <Project Path="Plugins/Persistence/EfCore/Abstractions/src/Dosaic.Plugins.Persistence.EfCore.Abstractions/Dosaic.Plugins.Persistence.EfCore.Abstractions.csproj" />
+  </Folder>
+  <Folder Name="/Plugins/Persistence/EfCore/Abstractions/test/">
+    <Project Path="Plugins/Persistence/EfCore/Abstractions/test/Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests/Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests.csproj" />
+  </Folder>
+  <Folder Name="/Plugins/Persistence/EfCore/NpgSql/" />
+  <Folder Name="/Plugins/Persistence/EfCore/NpgSql/src/">
+    <Project Path="Plugins/Persistence/EfCore/NpgSql/src/Dosaic.Plugins.Persistence.EfCore.NpgSql/Dosaic.Plugins.Persistence.EfCore.NpgSql.csproj" />
+  </Folder>
+  <Folder Name="/Plugins/Persistence/EfCore/NpgSql/test/">
+    <Project Path="Plugins/Persistence/EfCore/NpgSql/test/Dosaic.Plugins.Persistence.EfCore.NpgSql.Tests/Dosaic.Plugins.Persistence.EfCore.NpgSql.Tests.csproj" />
+  </Folder>
+  <Folder Name="/Plugins/Persistence/MongoDb/" />
+  <Folder Name="/Plugins/Persistence/MongoDb/src/">
+    <Project Path="Plugins/Persistence/MongoDb/src/Dosaic.Plugins.Persistence.MongoDb/Dosaic.Plugins.Persistence.MongoDb.csproj" />
+  </Folder>
+  <Folder Name="/Plugins/Persistence/MongoDb/test/">
+    <Project Path="Plugins/Persistence/MongoDb/test/Dosaic.Plugins.Persistence.MongoDb.Tests/Dosaic.Plugins.Persistence.MongoDb.Tests.csproj" />
+  </Folder>
+  <Folder Name="/Plugins/Persistence/S3/" />
+  <Folder Name="/Plugins/Persistence/S3/src/">
+    <Project Path="Plugins/Persistence/S3/src/Dosaic.Plugins.Persistence.S3/Dosaic.Plugins.Persistence.S3.csproj" />
+  </Folder>
+  <Folder Name="/Plugins/Persistence/S3/test/">
+    <Project Path="Plugins/Persistence/S3/test/Dosaic.Plugins.Persistence.S3.Tests/Dosaic.Plugins.Persistence.S3.Tests.csproj" />
+  </Folder>
+  <Folder Name="/Plugins/Persistence/Smb/" />
+  <Folder Name="/Plugins/Persistence/Smb/src/">
+    <Project Path="Plugins/Persistence/Smb/src/Dosaic.Plugins.Persistence.Smb/Dosaic.Plugins.Persistence.Smb.csproj" />
+  </Folder>
+  <Folder Name="/Plugins/Persistence/Smb/test/">
+    <Project Path="Plugins/Persistence/Smb/test/Dosaic.Plugins.Persistence.Smb.Tests/Dosaic.Plugins.Persistence.Smb.Tests.csproj" />
+  </Folder>
+  <Folder Name="/Plugins/Persistence/VaultSharp/" />
+  <Folder Name="/Plugins/Persistence/VaultSharp/src/">
+    <Project Path="Plugins/Persistence/VaultSharp/src/Dosaic.Plugins.Persistence.VaultSharp/Dosaic.Plugins.Persistence.VaultSharp.csproj" />
+  </Folder>
+  <Folder Name="/Plugins/Persistence/VaultSharp/test/">
+    <Project Path="Plugins/Persistence/VaultSharp/test/Dosaic.Plugins.Persistence.VaultSharp.Tests/Dosaic.Plugins.Persistence.VaultSharp.Tests.csproj" />
+  </Folder>
+  <Folder Name="/Plugins/Validations/" />
+  <Folder Name="/Plugins/Validations/Abstractions/" />
+  <Folder Name="/Plugins/Validations/Abstractions/src/">
+    <Project Path="Plugins/Validations/Abstractions/src/Dosaic.Plugins.Validations.Abstractions/Dosaic.Plugins.Validations.Abstractions.csproj" />
+  </Folder>
+  <Folder Name="/Plugins/Validations/Attribute/" />
+  <Folder Name="/Plugins/Validations/Attribute/src/">
+    <Project Path="Plugins/Validations/Attribute/src/Dosaic.Plugins.Validations.AttributeValidation/Dosaic.Plugins.Validations.AttributeValidation.csproj" />
+  </Folder>
+  <Folder Name="/Plugins/Validations/Attribute/test/">
+    <Project Path="Plugins/Validations/Attribute/test/Dosaic.Plugins.Validations.AttributeValidation.Tests/Dosaic.Plugins.Validations.AttributeValidation.Tests.csproj" />
+  </Folder>
+  <Folder Name="/repository/">
+    <File Path=".editorconfig" />
+    <File Path=".gitattributes" />
+    <File Path=".gitignore" />
+    <File Path="CODE_OF_CONDUCT.md" />
+    <File Path="Directory.Build.props" />
+    <File Path="Directory.Packages.props" />
+    <File Path="global.json" />
+    <File Path="LICENSE" />
+    <File Path="NuGet.Config" />
+    <File Path="packages.sh" />
+    <File Path="README.md" />
+    <File Path="SUMMARY.md" />
+  </Folder>
+  <Folder Name="/repository/.github/">
+    <File Path=".github/copilot-instructions.md" />
+    <File Path=".github/dependabot.yml" />
+  </Folder>
+  <Folder Name="/repository/.github/workflows/">
+    <File Path=".github/workflows/dotnet-main.yml" />
+    <File Path=".github/workflows/dotnet-pr.yml" />
+    <File Path=".github/workflows/dotnet-release.yml" />
+  </Folder>
+  <Folder Name="/Testing/" />
+  <Folder Name="/Testing/NUnit/" />
+  <Folder Name="/Testing/NUnit/src/">
+    <Project Path="Testing/NUnit/src/Dosaic.Testing.NUnit/Dosaic.Testing.NUnit.csproj" />
+  </Folder>
+  <Folder Name="/Testing/NUnit/test/">
+    <Project Path="Testing/NUnit/test/Dosaic.Testing.NUnit.Tests/Dosaic.Testing.NUnit.Tests.csproj" />
+  </Folder>
+</Solution>

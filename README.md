@@ -68,13 +68,13 @@ PluginWebHostBuilder.RunDefault(Dosaic.Generated.DosaicPluginTypes.All);
 To build Dosaic, follow these steps:
 
 ```sh
-dotnet build ./Dosaic.sln
+dotnet build ./Dosaic.slnx
 ```
 
 To format and style check the solution run:
 
 ```sh
-dotnet format ./Dosaic.sln
+dotnet format ./Dosaic.slnx
 ```
 
 ## Testing Dosaic
@@ -94,7 +94,7 @@ We are using these frameworks for unit testing
 To run unit tests for Dosaic, follow these steps:
 
 ```
-dotnet test ./Dosaic.sln
+dotnet test ./Dosaic.slnx
 ```
 
 ## Contributing to Dosaic
