@@ -136,7 +136,7 @@
     <PackageVersion Include="Unleash.Client" Version="5.6.2" />
     <PackageVersion Include="VaultSharp" Version="1.17.5.1" />
     <PackageVersion Include="Vogen" Version="8.0.5" />
-    <PackageVersion Include="WireMock.Net" Version="2.8.0" />
+    <PackageVersion Include="WireMock.Net" Version="2.11.0" />
     <PackageVersion Include="YamlDotNet" Version="17.1.0" />
     <PackageVersion Include="jose-jwt" Version="5.3.0" />
     <PackageVersion Include="Zitadel" Version="7.0.44" />
