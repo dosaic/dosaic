@@ -32,7 +32,6 @@ namespace Dosaic.Hosting.Abstractions.Extensions
             return Uri.UnescapeDataString(input);
         }
 
-
         public static T? ParseEnum<T>(this string? value) where T : struct, Enum
         {
             if (Enum.TryParse<T>(value, true, out var enumValue) && Enum.IsDefined(enumValue))
