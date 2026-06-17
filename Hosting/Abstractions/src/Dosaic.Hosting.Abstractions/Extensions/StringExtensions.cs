@@ -31,5 +31,35 @@ namespace Dosaic.Hosting.Abstractions.Extensions
 
             return Uri.UnescapeDataString(input);
         }
+
+
+        public static T? ParseEnum<T>(this string? value) where T : struct, Enum
+        {
+            if (Enum.TryParse<T>(value, true, out var enumValue) && Enum.IsDefined(enumValue))
+                return enumValue;
+            return null;
+        }
+
+        public static bool TryParseEnum(this string? value, Type enumType, out object? enumValue)
+        {
+            enumValue = null;
+            if (!Enum.TryParse(enumType, value, true, out var eValue) || !Enum.IsDefined(enumType, eValue)) return false;
+            enumValue = eValue;
+            return true;
+        }
+
+        public static string? NormalizeNullAndEmptyValues(this string? value)
+        {
+            return string.IsNullOrEmpty(value)
+            || value.Equals("unbekannt", StringComparison.InvariantCultureIgnoreCase)
+            || value.Equals("null", StringComparison.InvariantCultureIgnoreCase)
+            ? null : value;
+        }
+
+        public static string Truncate(this string value, int maxLength)
+        {
+            if (value.Length <= maxLength) return value;
+            return value.Substring(0, maxLength);
+        }
     }
 }

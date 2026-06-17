@@ -56,5 +56,146 @@ namespace Dosaic.Hosting.Abstractions.Tests.Extensions
 
             roundTrip.Should().Be(sample, "round-trip should preserve '{0}'", sample);
         }
+
+        private enum SampleEnum
+        {
+            First,
+            Second,
+            Third
+        }
+
+        [Test]
+        public void ParseEnumReturnsValueWhenStringMatches()
+        {
+            "Second".ParseEnum<SampleEnum>().Should().Be(SampleEnum.Second);
+        }
+
+        [Test]
+        public void ParseEnumIsCaseInsensitive()
+        {
+            "second".ParseEnum<SampleEnum>().Should().Be(SampleEnum.Second);
+            "THIRD".ParseEnum<SampleEnum>().Should().Be(SampleEnum.Third);
+        }
+
+        [Test]
+        public void ParseEnumReturnsNullWhenStringDoesNotMatch()
+        {
+            "Unknown".ParseEnum<SampleEnum>().Should().BeNull();
+        }
+
+        [Test]
+        public void ParseEnumReturnsNullForNullInput()
+        {
+            ((string?)null).ParseEnum<SampleEnum>().Should().BeNull();
+        }
+
+        [Test]
+        public void ParseEnumReturnsNullForEmptyInput()
+        {
+            string.Empty.ParseEnum<SampleEnum>().Should().BeNull();
+        }
+
+        [Test]
+        public void ParseEnumReturnsNullForUndefinedNumericValue()
+        {
+            "999".ParseEnum<SampleEnum>().Should().BeNull();
+        }
+
+        [Test]
+        public void TryParseEnumReturnsTrueAndValueWhenMatches()
+        {
+            var result = "First".TryParseEnum(typeof(SampleEnum), out var value);
+
+            result.Should().BeTrue();
+            value.Should().Be(SampleEnum.First);
+        }
+
+        [Test]
+        public void TryParseEnumIsCaseInsensitive()
+        {
+            var result = "third".TryParseEnum(typeof(SampleEnum), out var value);
+
+            result.Should().BeTrue();
+            value.Should().Be(SampleEnum.Third);
+        }
+
+        [Test]
+        public void TryParseEnumReturnsFalseWhenStringDoesNotMatch()
+        {
+            var result = "Unknown".TryParseEnum(typeof(SampleEnum), out var value);
+
+            result.Should().BeFalse();
+            value.Should().BeNull();
+        }
+
+        [Test]
+        public void TryParseEnumReturnsFalseForNullInput()
+        {
+            var result = ((string?)null).TryParseEnum(typeof(SampleEnum), out var value);
+
+            result.Should().BeFalse();
+            value.Should().BeNull();
+        }
+
+        [Test]
+        public void TryParseEnumReturnsFalseForUndefinedNumericValue()
+        {
+            var result = "999".TryParseEnum(typeof(SampleEnum), out var value);
+
+            result.Should().BeFalse();
+            value.Should().BeNull();
+        }
+
+        [Test]
+        public void NormalizeNullAndEmptyValuesReturnsNullForNull()
+        {
+            ((string?)null).NormalizeNullAndEmptyValues().Should().BeNull();
+        }
+
+        [Test]
+        public void NormalizeNullAndEmptyValuesReturnsNullForEmpty()
+        {
+            string.Empty.NormalizeNullAndEmptyValues().Should().BeNull();
+        }
+
+        [Test]
+        public void NormalizeNullAndEmptyValuesReturnsNullForUnbekannt()
+        {
+            "unbekannt".NormalizeNullAndEmptyValues().Should().BeNull();
+            "Unbekannt".NormalizeNullAndEmptyValues().Should().BeNull();
+            "UNBEKANNT".NormalizeNullAndEmptyValues().Should().BeNull();
+        }
+
+        [Test]
+        public void NormalizeNullAndEmptyValuesReturnsNullForNullString()
+        {
+            "null".NormalizeNullAndEmptyValues().Should().BeNull();
+            "Null".NormalizeNullAndEmptyValues().Should().BeNull();
+            "NULL".NormalizeNullAndEmptyValues().Should().BeNull();
+        }
+
+        [Test]
+        public void NormalizeNullAndEmptyValuesReturnsValueWhenMeaningful()
+        {
+            "Hello".NormalizeNullAndEmptyValues().Should().Be("Hello");
+        }
+
+        [Test]
+        public void NormalizeNullAndEmptyValuesPreservesWhitespace()
+        {
+            " ".NormalizeNullAndEmptyValues().Should().Be(" ");
+        }
+
+        [Test]
+        public void TruncateReturnsOriginalStringWhenShorterThanMaxLength()
+        {
+            "Hello".Truncate(10).Should().Be("Hello");
+        }
+
+        [Test]
+        public void TruncateReturnsTruncatedStringWhenLongerThanMaxLength()
+        {
+            "Hello, World!".Truncate(5).Should().Be("Hello");
+        }
     }
 }
