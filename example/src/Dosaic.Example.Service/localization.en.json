@@ -1,0 +1,11 @@
+{
+  "Entry": {
+    "$": "",
+    "Source": "Source"
+  },
+  "MyEnum": {
+    "$": "My Enum",
+    "FirstValue": "",
+    "SecondValue": ""
+  }
+}

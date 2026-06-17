@@ -131,9 +131,8 @@ namespace Dosaic.Extensions.Localization.Generator
             var sb = new StringBuilder();
             sb.AppendLine(ClassHeader);
 
-            foreach (var info in infos)
+            foreach (var info in infos.Where(x => x != null).OrderBy(x => x.Key))
             {
-                if (info == null) continue;
                 sb.AppendLine(
                     $"                [\"{info.Key}\"] = " +
                     $"new Dictionary<string, string> {{ [\"en\"] = \"{Escape(info.En)}\", [\"de\"] = \"{Escape(info.De)}\" }},");
@@ -157,11 +156,11 @@ namespace Dosaic.Extensions.Localization.Generator
             var sb = new StringBuilder();
             sb.AppendLine("{");
 
-            var groups = new List<string>(grouped.Keys);
+            var groups = grouped.Keys.OrderBy(k => k).ToList();
             for (var i = 0; i < groups.Count; i++)
             {
                 var groupName = groups[i];
-                var members = grouped[groupName];
+                var members = grouped[groupName].OrderBy(m => m.MemberName ?? "").ToList();
                 sb.AppendLine($"  \"{EscapeJson(groupName)}\": {{");
 
                 for (var j = 0; j < members.Count; j++)
@@ -177,7 +176,7 @@ namespace Dosaic.Extensions.Localization.Generator
                 sb.AppendLine($"  }}{groupComma}");
             }
 
-            sb.Append("}");
+            sb.AppendLine("}");
 
 #pragma warning disable RS1035
             var dir = Path.GetDirectoryName(path);
