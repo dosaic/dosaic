@@ -131,9 +131,12 @@ namespace Dosaic.Extensions.Localization.Generator
             var sb = new StringBuilder();
             sb.AppendLine(ClassHeader);
 
-            foreach (var info in infos)
+            var ordered = infos
+                .Where(i => i != null)
+                .OrderBy(i => i.Key, System.StringComparer.Ordinal);
+
+            foreach (var info in ordered)
             {
-                if (info == null) continue;
                 sb.AppendLine(
                     $"                [\"{info.Key}\"] = " +
                     $"new Dictionary<string, string> {{ [\"en\"] = \"{Escape(info.En)}\", [\"de\"] = \"{Escape(info.De)}\" }},");
@@ -158,10 +161,12 @@ namespace Dosaic.Extensions.Localization.Generator
             sb.AppendLine("{");
 
             var groups = new List<string>(grouped.Keys);
+            groups.Sort(System.StringComparer.Ordinal);
             for (var i = 0; i < groups.Count; i++)
             {
                 var groupName = groups[i];
                 var members = grouped[groupName];
+                members.Sort((a, b) => System.StringComparer.Ordinal.Compare(a.MemberName ?? "", b.MemberName ?? ""));
                 sb.AppendLine($"  \"{EscapeJson(groupName)}\": {{");
 
                 for (var j = 0; j < members.Count; j++)
