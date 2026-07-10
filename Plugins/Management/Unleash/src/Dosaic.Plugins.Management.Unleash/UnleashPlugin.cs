@@ -39,10 +39,9 @@ namespace Dosaic.Plugins.Management.Unleash
                     new Dictionary<string, string>() { { "Authorization", unleashConfiguration.ApiToken } }
             };
 
-            var unleash = new DefaultUnleash(settings);
-
-            // Set up handling of impression and error events
-            unleash.ConfigureEvents(cfg =>
+            // Set up handling of impression and error events (Unleash 6.x moved event
+            // wiring from DefaultUnleash.ConfigureEvents into the constructor callback)
+            var unleash = new DefaultUnleash(settings, cfg =>
             {
                 cfg.ImpressionEvent = HandleImpressionEvent;
                 cfg.ErrorEvent = HandleErrorEvent;
