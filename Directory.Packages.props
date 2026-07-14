@@ -38,8 +38,8 @@
     <!-- MassTransit v9+ switched to a commercial license we cannot use.
     DO NOT UPDATE MassTransit / MassTransit.RabbitMQ TO V9 OR HIGHER!!!
     Stay on the last v8 release. -->
-    <PackageVersion Include="MassTransit" Version="8.5.10" />
-    <PackageVersion Include="MassTransit.RabbitMQ" Version="8.5.10" />
+    <PackageVersion Include="MassTransit" Version="9.1.2" />
+    <PackageVersion Include="MassTransit.RabbitMQ" Version="9.1.2" />
     <PackageVersion Include="Metalama.Framework" Version="2026.1.19" />
     <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="$(MicrosoftAspNetCoreVersion)" />
     <PackageVersion Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="$(MicrosoftAspNetCoreVersion)" />
