@@ -20,6 +20,10 @@
     <PackageVersion Include="Buildalyzer.Workspaces" Version="9.0.0" />
     <PackageVersion Include="Chronos.Abstractions" Version="2.0.24" />
     <PackageVersion Include="Chronos.Net" Version="2.0.24" />
+    <PackageVersion Include="coverlet.collector" Version="6.0.4">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageVersion>
     <PackageVersion Include="DynamicExpresso.Core" Version="2.19.3" />
     <PackageVersion Include="EntityFrameworkCore.Testing.NSubstitute" Version="10.0.0" />
     <PackageVersion Include="EzSmb" Version="1.3.10" />

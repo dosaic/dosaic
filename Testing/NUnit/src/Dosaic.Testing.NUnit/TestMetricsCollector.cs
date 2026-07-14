@@ -5,14 +5,14 @@ using AwesomeAssertions.Execution;
 
 namespace Dosaic.Testing.NUnit
 {
-    public record MetricMeasurement(long Measurement, IEnumerable<KeyValuePair<string, string>> Tags);
+    public record MetricMeasurement(double Measurement, IEnumerable<KeyValuePair<string, string>> Tags);
 
     public sealed class TestMetricsCollector : IDisposable
     {
         private readonly MeterListener _myMeterListener;
         public List<MetricMeasurement> CollectedMetrics { get; } = new();
 
-        public long GetSum(KeyValuePair<string, string>[] tag = null)
+        public double GetSum(KeyValuePair<string, string>[] tag = null)
         {
             if (tag == null)
             {
@@ -41,11 +41,12 @@ namespace Dosaic.Testing.NUnit
 
                 Instruments.Add(instrument.Name);
             };
-            _myMeterListener.SetMeasurementEventCallback<long>(OnMeasurementWritten);
+            _myMeterListener.SetMeasurementEventCallback<long>((instrument, measurement, tags, state) => OnMeasurementWritten(instrument, measurement, tags, state));
+            _myMeterListener.SetMeasurementEventCallback<double>(OnMeasurementWritten);
             _myMeterListener.Start();
         }
 
-        private void OnMeasurementWritten(Instrument instrument, long measurement, ReadOnlySpan<KeyValuePair<string, object>> tags, object state)
+        private void OnMeasurementWritten(Instrument instrument, double measurement, ReadOnlySpan<KeyValuePair<string, object>> tags, object state)
         {
             CollectedMetrics.Add(new(measurement, tags.ToArray().Select(x => new KeyValuePair<string, string>(x.Key, x.Value.ToString()))));
         }

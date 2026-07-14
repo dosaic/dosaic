@@ -8,8 +8,8 @@ model: sonnet
 Coverage gate is 80% line coverage, enforced in CI.
 
 ## Steps
-1. `dotnet test --collect "Code Coverage;Format=Xml;CoverageFileName=coverage.xml" --results-directory "./test-results" --no-restore --nologo -c Release --logger trx`
-2. Locate produced `coverage.xml` (newest under `./test-results`).
+1. `dotnet test --collect "XPlat Code Coverage" --settings coverage.runsettings --results-directory "./test-results" --no-restore --nologo -c Release --logger trx`
+2. Locate produced `coverage.cobertura.xml` files (one per test project under `./test-results`).
 3. Parse line-rate per module; flag any module below 80%.
 4. For each flagged module, list classes/methods with lowest coverage and suggest concrete test additions (use `dotnet-test-author`).
 5. Do not edit source to inflate coverage — tests only.
