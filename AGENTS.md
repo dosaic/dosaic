@@ -227,7 +227,7 @@ Defined in `PluginActivateableExtensions.GetSortOrderForPlugin`:
 ### Coverage
 
 - **80% line coverage threshold** enforced in CI
-- Collected via `dotnet test --collect "Code Coverage"`
+- Collected via coverlet: `dotnet test --collect "XPlat Code Coverage" --settings coverage.runsettings` (produces one `coverage.cobertura.xml` per test project)
 
 ---
 
@@ -252,7 +252,7 @@ dotnet format
 dotnet test ./Dosaic.slnx
 
 # Run tests with coverage
-dotnet test --collect "Code Coverage;Format=Xml;CoverageFileName=coverage.xml" \
+dotnet test --collect "XPlat Code Coverage" --settings coverage.runsettings \
   --results-directory "./test-results" --no-restore --nologo -c Release --logger trx
 
 # Run specific test project

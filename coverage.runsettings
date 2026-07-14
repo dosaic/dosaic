@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Coverage configuration for the "XPlat Code Coverage" collector (coverlet.collector).
+  Replaces the built-in "Code Coverage" (Microsoft.CodeCoverage) dynamic collector, which under
+  Microsoft.NET.Test.Sdk 18 intermittently emitted a malformed aggregate report (duplicate module
+  keys) that ReportGenerator could not parse, causing whole assemblies to drop to ~0% and the total
+  to swing (e.g. 95% down to 75%). Coverlet writes one deterministic Cobertura file per test project.
+-->
+<RunSettings>
+  <RunConfiguration>
+    <!-- Run each test assembly in its own host; keeps one coverage file per project. -->
+    <CollectSourceInformation>true</CollectSourceInformation>
+  </RunConfiguration>
+  <DataCollectionRunSettings>
+    <DataCollectors>
+      <DataCollector friendlyName="XPlat Code Coverage">
+        <Configuration>
+          <Format>cobertura</Format>
+          <!-- Only measure our own code. Assembly-name filters ([Assembly]Type). -->
+          <Include>[Dosaic.*]*</Include>
+          <!-- Never count test assemblies or generated source generators. -->
+          <Exclude>[*.Tests]*,[*.Test]*,[*]*.Migrations.*</Exclude>
+          <ExcludeByAttribute>Obsolete,GeneratedCodeAttribute,CompilerGeneratedAttribute,ExcludeFromCodeCoverageAttribute</ExcludeByAttribute>
+          <ExcludeByFile>**/*.g.cs,**/*.Designer.cs,**/*.generated.cs</ExcludeByFile>
+          <!-- Do not instrument the test assemblies themselves. -->
+          <IncludeTestAssembly>false</IncludeTestAssembly>
+          <!-- Skip trivial auto-property get/set so coverage reflects real logic. -->
+          <SkipAutoProps>true</SkipAutoProps>
+          <!-- Count every hit path, not just first, for accurate branch data. -->
+          <SingleHit>false</SingleHit>
+          <UseSourceLink>false</UseSourceLink>
+        </Configuration>
+      </DataCollector>
+    </DataCollectors>
+  </DataCollectionRunSettings>
+</RunSettings>
