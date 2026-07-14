@@ -6,7 +6,7 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Monitoring
 {
     public class MetricsObserver : IObserver<KeyValuePair<string, object>>
     {
-        private readonly Histogram<long> _commandDurationInSeconds = Metrics.CreateHistogram<long>("efcore_command_duration_seconds", "items", "description");
+        private readonly Histogram<double> _commandDurationInSeconds = Metrics.CreateHistogram<double>("efcore_command_duration_seconds", "items", "description");
 
         public void OnCompleted()
         {
@@ -42,7 +42,7 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Monitoring
                     {
                         if (value.Value is CommandExecutedEventData commandExecuted)
                         {
-                            _commandDurationInSeconds.Record((long)commandExecuted.Duration.TotalSeconds);
+                            _commandDurationInSeconds.Record(commandExecuted.Duration.TotalSeconds);
                         }
                     }
                     return;

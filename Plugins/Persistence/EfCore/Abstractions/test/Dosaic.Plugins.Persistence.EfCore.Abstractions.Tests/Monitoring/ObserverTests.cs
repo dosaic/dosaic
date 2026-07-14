@@ -125,6 +125,27 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests.Monitoring
         }
 
         [Test]
+        public void UpdateHistogramRecordsSubSecondDurations()
+        {
+            string expectedCounterName = "efcore_command_duration_seconds";
+            using var metricsCollector = new TestMetricsCollector(expectedCounterName);
+            metricsCollector.CollectedMetrics.Should().BeEmpty();
+            var observer = new MetricsObserver();
+
+            var keyValuePair =
+                new KeyValuePair<string, object>("Microsoft.EntityFrameworkCore.Database.Command.CommandExecuted",
+                    new CommandExecutedEventData(null!, null!, null!, null!,
+                        null!, null!, DbCommandMethod.ExecuteNonQuery,
+                        Guid.Empty, Guid.Empty, null!, false,
+                        false, DateTimeOffset.Now, TimeSpan.FromMilliseconds(500),
+                        CommandSource.Unknown));
+            observer.OnNext(keyValuePair);
+
+            metricsCollector.CollectedMetrics.Should().Contain(m => Math.Abs(m.Measurement - 0.5) < 1e-9);
+            metricsCollector.Instruments.Should().Contain(expectedCounterName);
+        }
+
+        [Test]
         public void MetricsAreOnlyCreatedOnce()
         {
             var counter = Metrics.CreateCounter<long>("test", "calls", "some test calls");
