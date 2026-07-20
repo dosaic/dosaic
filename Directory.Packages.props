@@ -14,7 +14,7 @@
     <PackageVersion Include="AspNetCore.HealthChecks.System" Version="9.0.0" />
     <PackageVersion Include="AspNetCore.HealthChecks.Uris" Version="9.0.0" />
     <PackageVersion Include="AspNetCoreRateLimit" Version="5.0.0" />
-    <PackageVersion Include="AwesomeAssertions" Version="9.4.0" />
+    <PackageVersion Include="AwesomeAssertions" Version="9.5.0" />
     <PackageVersion Include="Bogus" Version="35.6.5" />
     <PackageVersion Include="BouncyCastle.NetCore" Version="2.2.1" />
     <PackageVersion Include="Buildalyzer.Workspaces" Version="9.0.0" />
