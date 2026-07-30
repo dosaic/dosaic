@@ -6,7 +6,13 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Monitoring
 {
     public class MetricsObserver : IObserver<KeyValuePair<string, object>>
     {
-        private readonly Histogram<double> _commandDurationInSeconds = Metrics.CreateHistogram<double>("efcore_command_duration_seconds", "items", "description");
+        // Milliseconds, matching the OTel SDK's default explicit bucket boundaries (5 … 10000) and
+        // the messaging.consumer.duration convention. Recording seconds against those buckets put
+        // every real command in the first bucket, so every quantile came out as ~0.
+        // The unit must stay out of the name: exporters append it, which is where the old
+        // "efcore_command_duration_seconds" + unit "items" pair got its bogus _items suffix.
+        private readonly Histogram<double> _commandDuration =
+            Metrics.CreateHistogram<double>("efcore_command_duration", "ms", "EF Core command execution duration");
 
         public void OnCompleted()
         {
@@ -42,7 +48,7 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Monitoring
                     {
                         if (value.Value is CommandExecutedEventData commandExecuted)
                         {
-                            _commandDurationInSeconds.Record(commandExecuted.Duration.TotalSeconds);
+                            _commandDuration.Record(commandExecuted.Duration.TotalMilliseconds);
                         }
                     }
                     return;

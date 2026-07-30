@@ -105,7 +105,7 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests.Monitoring
         [Test]
         public void UpdateHistogramWorks()
         {
-            string expectedCounterName = "efcore_command_duration_seconds";
+            string expectedCounterName = "efcore_command_duration";
             using var metricsCollector = new TestMetricsCollector(expectedCounterName);
             metricsCollector.CollectedMetrics.Should().BeEmpty();
             var observer = new MetricsObserver();
@@ -120,14 +120,14 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests.Monitoring
                         false, DateTimeOffset.Now, TimeSpan.FromSeconds(10),
                         CommandSource.Unknown));
             observer.OnNext(keyValuePair);
-            metricsCollector.CollectedMetrics.Should().ContainsMetric(10);
+            metricsCollector.CollectedMetrics.Should().ContainsMetric(10_000);
             metricsCollector.Instruments.Should().Contain(expectedCounterName);
         }
 
         [Test]
         public void UpdateHistogramRecordsSubSecondDurations()
         {
-            string expectedCounterName = "efcore_command_duration_seconds";
+            string expectedCounterName = "efcore_command_duration";
             using var metricsCollector = new TestMetricsCollector(expectedCounterName);
             metricsCollector.CollectedMetrics.Should().BeEmpty();
             var observer = new MetricsObserver();
@@ -141,7 +141,7 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests.Monitoring
                         CommandSource.Unknown));
             observer.OnNext(keyValuePair);
 
-            metricsCollector.CollectedMetrics.Should().Contain(m => Math.Abs(m.Measurement - 0.5) < 1e-9);
+            metricsCollector.CollectedMetrics.Should().Contain(m => Math.Abs(m.Measurement - 500) < 1e-9);
             metricsCollector.Instruments.Should().Contain(expectedCounterName);
         }
 
