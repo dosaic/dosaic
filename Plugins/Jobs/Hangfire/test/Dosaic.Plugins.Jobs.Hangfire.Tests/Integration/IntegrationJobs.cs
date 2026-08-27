@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using Dosaic.Plugins.Jobs.Hangfire.Attributes;
 using Dosaic.Plugins.Jobs.Hangfire.Job;
 
 namespace Dosaic.Plugins.Jobs.Hangfire.Tests.Integration
@@ -24,6 +25,25 @@ namespace Dosaic.Plugins.Jobs.Hangfire.Tests.Integration
     {
         public Task<object> ExecuteAsync(CancellationToken jobCancellationToken = default) =>
             Task.FromResult<object>(null);
+
+        public void Dispose() => GC.SuppressFinalize(this);
+    }
+
+    /// <summary>
+    ///     Same as <see cref="RecordingJob" />, but deduplicated by its fingerprint. The claim is released
+    ///     as soon as the job starts processing, which is the attribute's default.
+    /// </summary>
+    [UniquePerQueue(UniqueQueue)]
+    public class UniqueRecordingJob : IParameterizedAsyncJob<string>
+    {
+        public const string UniqueQueue = "unique-it";
+        public static readonly ConcurrentQueue<string> Executed = new();
+
+        public Task<object> ExecuteAsync(string value, CancellationToken jobCancellationToken = default)
+        {
+            Executed.Enqueue(value);
+            return Task.FromResult<object>(value);
+        }
 
         public void Dispose() => GC.SuppressFinalize(this);
     }

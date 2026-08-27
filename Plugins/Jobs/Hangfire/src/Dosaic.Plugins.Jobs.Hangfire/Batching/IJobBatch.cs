@@ -13,8 +13,18 @@ namespace Dosaic.Plugins.Jobs.Hangfire.Batching
         /// <summary>1 based position inside the batch.</summary>
         int Index { get; }
 
-        /// <summary>Hangfire job id. Only available after the batch has been saved.</summary>
+        /// <summary>
+        ///     Hangfire job id. Only available after the batch has been saved, and null when the job was
+        ///     suppressed as a duplicate — see <see cref="IsSuppressed" />.
+        /// </summary>
         string Id { get; }
+
+        /// <summary>
+        ///     True when the job was not written because <see cref="Attributes.UniquePerQueueAttribute" />
+        ///     found an equivalent job. Continuations of a suppressed job are suppressed as well. Only
+        ///     meaningful after the batch has been saved.
+        /// </summary>
+        bool IsSuppressed { get; }
 
         IJobBatchItem ContinueWith<TJob>(string queue = EnqueuedState.DefaultQueue,
             JobContinuationOptions options = JobContinuationOptions.OnlyOnSucceededState) where TJob : IAsyncJob;
@@ -30,9 +40,10 @@ namespace Dosaic.Plugins.Jobs.Hangfire.Batching
     ///     them to the storage in a single round trip when <see cref="Save" /> is called.
     /// </summary>
     /// <remarks>
-    ///     The bulk write bypasses Hangfire's client side filter pipeline (for example
-    ///     <see cref="Attributes.UniquePerQueueAttribute" />), because those filters issue their own
-    ///     queries and would defeat the single round trip. Server side filters are unaffected.
+    ///     The bulk write bypasses Hangfire's client side filter pipeline, because those filters issue
+    ///     their own queries and would defeat the single round trip. Server side filters are unaffected.
+    ///     <see cref="Attributes.UniquePerQueueAttribute" /> is the exception: its fingerprint claim is
+    ///     folded into the bulk statement, so batched jobs are deduplicated without an extra round trip.
     /// </remarks>
     public interface IJobBatch
     {
@@ -55,10 +66,16 @@ namespace Dosaic.Plugins.Jobs.Hangfire.Batching
         IJobBatchItem ScheduleAt<TJob, TJobParams>(TJobParams parameters, DateTimeOffset enqueueAt,
             string queue = EnqueuedState.DefaultQueue) where TJob : IParameterizedAsyncJob<TJobParams>;
 
-        /// <summary>Writes the whole batch and returns the created job ids in insertion order.</summary>
+        /// <summary>
+        ///     Writes the whole batch and returns the created job ids in insertion order. Jobs that were
+        ///     suppressed as duplicates get a null id.
+        /// </summary>
         Task<IReadOnlyList<string>> SaveAsync(CancellationToken cancellationToken = default);
 
-        /// <summary>Writes the whole batch and returns the created job ids in insertion order.</summary>
+        /// <summary>
+        ///     Writes the whole batch and returns the created job ids in insertion order. Jobs that were
+        ///     suppressed as duplicates get a null id.
+        /// </summary>
         IReadOnlyList<string> Save();
     }
 }

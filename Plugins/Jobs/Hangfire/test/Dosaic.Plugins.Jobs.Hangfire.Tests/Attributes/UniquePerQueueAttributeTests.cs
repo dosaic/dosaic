@@ -2,10 +2,10 @@ using System.Diagnostics.CodeAnalysis;
 using AwesomeAssertions;
 using Dosaic.Plugins.Jobs.Hangfire.Attributes;
 using Dosaic.Plugins.Jobs.Hangfire.Job;
+using Dosaic.Plugins.Jobs.Hangfire.Uniqueness;
 using Hangfire;
 using Hangfire.States;
 using Hangfire.Storage;
-using Hangfire.Storage.Monitoring;
 using NSubstitute;
 using NUnit.Framework;
 
@@ -14,240 +14,237 @@ namespace Dosaic.Plugins.Jobs.Hangfire.Tests.Attributes
     public class UniquePerQueueAttributeTests
     {
         private const string Queue = "test";
+        private const string JobId = "1";
         private ElectStateContext _context = null!;
-        private IMonitoringApi _monitoringApi = null!;
+        private IStorageConnection _connection = null!;
+        private IWriteOnlyTransaction _transaction = null!;
+        private IJobUniquenessStore _store = null!;
         private UniquePerQueueAttribute _attribute = null!;
 
-        private void Setup(BackgroundJob backgroundJob, bool includeProcessingJobs = false, bool includeScheduledJobs = false)
+        private void Setup(global::Hangfire.Common.Job job, bool checkRunningJobs = false,
+            bool checkScheduledJobs = false, string currentState = null)
         {
             var storage = Substitute.For<JobStorage>();
-            var con = Substitute.For<IStorageConnection>();
-            var state = Substitute.For<IState>();
-            var transaction = Substitute.For<IWriteOnlyTransaction>();
+            _connection = Substitute.For<IStorageConnection>();
+            _transaction = Substitute.For<IWriteOnlyTransaction>();
             var applyStateContext = new ApplyStateContext(
                 storage: storage,
-                connection: con,
-                transaction: transaction,
-                backgroundJob: backgroundJob,
-                newState: state,
-                oldStateName: null);
-            _context = Substitute.For<ElectStateContext>(applyStateContext);
-            _context.CandidateState = new EnqueuedState();
-            _monitoringApi = Substitute.For<IMonitoringApi>();
-            _context.Storage.GetMonitoringApi().Returns(_monitoringApi);
-            _context.BackgroundJob.Returns(backgroundJob);
+                connection: _connection,
+                transaction: _transaction,
+                backgroundJob: new BackgroundJob(JobId, job, DateTime.Now),
+                newState: Substitute.For<IState>(),
+                oldStateName: currentState);
+            _context = new ElectStateContext(applyStateContext) { CandidateState = new EnqueuedState() };
+            _store = Substitute.For<IJobUniquenessStore>();
+            _store.Claim(Arg.Any<IReadOnlyList<JobUniquenessClaim>>(), Arg.Any<double>()).Returns([]);
+            JobUniquenessStores.Use(storage, _store);
             _attribute = new UniquePerQueueAttribute(Queue)
             {
-                CheckRunningJobs = includeProcessingJobs,
-                CheckScheduledJobs = includeScheduledJobs
+                CheckRunningJobs = checkRunningJobs,
+                CheckScheduledJobs = checkScheduledJobs
             };
         }
 
+        private void ClaimSucceeds() =>
+            _store.Claim(Arg.Any<IReadOnlyList<JobUniquenessClaim>>(), Arg.Any<double>())
+                .Returns(x => x.Arg<IReadOnlyList<JobUniquenessClaim>>());
+
         [Test]
-        public void DoesNotRemoveItself()
+        public void KeepsTheJobWhenItWinsTheClaim()
         {
-            var job = CreateJob();
-            var backgroundJob = new BackgroundJob("1", job, DateTime.Now);
-            var enqueuedJob = new EnqueuedJobDto { Job = job };
-            Setup(backgroundJob);
-            _monitoringApi.EnqueuedJobs(Queue, Arg.Any<int>(), Arg.Any<int>())
-                .Returns(GetJobList(("1", enqueuedJob)));
+            Setup(CreateJob());
+            ClaimSucceeds();
             _attribute.OnStateElection(_context);
             _context.CandidateState.Should().BeOfType<EnqueuedState>();
-            var state = _context.CandidateState as EnqueuedState;
-            state!.Queue.Should().Be(Queue);
+            (_context.CandidateState as EnqueuedState)!.Queue.Should().Be(Queue);
         }
 
         [Test]
-        public void RemovesTheDuplicateFromEnqueuedOnes()
+        public void ClaimsTheFingerprintOfTheJobOnItsOwnQueue()
         {
             var job = CreateJob();
-            var backgroundJob = new BackgroundJob("1", job, DateTime.Now);
-            var enqueuedJob = new EnqueuedJobDto { Job = job };
-            Setup(backgroundJob);
-            _monitoringApi.EnqueuedJobs(Queue, Arg.Any<int>(), Arg.Any<int>())
-                .Returns(GetJobList(("2", enqueuedJob)));
+            Setup(job);
+            ClaimSucceeds();
+            _attribute.OnStateElection(_context);
+            _store.Received(1).Claim(
+                Arg.Is<IReadOnlyList<JobUniquenessClaim>>(x =>
+                    x.Count == 1
+                    && x[0].SetKey == JobFingerprint.SetKey(Queue)
+                    && x[0].Fingerprint == JobFingerprint.Compute(job, Queue)),
+                Arg.Any<double>());
+        }
+
+        [Test]
+        public void RemembersTheClaimOnTheJob()
+        {
+            var job = CreateJob();
+            Setup(job);
+            ClaimSucceeds();
+            _attribute.OnStateElection(_context);
+            _connection.Received(1).SetJobParameter(JobId, JobFingerprint.ClaimParameterName,
+                $"\"{JobFingerprint.Compute(job, Queue)}\"");
+        }
+
+        [Test]
+        public void DeletesTheJobWhenItLosesTheClaim()
+        {
+            Setup(CreateJob());
             _attribute.OnStateElection(_context);
             _context.CandidateState.Should().BeOfType<DeletedState>();
-            var state = _context.CandidateState as DeletedState;
-            state!.Reason.Should().Be("Instance of the same job is already queued.");
+            (_context.CandidateState as DeletedState)!.Reason.Should().Be(UniquePerQueueAttribute.DuplicateReason);
         }
 
         [Test]
-        public void RemovesTheDuplicateFromProcessingOnes()
+        public void DeletesTheParameterizedJobWhenItLosesTheClaim()
         {
-            var job = CreateJob();
-            var backgroundJob = new BackgroundJob("1", job, DateTime.Now);
-            var processingJob = new ProcessingJobDto { Job = job };
-            Setup(backgroundJob, true);
-            _monitoringApi.EnqueuedJobs(Queue, Arg.Any<int>(), Arg.Any<int>())
-                .Returns(GetJobList<EnqueuedJobDto>());
-            _monitoringApi.ProcessingJobs(Arg.Any<int>(), Arg.Any<int>())
-                .Returns(GetJobList(("2", processingJob)));
+            Setup(CreateParameterizedJob("testPayload"));
             _attribute.OnStateElection(_context);
             _context.CandidateState.Should().BeOfType<DeletedState>();
-            var state = _context.CandidateState as DeletedState;
-            state!.Reason.Should().Be("Instance of the same job is already queued.");
         }
 
         [Test]
-        public void RemovesTheDuplicateFromScheduledOnes()
+        public void DifferentArgumentsGetDifferentFingerprints()
         {
-            var job = CreateJob();
-            var backgroundJob = new BackgroundJob("1", job, DateTime.Now);
-            var scheduledJob = new ScheduledJobDto { Job = job };
-            Setup(backgroundJob, false, true);
-            _monitoringApi.EnqueuedJobs(Queue, Arg.Any<int>(), Arg.Any<int>())
-                .Returns(GetJobList<EnqueuedJobDto>());
-            _monitoringApi.ScheduledJobs(Arg.Any<int>(), Arg.Any<int>())
-                .Returns(GetJobList(("2", scheduledJob)));
-            _attribute.OnStateElection(_context);
-            _context.CandidateState.Should().BeOfType<DeletedState>();
-            var state = _context.CandidateState as DeletedState;
-            state!.Reason.Should().Be("Instance of the same job is already queued.");
+            JobFingerprint.Compute(CreateParameterizedJob("a"), Queue)
+                .Should().NotBe(JobFingerprint.Compute(CreateParameterizedJob("b"), Queue));
         }
 
         [Test]
-        public void DoesNothingOnWrongState()
+        public void EqualArgumentsGetTheSameFingerprint()
+        {
+            JobFingerprint.Compute(CreateParameterizedJob("a"), Queue)
+                .Should().Be(JobFingerprint.Compute(CreateParameterizedJob("a"), Queue));
+        }
+
+        [Test]
+        public void DifferentQueuesGetDifferentFingerprints()
         {
             var job = CreateJob();
-            var backgroundJob = new BackgroundJob("1", job, DateTime.Now);
-            Setup(backgroundJob, false, true);
+            JobFingerprint.Compute(job, Queue).Should().NotBe(JobFingerprint.Compute(job, "other"));
+        }
+
+        [Test]
+        public void DoesNotClaimForScheduledJobsByDefault()
+        {
+            Setup(CreateJob());
             var state = new ScheduledState(TimeSpan.FromMilliseconds(100));
             _context.CandidateState = state;
             _attribute.OnStateElection(_context);
-            _context.CandidateState.Should().BeOfType<ScheduledState>();
             _context.CandidateState.Should().Be(state);
+            _store.DidNotReceiveWithAnyArgs().Claim(default, default);
         }
 
         [Test]
-        public void ParameterizedJobDoesNotRemoveItself()
+        public void ClaimsForScheduledJobsWhenScheduledJobsAreChecked()
         {
-            var job = CreateParameterizedJob("test");
-            var backgroundJob = new BackgroundJob("1", job, DateTime.Now);
-            var enqueuedJob = new EnqueuedJobDto { Job = job };
-            Setup(backgroundJob);
-            _monitoringApi.EnqueuedJobs(Queue, Arg.Any<int>(), Arg.Any<int>())
-                .Returns(GetJobList(("1", enqueuedJob)));
-            _attribute.OnStateElection(_context);
-            _context.CandidateState.Should().BeOfType<EnqueuedState>();
-            var state = _context.CandidateState as EnqueuedState;
-            state!.Queue.Should().Be(Queue);
-        }
-
-        [Test]
-        public void ParameterizedJobRemovesTheDuplicateFromEnqueuedOnes()
-        {
-            var job = CreateParameterizedJob("testPayload");
-            var backgroundJob = new BackgroundJob("1", job, DateTime.Now);
-            var enqueuedJob = new EnqueuedJobDto { Job = job };
-            Setup(backgroundJob);
-            _monitoringApi.EnqueuedJobs(Queue, Arg.Any<int>(), Arg.Any<int>())
-                .Returns(GetJobList(("2", enqueuedJob)));
+            Setup(CreateJob(), checkScheduledJobs: true);
+            _context.CandidateState = new ScheduledState(TimeSpan.FromMilliseconds(100));
             _attribute.OnStateElection(_context);
             _context.CandidateState.Should().BeOfType<DeletedState>();
-            var state = _context.CandidateState as DeletedState;
-            state!.Reason.Should().Be("Instance of the same job is already queued.");
         }
 
         [Test]
-        public void ParameterizedJobRemovesTheDuplicateFromEnqueuedOnesTwo()
+        public void IgnoresStatesThatNeitherEnqueueNorSchedule()
         {
-            var job = CreateParameterizedJob("testPayload");
-            var job2 = CreateParameterizedJob("testPayload1");
-            var backgroundJob = new BackgroundJob("1", job, DateTime.Now);
-            var enqueuedJob = new EnqueuedJobDto { Job = job2 };
-            Setup(backgroundJob);
-            _monitoringApi.EnqueuedJobs(Queue, Arg.Any<int>(), Arg.Any<int>())
-                .Returns(GetJobList(("2", enqueuedJob)));
-            _attribute.OnStateElection(_context);
-            _context.CandidateState.Should().BeOfType<EnqueuedState>();
-            var state = _context.CandidateState as EnqueuedState;
-            state!.Reason.Should().BeNull();
-            state.EnqueuedAt.Should().NotBe(null);
-        }
-
-        [Test]
-        public void ParameterizedJobRemovesTheDuplicateFromProcessingOnes()
-        {
-            var job = CreateParameterizedJob("testPayload");
-            var backgroundJob = new BackgroundJob("1", job, DateTime.Now);
-            var processingJob = new ProcessingJobDto { Job = job };
-            Setup(backgroundJob, true);
-            _monitoringApi.EnqueuedJobs(Queue, Arg.Any<int>(), Arg.Any<int>())
-                .Returns(GetJobList<EnqueuedJobDto>());
-            _monitoringApi.ProcessingJobs(Arg.Any<int>(), Arg.Any<int>())
-                .Returns(GetJobList(("2", processingJob)));
-            _attribute.OnStateElection(_context);
-            _context.CandidateState.Should().BeOfType<DeletedState>();
-            var state = _context.CandidateState as DeletedState;
-            state!.Reason.Should().Be("Instance of the same job is already queued.");
-        }
-
-        [Test]
-        public void ParameterizedJobRemovesTheDuplicateFromScheduledOnes()
-        {
-            var job = CreateParameterizedJob("testPayload");
-            var backgroundJob = new BackgroundJob("1", job, DateTime.Now);
-            var scheduledJob = new ScheduledJobDto { Job = job };
-            Setup(backgroundJob, false, true);
-            _monitoringApi.EnqueuedJobs(Queue, Arg.Any<int>(), Arg.Any<int>())
-                .Returns(GetJobList<EnqueuedJobDto>());
-            _monitoringApi.ScheduledJobs(Arg.Any<int>(), Arg.Any<int>())
-                .Returns(GetJobList(("2", scheduledJob)));
-            _attribute.OnStateElection(_context);
-            _context.CandidateState.Should().BeOfType<DeletedState>();
-            var state = _context.CandidateState as DeletedState;
-            state!.Reason.Should().Be("Instance of the same job is already queued.");
-        }
-
-        [Test]
-        public void ParameterizedJobDoesNothingOnWrongState()
-        {
-            var job = CreateParameterizedJob("testPayload");
-            var backgroundJob = new BackgroundJob("1", job, DateTime.Now);
-            Setup(backgroundJob, false, true);
-            var state = new ScheduledState(TimeSpan.FromMilliseconds(100));
+            Setup(CreateJob(), checkScheduledJobs: true);
+            var state = Substitute.For<IState>();
+            state.Name.Returns(ProcessingState.StateName);
             _context.CandidateState = state;
             _attribute.OnStateElection(_context);
-            _context.CandidateState.Should().BeOfType<ScheduledState>();
             _context.CandidateState.Should().Be(state);
+            _store.DidNotReceiveWithAnyArgs().Claim(default, default);
         }
 
-        private static JobList<T> GetJobList<T>(params (string, T)[] jobs)
+        [Test]
+        public void DoesNotLetAJobLoseAgainstItsOwnClaim()
         {
-            var entries = jobs.Select(x => new KeyValuePair<string, T>(x.Item1, x.Item2));
-            return new JobList<T>(entries);
+            var job = CreateJob();
+            Setup(job, checkScheduledJobs: true, currentState: ScheduledState.StateName);
+            _connection.GetJobParameter(JobId, JobFingerprint.ClaimParameterName)
+                .Returns($"\"{JobFingerprint.Compute(job, Queue)}\"");
+            _attribute.OnStateElection(_context);
+            _context.CandidateState.Should().BeOfType<EnqueuedState>();
+            _store.DidNotReceiveWithAnyArgs().Claim(default, default);
         }
 
-        private static global::Hangfire.Common.Job CreateJob()
+        [Test]
+        public void DoesNotReadTheClaimParameterForNewlyCreatedJobs()
         {
-            var job = new global::Hangfire.Common.Job(typeof(TestJob),
-                typeof(TestJob).GetMethod(nameof(TestJob.ExecuteAsync)), CancellationToken.None);
-            return job;
+            Setup(CreateJob());
+            ClaimSucceeds();
+            _attribute.OnStateElection(_context);
+            _connection.DidNotReceive().GetJobParameter(JobId, JobFingerprint.ClaimParameterName);
         }
 
-        private static global::Hangfire.Common.Job CreateParameterizedJob(string payloadName)
+        [TestCase("Succeeded")]
+        [TestCase("Deleted")]
+        [TestCase("Failed")]
+        [TestCase("Processing")]
+        public void ReleasesTheClaimWhenTheJobLeavesTheCheckedStates(string stateName)
         {
-            var job = new global::Hangfire.Common.Job(typeof(ParameterizedTestJob),
-                typeof(ParameterizedTestJob).GetMethod(nameof(ParameterizedTestJob.ExecuteAsync)), new TestJobPayload { Name = payloadName }, CancellationToken.None);
-            return job;
+            var job = CreateJob();
+            Setup(job);
+            var fingerprint = JobFingerprint.Compute(job, Queue);
+            _connection.GetJobParameter(JobId, JobFingerprint.ClaimParameterName).Returns($"\"{fingerprint}\"");
+            _attribute.OnStateApplied(ApplyContext(job, stateName), _transaction);
+            _transaction.Received(1).RemoveFromSet(JobFingerprint.SetKey(Queue), fingerprint);
+            _connection.Received(1).SetJobParameter(JobId, JobFingerprint.ClaimParameterName, null);
         }
+
+        [Test]
+        public void KeepsTheClaimWhileTheJobIsProcessingWhenRunningJobsAreChecked()
+        {
+            var job = CreateJob();
+            Setup(job, checkRunningJobs: true);
+            _connection.GetJobParameter(JobId, JobFingerprint.ClaimParameterName)
+                .Returns($"\"{JobFingerprint.Compute(job, Queue)}\"");
+            _attribute.OnStateApplied(ApplyContext(job, ProcessingState.StateName), _transaction);
+            _transaction.DidNotReceiveWithAnyArgs().RemoveFromSet(default, default);
+        }
+
+        [Test]
+        public void DoesNotReleaseAClaimTheJobNeverOwned()
+        {
+            var job = CreateJob();
+            Setup(job);
+            _attribute.OnStateApplied(ApplyContext(job, DeletedState.StateName), _transaction);
+            _transaction.DidNotReceiveWithAnyArgs().RemoveFromSet(default, default);
+        }
+
+        [Test]
+        public void OnStateUnappliedDoesNothing()
+        {
+            var job = CreateJob();
+            Setup(job);
+            _attribute.OnStateUnapplied(ApplyContext(job, DeletedState.StateName), _transaction);
+            _transaction.ReceivedCalls().Should().BeEmpty();
+        }
+
+        private ApplyStateContext ApplyContext(global::Hangfire.Common.Job job, string stateName)
+        {
+            var newState = Substitute.For<IState>();
+            newState.Name.Returns(stateName);
+            return new ApplyStateContext(
+                storage: Substitute.For<JobStorage>(),
+                connection: _connection,
+                transaction: _transaction,
+                backgroundJob: new BackgroundJob(JobId, job, DateTime.Now),
+                newState: newState,
+                oldStateName: null);
+        }
+
+        private static global::Hangfire.Common.Job CreateJob() =>
+            new(typeof(TestJob), typeof(TestJob).GetMethod(nameof(TestJob.ExecuteAsync)), CancellationToken.None);
+
+        private static global::Hangfire.Common.Job CreateParameterizedJob(string payloadName) =>
+            new(typeof(ParameterizedTestJob),
+                typeof(ParameterizedTestJob).GetMethod(nameof(ParameterizedTestJob.ExecuteAsync)),
+                new TestJobPayload { Name = payloadName }, CancellationToken.None);
 
         [ExcludeFromCodeCoverage]
         private class TestJob : IAsyncJob
         {
-
-            public void Dispose()
-            {
-                Dispose(true);
-                GC.SuppressFinalize(this);
-            }
-
-            protected virtual void Dispose(bool disposing)
-            {
-                // Cleanup
-            }
+            public void Dispose() => GC.SuppressFinalize(this);
 
             public Task<object> ExecuteAsync(CancellationToken jobCancellationToken)
             {
@@ -265,22 +262,12 @@ namespace Dosaic.Plugins.Jobs.Hangfire.Tests.Attributes
                 return Task.FromResult(x);
             }
 
-            public void Dispose()
-            {
-                Dispose(true);
-                GC.SuppressFinalize(this);
-            }
-
-            protected virtual void Dispose(bool disposing)
-            {
-                // Cleanup
-            }
+            public void Dispose() => GC.SuppressFinalize(this);
         }
 
         [ExcludeFromCodeCoverage]
         private class TestJobPayload
         {
-
             public string Name { get; set; }
         }
     }

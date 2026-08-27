@@ -1,6 +1,7 @@
 using System.Globalization;
 using AwesomeAssertions;
 using Dosaic.Plugins.Jobs.Hangfire.Batching;
+using Dosaic.Plugins.Jobs.Hangfire.Uniqueness;
 using Hangfire;
 using Hangfire.States;
 using NSubstitute;
@@ -185,6 +186,93 @@ namespace Dosaic.Plugins.Jobs.Hangfire.Tests.Batching
             await batch.SaveAsync();
             _dispatched[0].Parameters.Keys.Should().Contain("CurrentCulture");
             _dispatched[0].Parameters["CurrentCulture"].Should().StartWith("\"").And.EndWith("\"");
+        }
+        [Test]
+        public async Task UniqueJobsCarryAFingerprintClaimOnTheAttributeQueue()
+        {
+            var batch = GetBatch();
+            batch.Enqueue<UniqueTestJob>("ignored");
+            await batch.SaveAsync();
+
+            var entry = _dispatched[0];
+            entry.Queue.Should().Be("unique");
+            (entry.State as EnqueuedState)!.Queue.Should().Be("unique");
+            entry.UniqueSetKey.Should().Be(JobFingerprint.SetKey("unique"));
+            entry.UniqueFingerprint.Should().Be(JobFingerprint.Compute(entry.Job, "unique"));
+            entry.UniqueDuplicate.Should().BeFalse();
+            entry.UniqueExpiresAt.Should().BeGreaterThan(JobFingerprint.ToTimestamp(DateTime.UtcNow));
+            entry.Parameters[JobFingerprint.ClaimParameterName].Should().Be($"\"{entry.UniqueFingerprint}\"");
+        }
+
+        [Test]
+        public async Task JobsWithoutTheAttributeCarryNoClaim()
+        {
+            var batch = GetBatch();
+            batch.Enqueue<TestJob>();
+            await batch.SaveAsync();
+
+            _dispatched[0].UniqueSetKey.Should().BeNull();
+            _dispatched[0].UniqueFingerprint.Should().BeNull();
+            _dispatched[0].Parameters.Should().NotContainKey(JobFingerprint.ClaimParameterName);
+        }
+
+        [Test]
+        public async Task OnlyTheFirstOccurrenceOfAFingerprintClaimsItInsideOneBatch()
+        {
+            var batch = GetBatch();
+            batch.Enqueue<UniqueTestJob>();
+            batch.Enqueue<UniqueTestJob>();
+            batch.Enqueue<UniqueParamTestJob, string>("a");
+            batch.Enqueue<UniqueParamTestJob, string>("b");
+            await batch.SaveAsync();
+
+            _dispatched[0].UniqueDuplicate.Should().BeFalse();
+            _dispatched[1].UniqueDuplicate.Should().BeTrue();
+            _dispatched[1].UniqueFingerprint.Should().BeNull();
+            _dispatched[1].Parameters.Should().NotContainKey(JobFingerprint.ClaimParameterName);
+            _dispatched[2].UniqueDuplicate.Should().BeFalse();
+            _dispatched[3].UniqueDuplicate.Should().BeFalse();
+        }
+
+        [Test]
+        public async Task ScheduledUniqueJobsOnlyClaimWhenScheduledJobsAreChecked()
+        {
+            var batch = GetBatch();
+            batch.Schedule<UniqueTestJob>(TimeSpan.FromMinutes(5));
+            batch.Schedule<UniqueScheduledTestJob>(TimeSpan.FromMinutes(5));
+            await batch.SaveAsync();
+
+            _dispatched[0].UniqueFingerprint.Should().BeNull();
+            _dispatched[0].SetValuePrefix.Should().Be("unique");
+            _dispatched[1].UniqueFingerprint.Should().NotBeNull();
+        }
+
+        [Test]
+        public async Task ContinuationsAreLeftToTheFilterPipeline()
+        {
+            var batch = GetBatch();
+            batch.Enqueue<TestJob>().ContinueWith<UniqueTestJob>("ignored");
+            await batch.SaveAsync();
+
+            var continuation = _dispatched[1];
+            continuation.UniqueFingerprint.Should().BeNull();
+            ((continuation.State as AwaitingState)!.NextState as EnqueuedState)!.Queue.Should().Be("unique");
+        }
+
+        [Test]
+        public async Task SuppressedJobsGetNoIdAndAreReported()
+        {
+            _dispatcher.DispatchAsync(Arg.Any<IReadOnlyList<BatchJobEntry>>(), Arg.Any<CancellationToken>())
+                .Returns(Task.FromResult<IReadOnlyList<string>>(["1", null]));
+            var batch = GetBatch();
+            var first = batch.Enqueue<UniqueTestJob>();
+            var second = batch.Enqueue<UniqueTestJob>();
+            var ids = await batch.SaveAsync();
+
+            ids.Should().Equal("1", null);
+            first.IsSuppressed.Should().BeFalse();
+            second.IsSuppressed.Should().BeTrue();
+            second.Id.Should().BeNull();
         }
     }
 }

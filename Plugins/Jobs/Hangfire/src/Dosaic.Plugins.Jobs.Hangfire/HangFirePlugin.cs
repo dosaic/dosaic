@@ -6,6 +6,7 @@ using Dosaic.Plugins.Jobs.Hangfire.Attributes;
 using Dosaic.Plugins.Jobs.Hangfire.Batching;
 using Dosaic.Plugins.Jobs.Hangfire.Fetching;
 using Dosaic.Plugins.Jobs.Hangfire.Job;
+using Dosaic.Plugins.Jobs.Hangfire.Uniqueness;
 using Hangfire;
 using Hangfire.Dashboard;
 using Hangfire.MemoryStorage;
@@ -177,6 +178,8 @@ namespace Dosaic.Plugins.Jobs.Hangfire
                     applicationBuilder.ApplicationServices.GetRequiredService<ILogger<EnabledByFeatureFilter>>()));
             }
 
+            RegisterUniquenessStore(applicationBuilder.ApplicationServices.GetRequiredService<JobStorage>());
+
             var urlAuthFilter = new HostAuthorizationFilter(_hangfireConfig.AllowedDashboardHost);
             applicationBuilder.UseHangfireDashboard(options: new()
             {
@@ -195,6 +198,18 @@ namespace Dosaic.Plugins.Jobs.Hangfire
                 var genericMethod = registerJobMethod.MakeGenericMethod(job);
                 genericMethod.Invoke(jobRegister, [recurringJobDetails.CronPattern, recurringJobDetails.Queue, ""]);
             }
+        }
+
+        /// <summary>
+        ///     Lets <see cref="UniquePerQueueAttribute" /> claim fingerprints with a single upsert instead of
+        ///     the storage agnostic lock-and-read fallback. Only valid for a storage we built ourselves,
+        ///     because the claim talks to the connection string from our own configuration.
+        /// </summary>
+        private void RegisterUniquenessStore(JobStorage jobStorage)
+        {
+            if (_managedStorage is null || !ReferenceEquals(jobStorage, _managedStorage)) return;
+            JobUniquenessStores.Use(jobStorage,
+                new PostgresJobUniquenessStore(CreateConnection, _hangfireConfig.SchemaName));
         }
 
         public void ConfigureHealthChecks(IHealthChecksBuilder healthChecksBuilder)

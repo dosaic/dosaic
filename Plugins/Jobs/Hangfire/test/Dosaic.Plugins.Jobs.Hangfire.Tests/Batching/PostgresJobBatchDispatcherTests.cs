@@ -1,5 +1,6 @@
 using AwesomeAssertions;
 using Dosaic.Plugins.Jobs.Hangfire.Batching;
+using Dosaic.Plugins.Jobs.Hangfire.Uniqueness;
 using Hangfire;
 using NSubstitute;
 using NUnit.Framework;
@@ -91,6 +92,55 @@ namespace Dosaic.Plugins.Jobs.Hangfire.Tests.Batching
             parameters.StateNames[1].Should().Be("Awaiting");
             parameters.StateData[1].Should().Contain("ParentId");
             parameters.ContinuationOptions[1].Should().Be((int)JobContinuationOptions.OnlyOnSucceededState);
+        }
+
+        [Test]
+        public void UniquenessClaimsAreTakenByTheSameStatement()
+        {
+            _sql.Should().Contain("""ON CONFLICT ("key", "value") DO UPDATE""")
+                .And.Contain(@"""score"" = EXCLUDED.""score"", ""expireat"" = EXCLUDED.""expireat""")
+                .And.Contain(@"""set"".""score"" <= @uniquenow")
+                .And.Contain(@"RETURNING ""key"", ""value""");
+        }
+
+        [Test]
+        public void JobsThatLoseTheirClaimAreNeverWritten()
+        {
+            _sql.Should().Contain(@"""allocated"" AS (").And.Contain(@"FROM ""accepted""");
+            _sql.Should().Contain(@"""suppressed"" AS (").And.Contain(@"r.""presuppressed""");
+        }
+
+        [Test]
+        public async Task UniquenessColumnsAreFlattenedIntoParallelArrays()
+        {
+            var batch = new JobBatch(Substitute.For<IJobBatchDispatcher>());
+            batch.Enqueue<TestJob>();
+            batch.Enqueue<UniqueTestJob>();
+            batch.Enqueue<UniqueTestJob>();
+            var entries = Capture(batch);
+
+            var parameters = PostgresJobBatchDispatcher.BuildParameters(entries);
+
+            parameters.UniqueSetKeys.Should().Equal(null, JobFingerprint.SetKey("unique"),
+                JobFingerprint.SetKey("unique"));
+            parameters.UniqueFingerprints[0].Should().BeNull();
+            parameters.UniqueFingerprints[1].Should().NotBeNull();
+            parameters.UniqueFingerprints[2].Should().BeNull();
+            parameters.UniqueDuplicates.Should().Equal(false, false, true);
+            parameters.UniqueExpiresAt[1].Should().BeGreaterThan(0);
+            await Task.CompletedTask;
+        }
+
+        [Test]
+        public void ContinuationsInheritTheSuppressionOfTheirChainRoot()
+        {
+            var batch = new JobBatch(Substitute.For<IJobBatchDispatcher>());
+            batch.Enqueue<UniqueTestJob>().ContinueWith<TestJob>().ContinueWith<TestJob>();
+            var entries = Capture(batch);
+
+            var parameters = PostgresJobBatchDispatcher.BuildParameters(entries);
+
+            parameters.RootIndexes.Should().Equal(1, 1, 1);
         }
 
         private static IReadOnlyList<BatchJobEntry> Capture(IJobBatch batch)

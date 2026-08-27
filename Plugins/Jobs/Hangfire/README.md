@@ -291,9 +291,13 @@ Things worth knowing:
   that already exists in the storage still goes through `BackgroundJob.ContinueJobWith`, because it
   has to merge into the antecedent's continuation list under a distributed lock.
 - **Client side filters are bypassed.** The bulk write goes straight to the storage, so state
-  election filters such as `[UniquePerQueue]` do not run for batched jobs — they issue their own
-  queries and would defeat the single round trip. Server side filters
-  (`EnabledByFeatureFilter`, `LogJobExecutionFilter`, `[JobTimeout]`, retries) are unaffected.
+  election filters do not run for batched jobs — they issue their own queries and would defeat the
+  single round trip. Server side filters (`EnabledByFeatureFilter`, `LogJobExecutionFilter`,
+  `[JobTimeout]`, retries) are unaffected.
+- **`[UniquePerQueue]` is the exception.** Its fingerprint claim is folded into the same statement, so
+  batched jobs are deduplicated without an extra round trip. A job that loses its claim is never
+  written and gets a `null` id back (`IJobBatchItem.IsSuppressed`); continuations of a suppressed job
+  are suppressed with it.
 - **Non-PostgreSQL storages still work.** With `inMemory: true`, or when an `IHangfireConfigurator`
   brings its own storage, the batch falls back to creating the jobs through the regular Hangfire
   client — same API, without the single round trip guarantee.
@@ -409,7 +413,7 @@ public class LocalTimeCronJob : AsyncJob { ... }
 
 ### `[UniquePerQueueAttribute(queue)]`
 
-Prevents duplicate job executions. If a job with the same type and arguments is already queued, the new one is deleted instead of enqueued.
+Prevents duplicate job executions. If a job with the same type and arguments is already queued, the new one is deleted instead of enqueued. The attribute also owns the queue of the jobs it guards — whatever queue you pass at enqueue time is overridden by the one on the attribute.
 
 ```csharp
 [UniquePerQueueAttribute("default")]
@@ -417,11 +421,48 @@ public class ImportDataJob : AsyncJob { ... }
 ```
 
 Optional properties:
-- `CheckScheduledJobs` — also check scheduled (delayed) jobs (default: `false`)
-- `CheckRunningJobs` — also check currently processing jobs (default: `false`)
+- `CheckScheduledJobs` — also block while an equivalent job is only scheduled (default: `false`)
+- `CheckRunningJobs` — also block while an equivalent job is being processed (default: `false`)
+- `ClaimTimeoutInMinutes` — how long a claim survives without being released, as a safety net for
+  processes that died mid-flight (default: `1440`). PostgreSQL only.
 
-> Not applied to jobs created through the batch API — see
-> [Batch creating jobs](#batch-creating-jobs-ijobmanagercreatebatch).
+#### How the check works
+
+The job's identity — type, method, arguments and queue — is hashed into a fingerprint, and that
+fingerprint is claimed in a Hangfire set (`dosaic:unique:<queue>`) that has a unique index on
+`(key, value)`. Enqueueing writes the claim; the storage decides who wins. The claim is released
+again when the job leaves the checked states (when it starts processing, or when it succeeds, fails
+or is deleted if `CheckRunningJobs` is set).
+
+That makes the check cost **one round trip regardless of queue depth** — the previous implementation
+paged through every enqueued, scheduled and processing job on every single enqueue, so a batch of
+N jobs against a queue of depth M cost O(N·M). It also closes the race the scan had: two clients
+enqueueing the same job at the same time could both find nothing and both enqueue.
+
+On PostgreSQL the claim is a single `INSERT ... ON CONFLICT`, and it rides along inside the batch
+statement, so `[UniquePerQueue]` now applies to jobs created through the batch API too. On other
+storages (in-memory, storages brought by an `IHangfireConfigurator`) the check falls back to a
+distributed lock around the set — correct, but unable to take over a claim whose owner died.
+
+#### Differences to the previous queue-scanning implementation
+
+The attribute's own surface is unchanged — same constructor, same `Queue`, `CheckScheduledJobs` and
+`CheckRunningJobs`, same `DeletedState` reason — but a few edge cases behave differently:
+
+- **The batch API now honours it.** Previously batched jobs were never deduplicated. Duplicates are
+  now suppressed and come back with a `null` id, and the attribute's queue wins over the queue passed
+  to `Enqueue`/`Schedule`, exactly as it always did outside the batch.
+- **`CheckScheduledJobs` blocks at scheduling time**, not when the scheduled job is enqueued. Under
+  the old scan, scheduling the same job five times let all five through, and the first one to reach
+  the queue then deleted *itself* because its four siblings were still in the schedule set.
+- **A job whose worker died no longer blocks.** With `CheckRunningJobs = false` the claim is released
+  when the job starts processing. If the worker then dies and the job is requeued by the invisibility
+  timeout, an equivalent job is allowed in; the old scan would have blocked it.
+- **On non-PostgreSQL storages a claim outlives its owner.** The fallback cannot detect an expired
+  claim, so a process that dies between claiming and releasing blocks that fingerprint until the set
+  entry is removed. On PostgreSQL `ClaimTimeoutInMinutes` covers this.
+- **During a rolling upgrade** jobs enqueued by the old code hold no claim, so one duplicate per
+  fingerprint can slip through until the queue has drained once.
 
 ### `[JobCleanupExpirationTimeAttribute(days)]`
 

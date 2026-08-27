@@ -1,5 +1,8 @@
 using System.Globalization;
+using System.Reflection;
+using Dosaic.Plugins.Jobs.Hangfire.Attributes;
 using Dosaic.Plugins.Jobs.Hangfire.Job;
+using Dosaic.Plugins.Jobs.Hangfire.Uniqueness;
 using Hangfire;
 using Hangfire.States;
 
@@ -16,6 +19,7 @@ namespace Dosaic.Plugins.Jobs.Hangfire.Batching
         private readonly IJobBatchDispatcher _dispatcher;
         private readonly List<BatchJobEntry> _entries = [];
         private readonly List<BatchItem> _items = [];
+        private readonly HashSet<string> _claimedFingerprints = [];
         private bool _saved;
 
         public JobBatch(IJobBatchDispatcher dispatcher) => _dispatcher = dispatcher;
@@ -63,7 +67,11 @@ namespace Dosaic.Plugins.Jobs.Hangfire.Batching
                 throw new InvalidOperationException(
                     $"Job batch dispatcher returned {ids.Count} job ids for {_entries.Count} jobs.");
             for (var i = 0; i < ids.Count; i++)
+            {
                 _items[i].Id = ids[i];
+                _items[i].IsSuppressed = ids[i] is null;
+            }
+
             _saved = true;
             return ids;
         }
@@ -89,6 +97,13 @@ namespace Dosaic.Plugins.Jobs.Hangfire.Batching
         {
             if (_saved) throw new InvalidOperationException("This job batch has already been saved.");
             var index = _entries.Count + 1;
+            var unique = job.Type.GetCustomAttribute<UniquePerQueueAttribute>(true);
+            var parameters = CaptureCulture();
+            if (unique is not null) ApplyUniqueQueue(unique, state, ref queue, ref setValuePrefix);
+            var fingerprint = GetFingerprint(unique, state, job);
+            var duplicate = fingerprint is not null && !_claimedFingerprints.Add(fingerprint);
+            if (fingerprint is not null && !duplicate)
+                parameters[JobFingerprint.ClaimParameterName] = $"\"{fingerprint}\"";
             _entries.Add(new BatchJobEntry
             {
                 Index = index,
@@ -100,11 +115,51 @@ namespace Dosaic.Plugins.Jobs.Hangfire.Batching
                 SetScore = setScore,
                 ParentIndex = parentIndex,
                 ContinuationOptions = options,
-                Parameters = CaptureCulture()
+                UniqueSetKey = unique is null ? null : JobFingerprint.SetKey(unique.Queue),
+                UniqueFingerprint = duplicate ? null : fingerprint,
+                UniqueExpiresAt = fingerprint is null || duplicate
+                    ? 0
+                    : ToTimestamp(DateTime.UtcNow) + TimeSpan.FromMinutes(unique.ClaimTimeoutInMinutes).TotalSeconds,
+                UniqueDuplicate = duplicate,
+                Parameters = parameters
             });
             var item = new BatchItem(this, index);
             _items.Add(item);
             return item;
+        }
+
+        /// <summary>
+        ///     The attribute owns the queue of the jobs it guards, the same way it overrides the queue of the
+        ///     elected <see cref="EnqueuedState" /> outside the batch API.
+        /// </summary>
+        private static void ApplyUniqueQueue(UniquePerQueueAttribute unique, IState state, ref string queue,
+            ref string setValuePrefix)
+        {
+            switch (state)
+            {
+                case EnqueuedState enqueuedState:
+                    enqueuedState.Queue = unique.Queue;
+                    queue = unique.Queue;
+                    break;
+                case ScheduledState:
+                    setValuePrefix = unique.Queue;
+                    break;
+                case AwaitingState { NextState: EnqueuedState nextState }:
+                    nextState.Queue = unique.Queue;
+                    break;
+            }
+        }
+
+        /// <summary>
+        ///     Continuations are written in <see cref="AwaitingState" /> and only become enqueued much later,
+        ///     so they are left to the filter pipeline instead of being claimed up front.
+        /// </summary>
+        private static string GetFingerprint(UniquePerQueueAttribute unique, IState state,
+            global::Hangfire.Common.Job job)
+        {
+            if (unique is null) return null;
+            var claims = state is EnqueuedState || (unique.CheckScheduledJobs && state is ScheduledState);
+            return claims ? JobFingerprint.Compute(job, unique.Queue) : null;
         }
 
         private static IDictionary<string, string> CaptureCulture()
@@ -132,6 +187,7 @@ namespace Dosaic.Plugins.Jobs.Hangfire.Batching
 
             public int Index { get; }
             public string Id { get; internal set; }
+            public bool IsSuppressed { get; internal set; }
 
             public IJobBatchItem ContinueWith<TJob>(string queue = EnqueuedState.DefaultQueue,
                 JobContinuationOptions options = JobContinuationOptions.OnlyOnSucceededState) where TJob : IAsyncJob =>

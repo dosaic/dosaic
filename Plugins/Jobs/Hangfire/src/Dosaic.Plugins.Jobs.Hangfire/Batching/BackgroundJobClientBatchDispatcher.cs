@@ -8,6 +8,11 @@ namespace Dosaic.Plugins.Jobs.Hangfire.Batching
     ///     configurator storages). Creates the jobs one by one through the regular Hangfire client, so the
     ///     batch API keeps working — just without the single round trip guarantee.
     /// </summary>
+    /// <remarks>
+    ///     Because the jobs go through the regular client, <see cref="Attributes.UniquePerQueueAttribute" />
+    ///     runs as a normal filter here. A job it deletes as a duplicate still gets an id back — only
+    ///     duplicates inside the batch itself are reported as suppressed.
+    /// </remarks>
     internal sealed class BackgroundJobClientBatchDispatcher : IJobBatchDispatcher
     {
         private readonly IBackgroundJobClient _backgroundJobClient;
@@ -22,9 +27,18 @@ namespace Dosaic.Plugins.Jobs.Hangfire.Batching
             foreach (var entry in entries.OrderBy(x => x.Index))
             {
                 cancellationToken.ThrowIfCancellationRequested();
+                // an earlier entry of the same batch already claims this fingerprint — the filter pipeline
+                // cannot see that, because that job does not exist in the storage yet
+                if (entry.UniqueDuplicate) continue;
                 var state = entry.State;
-                if (entry.ParentIndex.HasValue && state is AwaitingState awaiting)
-                    state = new AwaitingState(ids[entry.ParentIndex.Value - 1], awaiting.NextState, awaiting.Options);
+                if (entry.ParentIndex.HasValue)
+                {
+                    var parentId = ids[entry.ParentIndex.Value - 1];
+                    if (parentId is null) continue;
+                    if (state is AwaitingState awaiting)
+                        state = new AwaitingState(parentId, awaiting.NextState, awaiting.Options);
+                }
+
                 ids[entry.Index - 1] = _backgroundJobClient.Create(entry.Job, state);
             }
 

@@ -1,4 +1,5 @@
 using System.Globalization;
+using Dosaic.Plugins.Jobs.Hangfire.Uniqueness;
 using Hangfire.Common;
 using Hangfire.Storage;
 using Npgsql;
@@ -54,6 +55,12 @@ namespace Dosaic.Plugins.Jobs.Hangfire.Batching
             Add(command, "paramidx", NpgsqlDbType.Array | NpgsqlDbType.Integer, parameters.ParameterIndexes);
             Add(command, "paramname", NpgsqlDbType.Array | NpgsqlDbType.Text, parameters.ParameterNames);
             Add(command, "paramvalue", NpgsqlDbType.Array | NpgsqlDbType.Text, parameters.ParameterValues);
+            Add(command, "unikey", NpgsqlDbType.Array | NpgsqlDbType.Text, parameters.UniqueSetKeys);
+            Add(command, "fingerprint", NpgsqlDbType.Array | NpgsqlDbType.Text, parameters.UniqueFingerprints);
+            Add(command, "uniqueexpiry", NpgsqlDbType.Array | NpgsqlDbType.Double, parameters.UniqueExpiresAt);
+            Add(command, "presuppressed", NpgsqlDbType.Array | NpgsqlDbType.Boolean, parameters.UniqueDuplicates);
+            Add(command, "rootidx", NpgsqlDbType.Array | NpgsqlDbType.Integer, parameters.RootIndexes);
+            Add(command, "uniquenow", NpgsqlDbType.Double, JobFingerprint.ToTimestamp(DateTime.UtcNow));
             Add(command, "createdat", NpgsqlDbType.TimestampTz, DateTime.UtcNow);
 
             await using var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
@@ -72,7 +79,12 @@ namespace Dosaic.Plugins.Jobs.Hangfire.Batching
         {
             var count = chunk.Count;
             var localIndex = new Dictionary<int, int>(count);
-            for (var i = 0; i < count; i++) localIndex[chunk[i].Index] = i + 1;
+            var byIndex = new Dictionary<int, BatchJobEntry>(count);
+            for (var i = 0; i < count; i++)
+            {
+                localIndex[chunk[i].Index] = i + 1;
+                byIndex[chunk[i].Index] = chunk[i];
+            }
 
             var parameters = new BatchParameters
             {
@@ -86,7 +98,12 @@ namespace Dosaic.Plugins.Jobs.Hangfire.Batching
                 SetPrefixes = new string[count],
                 SetScores = new double[count],
                 ParentIndexes = new int?[count],
-                ContinuationOptions = new int[count]
+                ContinuationOptions = new int[count],
+                UniqueSetKeys = new string[count],
+                UniqueFingerprints = new string[count],
+                UniqueExpiresAt = new double[count],
+                UniqueDuplicates = new bool[count],
+                RootIndexes = new int[count]
             };
             var parameterIndexes = new List<int>();
             var parameterNames = new List<string>();
@@ -107,6 +124,11 @@ namespace Dosaic.Plugins.Jobs.Hangfire.Batching
                 parameters.SetScores[i] = entry.SetScore;
                 parameters.ParentIndexes[i] = entry.ParentIndex.HasValue ? localIndex[entry.ParentIndex.Value] : null;
                 parameters.ContinuationOptions[i] = (int)entry.ContinuationOptions;
+                parameters.UniqueSetKeys[i] = entry.UniqueSetKey;
+                parameters.UniqueFingerprints[i] = entry.UniqueFingerprint;
+                parameters.UniqueExpiresAt[i] = entry.UniqueExpiresAt;
+                parameters.UniqueDuplicates[i] = entry.UniqueDuplicate;
+                parameters.RootIndexes[i] = localIndex[FindRoot(byIndex, entry).Index];
                 foreach (var (name, value) in entry.Parameters)
                 {
                     parameterIndexes.Add(i + 1);
@@ -121,6 +143,18 @@ namespace Dosaic.Plugins.Jobs.Hangfire.Batching
             return parameters;
         }
 
+        /// <summary>
+        ///     Walks up the continuation chain. Only chain roots ever carry a fingerprint, so suppressing a
+        ///     whole chain is a lookup on its root instead of a recursive query.
+        /// </summary>
+        private static BatchJobEntry FindRoot(IReadOnlyDictionary<int, BatchJobEntry> byIndex, BatchJobEntry entry)
+        {
+            var root = entry;
+            while (root.ParentIndex.HasValue && byIndex.TryGetValue(root.ParentIndex.Value, out var parent))
+                root = parent;
+            return root;
+        }
+
         private static void Add(NpgsqlCommand command, string name, NpgsqlDbType type, object value) =>
             command.Parameters.Add(new NpgsqlParameter(name, type) { Value = value });
 
@@ -129,20 +163,45 @@ namespace Dosaic.Plugins.Jobs.Hangfire.Batching
                 SELECT *
                 FROM unnest(@invocationdata::text[], @arguments::text[], @statename::text[], @statereason::text[],
                             @statedata::text[], @queue::text[], @setkey::text[], @setprefix::text[],
-                            @setscore::float8[], @parentidx::int[], @continuationoptions::int[])
+                            @setscore::float8[], @parentidx::int[], @continuationoptions::int[],
+                            @unikey::text[], @fingerprint::text[], @uniqueexpiry::float8[],
+                            @presuppressed::bool[], @rootidx::int[])
                      WITH ORDINALITY AS t("invocationdata", "arguments", "statename", "statereason",
                                           "statedata", "queue", "setkey", "setprefix",
-                                          "setscore", "parentidx", "continuationoptions", "idx")
+                                          "setscore", "parentidx", "continuationoptions",
+                                          "unikey", "fingerprint", "uniqueexpiry",
+                                          "presuppressed", "rootidx", "idx")
+            ),
+            "claimed" AS (
+                INSERT INTO "{{schema}}"."set" ("key", "value", "score", "expireat")
+                SELECT "unikey", "fingerprint", "uniqueexpiry", to_timestamp("uniqueexpiry")
+                FROM "input" WHERE "fingerprint" IS NOT NULL
+                ON CONFLICT ("key", "value") DO UPDATE
+                    SET "score" = EXCLUDED."score", "expireat" = EXCLUDED."expireat"
+                    WHERE "set"."score" <= @uniquenow
+                RETURNING "key", "value"
+            ),
+            "suppressed" AS (
+                SELECT i."idx"
+                FROM "input" i JOIN "input" r ON r."idx" = i."rootidx"
+                WHERE r."presuppressed"
+                   OR (r."fingerprint" IS NOT NULL
+                       AND NOT EXISTS (SELECT 1 FROM "claimed" c
+                                       WHERE c."key" = r."unikey" AND c."value" = r."fingerprint"))
+            ),
+            "accepted" AS (
+                SELECT i.* FROM "input" i
+                WHERE NOT EXISTS (SELECT 1 FROM "suppressed" s WHERE s."idx" = i."idx")
             ),
             "allocated" AS (
                 SELECT "idx",
                        nextval(pg_get_serial_sequence('"{{schema}}"."job"', 'id')::regclass) AS "jobid",
                        nextval(pg_get_serial_sequence('"{{schema}}"."state"', 'id')::regclass) AS "stateid"
-                FROM "input"
+                FROM "accepted"
             ),
             "rows" AS (
                 SELECT i.*, a."jobid", a."stateid"
-                FROM "input" i JOIN "allocated" a ON a."idx" = i."idx"
+                FROM "accepted" i JOIN "allocated" a ON a."idx" = i."idx"
             ),
             "linked" AS (
                 SELECT r.*, p."jobid" AS "parentjobid"
@@ -205,5 +264,10 @@ namespace Dosaic.Plugins.Jobs.Hangfire.Batching
         public int[] ParameterIndexes { get; set; }
         public string[] ParameterNames { get; set; }
         public string[] ParameterValues { get; set; }
+        public string[] UniqueSetKeys { get; init; }
+        public string[] UniqueFingerprints { get; init; }
+        public double[] UniqueExpiresAt { get; init; }
+        public bool[] UniqueDuplicates { get; init; }
+        public int[] RootIndexes { get; init; }
     }
 }
