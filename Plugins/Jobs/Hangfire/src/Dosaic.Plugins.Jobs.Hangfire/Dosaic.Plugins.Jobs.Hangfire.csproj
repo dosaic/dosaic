@@ -10,6 +10,7 @@
       <PackageReference Include="Hangfire.PostgreSql" />
       <PackageReference Include="Microsoft.FeatureManagement" />
       <PackageReference Include="Newtonsoft.Json" />
+      <PackageReference Include="Npgsql" />
       <PackageReference Include="OpenTelemetry.Instrumentation.Hangfire" />
       <PackageReference Include="OpenTelemetry.Extensions.Hosting" />
     </ItemGroup>

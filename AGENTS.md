@@ -198,6 +198,7 @@ Defined in `PluginActivateableExtensions.GetSortOrderForPlugin`:
 | Bogus | 35.6.5 | Fake data generation |
 | AutoBogus | — | Convention-based fakes |
 | WireMock.Net | 1.25.0 | HTTP server mocking |
+| Testcontainers.PostgreSql | 4.14.0 | Throwaway PostgreSQL for integration tests (Hangfire plugin) |
 | RichardSzalay.MockHttp | — | HttpClient mocking |
 | TngTech.ArchUnitNET.NUnit | — | Architecture tests |
 | Allure.NUnit | — | Test reporting |
@@ -223,6 +224,12 @@ Defined in `PluginActivateableExtensions.GetSortOrderForPlugin`:
 - `TestingDefaults` — standard test configuration
 - `ActivityTestBootstrapper` — OpenTelemetry test setup
 - `TestMetricsCollector` — metrics assertion helpers
+
+### Integration tests
+
+- Tests that need Docker are marked `[Explicit]` + `[Category("Integration")]`, so a plain
+  `dotnet test` and CI skip them. Run them on demand:
+  `dotnet test <project> --filter TestCategory=Integration`
 
 ### Coverage
 

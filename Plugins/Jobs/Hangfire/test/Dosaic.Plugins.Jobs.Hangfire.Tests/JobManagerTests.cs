@@ -1,5 +1,6 @@
 using AwesomeAssertions;
 using Dosaic.Hosting.Abstractions.Extensions;
+using Dosaic.Plugins.Jobs.Hangfire.Batching;
 using Dosaic.Plugins.Jobs.Hangfire.Job;
 using Hangfire;
 using Hangfire.Common;
@@ -19,8 +20,10 @@ namespace Dosaic.Plugins.Jobs.Hangfire.Tests
         private IBackgroundJobClient _backgroundJobClient;
         private IStorageConnection _storageConnection;
         private IMonitoringApi _monitoringApi;
+        private IJobBatchDispatcher _batchDispatcher;
         private JobManager GetJobManager(bool hasQueueSupport = false) =>
-            new(hasQueueSupport, _storageConnection, _monitoringApi, _recurringJobManager, _backgroundJobClient);
+            new(hasQueueSupport, _storageConnection, _monitoringApi, _recurringJobManager, _backgroundJobClient,
+                _batchDispatcher);
 
         [SetUp]
         public void Up()
@@ -29,6 +32,109 @@ namespace Dosaic.Plugins.Jobs.Hangfire.Tests
             _backgroundJobClient = Substitute.For<IBackgroundJobClient>();
             _storageConnection = Substitute.For<IStorageConnection>();
             _monitoringApi = Substitute.For<IMonitoringApi>();
+            _batchDispatcher = Substitute.For<IJobBatchDispatcher>();
+        }
+
+        [Test]
+        public async Task EnqueueBatchAsyncSendsEveryParameterSetInOneDispatch()
+        {
+            IReadOnlyList<BatchJobEntry> dispatched = null;
+            _batchDispatcher.DispatchAsync(Arg.Any<IReadOnlyList<BatchJobEntry>>(), Arg.Any<CancellationToken>())
+                .Returns(call =>
+                {
+                    dispatched = call.Arg<IReadOnlyList<BatchJobEntry>>();
+                    return Task.FromResult<IReadOnlyList<string>>(["1", "2", "3"]);
+                });
+
+            var ids = await GetJobManager().EnqueueBatchAsync<TestParamJob, string>(["a", "b", "c"], "critical");
+
+            ids.Should().Equal("1", "2", "3");
+            await _batchDispatcher.Received(1)
+                .DispatchAsync(Arg.Any<IReadOnlyList<BatchJobEntry>>(), Arg.Any<CancellationToken>());
+            dispatched.Should().HaveCount(3);
+            dispatched.Should().AllSatisfy(x => x.Queue.Should().Be("critical"));
+            dispatched.Select(x => x.Job.Args[0]).Should().Equal("a", "b", "c");
+        }
+
+        [Test]
+        public async Task ScheduleBatchAsyncCreatesScheduledJobs()
+        {
+            IReadOnlyList<BatchJobEntry> dispatched = null;
+            _batchDispatcher.DispatchAsync(Arg.Any<IReadOnlyList<BatchJobEntry>>(), Arg.Any<CancellationToken>())
+                .Returns(call =>
+                {
+                    dispatched = call.Arg<IReadOnlyList<BatchJobEntry>>();
+                    return Task.FromResult<IReadOnlyList<string>>(["1"]);
+                });
+
+            await GetJobManager().ScheduleBatchAsync<TestParamJob, string>(["a"], TimeSpan.FromMinutes(1), "critical");
+
+            dispatched.Should().ContainSingle();
+            dispatched[0].SetKey.Should().Be("schedule");
+            dispatched[0].SetValuePrefix.Should().Be("critical");
+        }
+
+        [Test]
+        public void EnqueueBatchWorksSynchronously()
+        {
+            IReadOnlyList<BatchJobEntry> dispatched = null;
+            _batchDispatcher.DispatchAsync(Arg.Any<IReadOnlyList<BatchJobEntry>>(), Arg.Any<CancellationToken>())
+                .Returns(call =>
+                {
+                    dispatched = call.Arg<IReadOnlyList<BatchJobEntry>>();
+                    return Task.FromResult<IReadOnlyList<string>>(["1", "2"]);
+                });
+
+            var ids = GetJobManager().EnqueueBatch<TestParamJob, string>(["a", "b"], "bulk");
+
+            ids.Should().Equal("1", "2");
+            dispatched.Should().AllSatisfy(x => x.Queue.Should().Be("bulk"));
+        }
+
+        [Test]
+        public void ScheduleBatchWorksSynchronously()
+        {
+            IReadOnlyList<BatchJobEntry> dispatched = null;
+            _batchDispatcher.DispatchAsync(Arg.Any<IReadOnlyList<BatchJobEntry>>(), Arg.Any<CancellationToken>())
+                .Returns(call =>
+                {
+                    dispatched = call.Arg<IReadOnlyList<BatchJobEntry>>();
+                    return Task.FromResult<IReadOnlyList<string>>(["1", "2"]);
+                });
+
+            var ids = GetJobManager().ScheduleBatch<TestParamJob, string>(["a", "b"], TimeSpan.FromMinutes(3), "bulk");
+
+            ids.Should().Equal("1", "2");
+            dispatched.Should().AllSatisfy(x =>
+            {
+                x.SetKey.Should().Be("schedule");
+                x.SetValuePrefix.Should().Be("bulk");
+            });
+        }
+
+        [Test]
+        public async Task ScheduleBatchAtAsyncUsesTheAbsoluteEnqueueTime()
+        {
+            IReadOnlyList<BatchJobEntry> dispatched = null;
+            _batchDispatcher.DispatchAsync(Arg.Any<IReadOnlyList<BatchJobEntry>>(), Arg.Any<CancellationToken>())
+                .Returns(call =>
+                {
+                    dispatched = call.Arg<IReadOnlyList<BatchJobEntry>>();
+                    return Task.FromResult<IReadOnlyList<string>>(["1"]);
+                });
+            var enqueueAt = DateTimeOffset.UtcNow.AddDays(2);
+
+            await GetJobManager().ScheduleBatchAtAsync<TestParamJob, string>(["a"], enqueueAt, "bulk");
+
+            dispatched.Should().ContainSingle();
+            ((ScheduledState)dispatched[0].State).EnqueueAt.Should()
+                .BeCloseTo(enqueueAt.UtcDateTime, TimeSpan.FromSeconds(1));
+        }
+
+        [Test]
+        public void CreateBatchReturnsAnEmptyBatch()
+        {
+            GetJobManager().CreateBatch().Count.Should().Be(0);
         }
 
         [Test]

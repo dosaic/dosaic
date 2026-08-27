@@ -5,6 +5,10 @@
     </PropertyGroup>
 
     <ItemGroup>
+      <PackageReference Include="Testcontainers.PostgreSql" />
+    </ItemGroup>
+
+    <ItemGroup>
       <ProjectReference Include="..\..\..\..\..\Testing\NUnit\src\Dosaic.Testing.NUnit\Dosaic.Testing.NUnit.csproj" />
       <ProjectReference Include="..\..\src\Dosaic.Plugins.Jobs.Hangfire\Dosaic.Plugins.Jobs.Hangfire.csproj" />
     </ItemGroup>

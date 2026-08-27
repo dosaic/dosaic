@@ -1,5 +1,6 @@
 using Dosaic.Hosting.Abstractions.Extensions;
 using Dosaic.Plugins.Jobs.Hangfire.Attributes;
+using Dosaic.Plugins.Jobs.Hangfire.Batching;
 using Dosaic.Plugins.Jobs.Hangfire.Extensions;
 using Dosaic.Plugins.Jobs.Hangfire.Job;
 using Hangfire;
@@ -28,6 +29,7 @@ namespace Dosaic.Plugins.Jobs.Hangfire
     {
         private readonly IRecurringJobManager _recurringJobManager;
         private readonly IBackgroundJobClient _backgroundJobClient;
+        private readonly IJobBatchDispatcher _batchDispatcher;
         private readonly bool _hasQueueSupport;
         public IStorageConnection Connection { get; }
         public IMonitoringApi MonitoringApi { get; }
@@ -36,10 +38,12 @@ namespace Dosaic.Plugins.Jobs.Hangfire
             IStorageConnection connection,
             IMonitoringApi monitoringApi,
             IRecurringJobManager recurringJobManager,
-            IBackgroundJobClient backgroundJobClient)
+            IBackgroundJobClient backgroundJobClient,
+            IJobBatchDispatcher batchDispatcher)
         {
             _recurringJobManager = recurringJobManager;
             _backgroundJobClient = backgroundJobClient;
+            _batchDispatcher = batchDispatcher;
             Connection = connection;
             MonitoringApi = monitoringApi;
             _hasQueueSupport = hasQueueSupport;
@@ -161,6 +165,64 @@ namespace Dosaic.Plugins.Jobs.Hangfire
                 _recurringJobManager.AddOrUpdate<TJob>(GetJobName<TJob>(jobSuffix), queue, x => x.ExecuteAsync(parameters, CancellationToken.None), cron, new RecurringJobOptions { TimeZone = GetTimeZone<TJob>() });
             else
                 _recurringJobManager.AddOrUpdate<TJob>(GetJobName<TJob>(jobSuffix), x => x.ExecuteAsync(parameters, CancellationToken.None), cron, new RecurringJobOptions { TimeZone = GetTimeZone<TJob>() });
+        }
+
+        public IJobBatch CreateBatch() => new JobBatch(_batchDispatcher);
+
+        public IReadOnlyList<string> EnqueueBatch<TJob, TJobParams>(IEnumerable<TJobParams> parameters,
+            string queue = EnqueuedState.DefaultQueue) where TJob : IParameterizedAsyncJob<TJobParams> =>
+            BuildBatch<TJob, TJobParams>(parameters, queue).Save();
+
+        public Task<IReadOnlyList<string>> EnqueueBatchAsync<TJob, TJobParams>(IEnumerable<TJobParams> parameters,
+            string queue = EnqueuedState.DefaultQueue, CancellationToken cancellationToken = default)
+            where TJob : IParameterizedAsyncJob<TJobParams> =>
+            BuildBatch<TJob, TJobParams>(parameters, queue).SaveAsync(cancellationToken);
+
+        public IReadOnlyList<string> ScheduleBatch<TJob, TJobParams>(IEnumerable<TJobParams> parameters,
+            TimeSpan schedule, string queue = EnqueuedState.DefaultQueue)
+            where TJob : IParameterizedAsyncJob<TJobParams> =>
+            BuildScheduledBatch<TJob, TJobParams>(parameters, schedule, queue).Save();
+
+        public Task<IReadOnlyList<string>> ScheduleBatchAsync<TJob, TJobParams>(IEnumerable<TJobParams> parameters,
+            TimeSpan schedule, string queue = EnqueuedState.DefaultQueue,
+            CancellationToken cancellationToken = default) where TJob : IParameterizedAsyncJob<TJobParams> =>
+            BuildScheduledBatch<TJob, TJobParams>(parameters, schedule, queue).SaveAsync(cancellationToken);
+
+        public IReadOnlyList<string> ScheduleBatchAt<TJob, TJobParams>(IEnumerable<TJobParams> parameters,
+            DateTimeOffset enqueueAt, string queue = EnqueuedState.DefaultQueue)
+            where TJob : IParameterizedAsyncJob<TJobParams> =>
+            BuildScheduledAtBatch<TJob, TJobParams>(parameters, enqueueAt, queue).Save();
+
+        public Task<IReadOnlyList<string>> ScheduleBatchAtAsync<TJob, TJobParams>(IEnumerable<TJobParams> parameters,
+            DateTimeOffset enqueueAt, string queue = EnqueuedState.DefaultQueue,
+            CancellationToken cancellationToken = default) where TJob : IParameterizedAsyncJob<TJobParams> =>
+            BuildScheduledAtBatch<TJob, TJobParams>(parameters, enqueueAt, queue).SaveAsync(cancellationToken);
+
+        private IJobBatch BuildScheduledAtBatch<TJob, TJobParams>(IEnumerable<TJobParams> parameters,
+            DateTimeOffset enqueueAt, string queue) where TJob : IParameterizedAsyncJob<TJobParams>
+        {
+            var batch = CreateBatch();
+            foreach (var parameter in parameters)
+                batch.ScheduleAt<TJob, TJobParams>(parameter, enqueueAt, queue);
+            return batch;
+        }
+
+        private IJobBatch BuildScheduledBatch<TJob, TJobParams>(IEnumerable<TJobParams> parameters, TimeSpan schedule,
+            string queue) where TJob : IParameterizedAsyncJob<TJobParams>
+        {
+            var batch = CreateBatch();
+            foreach (var parameter in parameters)
+                batch.Schedule<TJob, TJobParams>(parameter, schedule, queue);
+            return batch;
+        }
+
+        private IJobBatch BuildBatch<TJob, TJobParams>(IEnumerable<TJobParams> parameters, string queue)
+            where TJob : IParameterizedAsyncJob<TJobParams>
+        {
+            var batch = CreateBatch();
+            foreach (var parameter in parameters)
+                batch.Enqueue<TJob, TJobParams>(parameter, queue);
+            return batch;
         }
 
         public void DeleteRecurring(string id) => _recurringJobManager.RemoveIfExists(id);
