@@ -43,10 +43,23 @@ hangfire:
     - critical
 
   # Optional tuning
-  pollingIntervalInMs: 5000       # defaults to Hangfire built-in value
+  pollingIntervalInMs: 5000       # scheduled-job poller interval, defaults to Hangfire built-in value
   workerCount: 10                 # defaults to Hangfire built-in value
   invisibilityTimeoutInMinutes: 30
   maxJobArgumentsSizeToRenderInBytes: 4096  # max bytes of job args displayed in dashboard
+  schemaName: hangfire            # PostgreSQL schema holding the Hangfire tables
+  queuePollIntervalInMs: 1000     # how often an idle worker asks the queue for work
+  useSlidingInvisibilityTimeout: false
+  batchChunkSize: 0               # 0 = write a whole batch in exactly one round trip
+
+  # Per queue tuning - every entry gets its own background job server
+  queueConfigurations:
+    - name: bulk
+      workerCount: 100            # workers dedicated to this queue
+      prefetchCount: 50           # jobs fetched per polling round trip
+      queuePollIntervalInMs: 200
+    - name: critical
+      workerCount: 10
 ```
 
 ### Configuration class reference
@@ -68,7 +81,20 @@ public class HangfireConfiguration
     public string[] Queues { get; set; } = [EnqueuedState.DefaultQueue];
     public int InvisibilityTimeoutInMinutes { get; set; } = 30;
     public int MaxJobArgumentsSizeToRenderInBytes { get; set; } = 4096;
+    public string SchemaName { get; set; } = "hangfire";
+    public int QueuePollIntervalInMs { get; set; } = 1000;
+    public bool UseSlidingInvisibilityTimeout { get; set; }
+    public int BatchChunkSize { get; set; }
+    public QueueConfiguration[] QueueConfigurations { get; set; } = [];
     public string ConnectionString => $"Host={Host};Port={Port};Database={Database};Username={User};Password={Password};";
+}
+
+public class QueueConfiguration
+{
+    public string Name { get; set; }
+    public int? WorkerCount { get; set; }
+    public int PrefetchCount { get; set; } = 1;
+    public int? QueuePollIntervalInMs { get; set; }
 }
 ```
 
@@ -194,6 +220,134 @@ public class OrderController
 }
 ```
 
+### Batch creating jobs (`IJobManager.CreateBatch`)
+
+Creating jobs one by one costs one database round trip per job, which becomes the bottleneck long
+before the workers do. The batch API collects any number of jobs — including continuation chains
+between them — and writes **all** of them with a single SQL statement, so a batch of 100 000 jobs is
+exactly one round trip.
+
+```csharp
+// simplest form: one job per parameter set
+var ids = await jobManager.EnqueueBatchAsync<ProcessOrderJob, int>(orderIds, queue: "bulk");
+var sameButSync = jobManager.EnqueueBatch<ProcessOrderJob, int>(orderIds, "bulk");
+
+// or scheduled, relative or absolute
+await jobManager.ScheduleBatchAsync<ProcessOrderJob, int>(orderIds, TimeSpan.FromMinutes(5), "bulk");
+await jobManager.ScheduleBatchAtAsync<ProcessOrderJob, int>(orderIds, tomorrowAtThree, "bulk");
+jobManager.ScheduleBatch<ProcessOrderJob, int>(orderIds, TimeSpan.FromMinutes(5), "bulk");
+```
+
+For anything more involved, build the batch explicitly. Continuations are declared on the batch item
+handle and are resolved inside the same statement, so the antecedent job id never has to travel back
+to the application first:
+
+```csharp
+var batch = jobManager.CreateBatch();
+
+foreach (var orderId in orderIds)
+{
+    var import = batch.Enqueue<ImportOrderJob, int>(orderId, "bulk");
+    var enrich = import.ContinueWith<EnrichOrderJob, int>(orderId, "bulk");
+    enrich.ContinueWith<NotifyOrderJob, int>(orderId, options: JobContinuationOptions.OnAnyFinishedState);
+}
+
+batch.Schedule<CleanupJob>(TimeSpan.FromHours(1), "maintenance");
+
+var jobIds = await batch.SaveAsync();   // one round trip
+var firstImportId = jobIds[0];
+```
+
+`IJobBatch` supports `Enqueue`, `Schedule`, `ScheduleAt` and, on every returned `IJobBatchItem`,
+`ContinueWith`. After `SaveAsync()` each item exposes its `Id`.
+
+Enqueueing, scheduling and chaining can be mixed freely in one batch, and all of it still costs one
+round trip:
+
+```csharp
+var batch = jobManager.CreateBatch();
+
+batch.Enqueue<ImportOrderJob, int>(orderId, "bulk");                       // runs now
+batch.ScheduleAt<CleanupJob>(tomorrowAtThree, "maintenance");              // runs at a fixed time
+
+var nightly = batch.Schedule<ReportJob, int>(tenantId, TimeSpan.FromHours(8), "reports");
+nightly.ContinueWith<MailReportJob, int>(tenantId, "reports");             // chained off a scheduled job
+
+var root = batch.Enqueue<ImportOrderJob, int>(orderId, "bulk");
+root.ContinueWith<EnrichOrderJob, int>(orderId, "bulk");                   // fan-out: two continuations
+root.ContinueWith<AuditOrderJob, int>(orderId, "audit",
+    JobContinuationOptions.OnAnyFinishedState);                            // on the same antecedent
+
+await batch.SaveAsync();
+```
+
+A continuation runs as soon as its antecedent finishes; there is no "continue with a delay". Hangfire
+cannot route a delayed continuation to a queue (the queue is not carried on the awaiting job), so if
+you need a delayed follow-up, schedule it as its own batch entry or put `[Queue]` on the job type.
+
+Things worth knowing:
+
+- **Chaining is batch local.** `ContinueWith` links two jobs of the same batch. Continuing on a job
+  that already exists in the storage still goes through `BackgroundJob.ContinueJobWith`, because it
+  has to merge into the antecedent's continuation list under a distributed lock.
+- **Client side filters are bypassed.** The bulk write goes straight to the storage, so state
+  election filters such as `[UniquePerQueue]` do not run for batched jobs — they issue their own
+  queries and would defeat the single round trip. Server side filters
+  (`EnabledByFeatureFilter`, `LogJobExecutionFilter`, `[JobTimeout]`, retries) are unaffected.
+- **Non-PostgreSQL storages still work.** With `inMemory: true`, or when an `IHangfireConfigurator`
+  brings its own storage, the batch falls back to creating the jobs through the regular Hangfire
+  client — same API, without the single round trip guarantee.
+- `batchChunkSize` caps how many jobs go into one statement. It defaults to `0` (no cap). Chunking
+  never splits a continuation chain.
+- **Pickup latency.** The bulk write does not raise Hangfire's in-process "queue changed" signal, so
+  idle workers pick batched jobs up on their next poll — `queuePollIntervalInMs` (1000 ms by default,
+  instead of Hangfire's 15 seconds).
+
+#### Verifying it against a real database
+
+The batching and prefetching behaviour is covered by Testcontainers integration tests that start a
+real PostgreSQL, let Hangfire create its real schema, and assert against it — including that a 1000
+job batch produces exactly one statement in PostgreSQL's own query log, that batched jobs are
+indistinguishable from jobs created by `BackgroundJobClient`, and that a batched continuation chain
+actually executes in order on a running `BackgroundJobServer`.
+
+They are marked `[Explicit]` + `[Category("Integration")]`, so a normal `dotnet test` skips them and
+never needs Docker:
+
+```bash
+dotnet test Plugins/Jobs/Hangfire/test/Dosaic.Plugins.Jobs.Hangfire.Tests --filter TestCategory=Integration
+```
+
+### Tuning queues for high volume (workers and prefetching)
+
+Each entry in `queueConfigurations` gets its own background job server, which makes worker count and
+fetch behaviour tunable per queue instead of globally:
+
+```yaml
+hangfire:
+  workerCount: 20                 # used by the shared server and as fallback
+  queues: [default, critical]
+  queueConfigurations:
+    - name: bulk
+      workerCount: 100
+      prefetchCount: 50
+      queuePollIntervalInMs: 200
+```
+
+- **`workerCount`** — workers dedicated to that queue. Queues without an entry stay on the shared
+  server and use the global `workerCount`.
+- **`prefetchCount`** — jobs pulled out of the queue per round trip. Hangfire's stock PostgreSQL
+  queue runs one `UPDATE ... LIMIT 1` per job; with `prefetchCount: 50` a single query hands 50 jobs
+  to the workers. This is the main throughput lever when a queue is used as a message bus
+  replacement. Values greater than 1 require the built-in PostgreSQL storage.
+- **`queuePollIntervalInMs`** — how long an empty queue waits before asking again. The global default
+  of 1000 ms replaces Hangfire's 15 second default, which is far too slow for bus-like workloads.
+
+Prefetched jobs are marked as fetched immediately, so they are invisible to other servers for
+`invisibilityTimeoutInMinutes`. A worker only asks for a job when it is free, so at most
+`prefetchCount - 1` jobs are ever buffered; size the prefetch to what your workers can drain quickly
+and enable `useSlidingInvisibilityTimeout` when jobs run longer than the invisibility window.
+
 ### Querying job state via `IJobManager`
 
 `IJobManager` exposes monitoring APIs to inspect the current state of the job store:
@@ -266,6 +420,9 @@ Optional properties:
 - `CheckScheduledJobs` — also check scheduled (delayed) jobs (default: `false`)
 - `CheckRunningJobs` — also check currently processing jobs (default: `false`)
 
+> Not applied to jobs created through the batch API — see
+> [Batch creating jobs](#batch-creating-jobs-ijobmanagercreatebatch).
+
 ### `[JobCleanupExpirationTimeAttribute(days)]`
 
 Controls how many days job results are retained in the storage backend before deletion.
@@ -318,6 +475,17 @@ public class MyHangfireConfigurator : IHangfireConfigurator
     }
 }
 ```
+
+`ConfigureServer` is invoked once **per background job server**, so with
+[`queueConfigurations`](#tuning-queues-for-high-volume-workers-and-prefetching) it runs for the shared
+server and for every dedicated queue server. It runs last, which means a configurator that sets
+`WorkerCount` or `Queues` overrides the per-queue configuration — use `options.Queues` to tell the
+servers apart if you only want to touch one of them.
+
+When a configurator supplies the storage (`IncludesStorage => true`, or by calling `UseStorage` in
+`Configure`), the batch API falls back to creating jobs through the regular Hangfire client: the bulk
+statement talks to the connection string from `hangfire:` configuration and must never be pointed at
+someone else's storage.
 
 All `IHangfireConfigurator` implementations are discovered automatically by the Dosaic plugin system.
 

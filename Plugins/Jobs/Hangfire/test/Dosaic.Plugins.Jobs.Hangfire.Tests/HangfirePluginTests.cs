@@ -3,6 +3,7 @@ using AwesomeAssertions;
 using Dosaic.Hosting.Abstractions;
 using Dosaic.Hosting.Abstractions.Services;
 using Dosaic.Plugins.Jobs.Hangfire.Attributes;
+using Dosaic.Plugins.Jobs.Hangfire.Batching;
 using Hangfire;
 using Hangfire.MemoryStorage;
 using Hangfire.Storage;
@@ -123,6 +124,78 @@ namespace Dosaic.Plugins.Jobs.Hangfire.Tests
             options.Should().NotBeNull();
             options.SchedulePollingInterval.Should().Be(TimeSpan.FromMilliseconds(_hangfireConfiguration.PollingIntervalInMs!.Value));
             options.WorkerCount.Should().Be(_hangfireConfiguration.WorkerCount!.Value);
+        }
+
+        [Test]
+        public void InMemoryStorageFallsBackToTheClientBatchDispatcher()
+        {
+            var sc = new ServiceCollection();
+            sc.AddSingleton<ILoggerFactory>(NullLoggerFactory.Instance);
+            GetPlugin().ConfigureServices(sc);
+            var sp = sc.BuildServiceProvider();
+
+            sp.GetRequiredService<IJobBatchDispatcher>().Should()
+                .BeOfType<BackgroundJobClientBatchDispatcher>("the bulk statement only works on our own PostgreSQL");
+        }
+
+        [Test, Parallelizable(ParallelScope.None)]
+        public void ConfiguratorSuppliedStorageFallsBackToTheClientBatchDispatcher()
+        {
+            JobStorage.Current = null;
+            _configurator.IncludesStorage.Returns(true);
+            _configurator.When(x => x.Configure(Arg.Any<IGlobalConfiguration>()))
+                .Do(x => x.Arg<IGlobalConfiguration>().UseMemoryStorage());
+            _hangfireConfiguration.InMemory = false;
+            var sc = new ServiceCollection();
+            sc.AddSingleton<ILoggerFactory>(NullLoggerFactory.Instance);
+            GetPlugin().ConfigureServices(sc);
+            var sp = sc.BuildServiceProvider();
+
+            sp.GetRequiredService<IJobBatchDispatcher>().Should().BeOfType<BackgroundJobClientBatchDispatcher>();
+        }
+
+        [Test]
+        public void EachConfiguredQueueGetsItsOwnServerWithItsOwnWorkerCount()
+        {
+            _hangfireConfiguration.QueueConfigurations =
+            [
+                new QueueConfiguration { Name = "bulk", WorkerCount = 50 },
+                new QueueConfiguration { Name = "critical" }
+            ];
+            var sc = new ServiceCollection();
+            sc.AddScoped<ILogger<HangfireStatisticsMetricsReporter>, NullLogger<HangfireStatisticsMetricsReporter>>();
+            GetPlugin().ConfigureServices(sc);
+            var sp = sc.BuildServiceProvider();
+
+            var options = sp.GetServices<IHostedService>().OfType<BackgroundJobServerHostedService>()
+                .Select(GetOptions).ToList();
+            options.Should().HaveCount(3);
+            var shared = options.Single(x => x.ServerName is null);
+            shared.Queues.Should().BeEquivalentTo("default", "test");
+            shared.WorkerCount.Should().Be(200);
+            var bulk = options.Single(x => x.Queues.Contains("bulk"));
+            bulk.Queues.Should().Equal("bulk");
+            bulk.WorkerCount.Should().Be(50);
+            bulk.ServerName.Should().EndWith(":bulk");
+            var critical = options.Single(x => x.Queues.Contains("critical"));
+            critical.WorkerCount.Should().Be(200);
+        }
+
+        [Test]
+        public void QueuesWithoutAConfigurationStayOnTheSharedServer()
+        {
+            var sc = new ServiceCollection();
+            sc.AddScoped<ILogger<HangfireStatisticsMetricsReporter>, NullLogger<HangfireStatisticsMetricsReporter>>();
+            GetPlugin().ConfigureServices(sc);
+            var sp = sc.BuildServiceProvider();
+            sp.GetServices<IHostedService>().OfType<BackgroundJobServerHostedService>().Should().ContainSingle();
+        }
+
+        private static BackgroundJobServerOptions GetOptions(BackgroundJobServerHostedService service)
+        {
+            var field = typeof(BackgroundJobServerHostedService)
+                .GetField("_options", BindingFlags.NonPublic | BindingFlags.Instance)!;
+            return (BackgroundJobServerOptions)field.GetValue(service);
         }
 
         [Test, Parallelizable(ParallelScope.None)]
