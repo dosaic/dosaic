@@ -33,7 +33,7 @@ namespace Dosaic.Plugins.Jobs.Hangfire.Tests.Fetching
         {
             _inner.GetConnection().Returns(Substitute.For<JobStorageConnection>());
             _client.Fetch(Arg.Any<string[]>(), 25, Arg.Any<TimeSpan>())
-                .Returns([new PrefetchedQueueEntry(1, 5)]);
+                .Returns([new PrefetchedQueueEntry(1, 5, DateTime.UtcNow)]);
 
             var connection = GetStorage(("bulk", 25)).GetConnection();
 
@@ -46,7 +46,7 @@ namespace Dosaic.Plugins.Jobs.Hangfire.Tests.Fetching
         public void UnknownQueuesFallBackToTheDefaultPrefetchCount()
         {
             _inner.GetConnection().Returns(Substitute.For<JobStorageConnection>());
-            _client.Fetch(Arg.Any<string[]>(), 1, Arg.Any<TimeSpan>()).Returns([new PrefetchedQueueEntry(1, 9)]);
+            _client.Fetch(Arg.Any<string[]>(), 1, Arg.Any<TimeSpan>()).Returns([new PrefetchedQueueEntry(1, 9, DateTime.UtcNow)]);
 
             GetStorage(("bulk", 25)).GetConnection().FetchNextJob(["default"], CancellationToken.None)
                 .JobId.Should().Be("9");

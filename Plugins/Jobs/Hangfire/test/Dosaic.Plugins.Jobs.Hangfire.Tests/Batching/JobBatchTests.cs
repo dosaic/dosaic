@@ -274,5 +274,25 @@ namespace Dosaic.Plugins.Jobs.Hangfire.Tests.Batching
             second.IsSuppressed.Should().BeTrue();
             second.Id.Should().BeNull();
         }
+
+        [Test]
+        public async Task AFailedDispatchDoesNotLetTheBatchBeSavedAgain()
+        {
+            var dispatcher = Substitute.For<IJobBatchDispatcher>();
+            dispatcher.DispatchAsync(Arg.Any<IReadOnlyList<BatchJobEntry>>(), Arg.Any<CancellationToken>())
+                .Returns<Task<IReadOnlyList<string>>>(_ => throw new InvalidOperationException("boom"));
+            var batch = new JobBatch(dispatcher);
+            batch.Enqueue<TestJob>();
+
+            var first = async () => await batch.SaveAsync();
+            await first.Should().ThrowAsync<InvalidOperationException>().WithMessage("boom");
+
+            // the dispatch may have written jobs before it threw - saving again would create them twice
+            var second = async () => await batch.SaveAsync();
+            await second.Should().ThrowAsync<InvalidOperationException>().WithMessage("*already been saved*");
+            await dispatcher.Received(1)
+                .DispatchAsync(Arg.Any<IReadOnlyList<BatchJobEntry>>(), Arg.Any<CancellationToken>());
+        }
+
     }
 }

@@ -11,7 +11,7 @@ namespace Dosaic.Plugins.Jobs.Hangfire.Fetching
     ///     Wraps the PostgreSQL job storage and replaces the one-job-per-query fetch with a batched
     ///     prefetching fetch that is configurable per queue.
     /// </summary>
-    internal sealed class PrefetchJobStorage : JobStorage
+    internal sealed class PrefetchJobStorage : JobStorage, IDisposable
     {
         private readonly JobStorage _inner;
         private readonly IJobQueueClient _client;
@@ -57,17 +57,36 @@ namespace Dosaic.Plugins.Jobs.Hangfire.Fetching
             return prefetcher.Fetch(queues, cancellationToken);
         }
 
+        /// <summary>
+        ///     Every prefetch queue gets its own single queue server, so exactly one configuration matches in
+        ///     practice. The merge below only covers a configurator that puts several of them on one server:
+        ///     the largest buffer is kept, and every timing is taken at its most conservative value.
+        /// </summary>
         private PrefetchSettings ResolveSettings(string[] queues)
         {
             var matches = queues.Where(_settingsPerQueue.ContainsKey).Select(x => _settingsPerQueue[x]).ToList();
             if (matches.Count == 0) return _defaultSettings;
+            if (matches.Count == 1) return matches[0];
+            var sliding = matches.Where(x => x.SlidingKeepAliveInterval.HasValue)
+                .Select(x => x.SlidingKeepAliveInterval.Value).ToList();
             return new PrefetchSettings
             {
                 PrefetchCount = matches.Max(x => x.PrefetchCount),
                 PollInterval = matches.Min(x => x.PollInterval),
-                InvisibilityTimeout = _defaultSettings.InvisibilityTimeout,
-                SlidingKeepAliveInterval = _defaultSettings.SlidingKeepAliveInterval
+                InvisibilityTimeout = matches.Min(x => x.InvisibilityTimeout),
+                SlidingKeepAliveInterval = sliding.Count == 0 ? null : sliding.Min()
             };
+        }
+
+        /// <summary>
+        ///     Releases every job that was claimed into a prefetch buffer but never handed to a worker.
+        ///     Hangfire's <c>AddHangfire</c> registers the storage as a singleton, so the container calls this.
+        /// </summary>
+        public void Dispose()
+        {
+            foreach (var prefetcher in _prefetchers.Values) prefetcher.Dispose();
+            _prefetchers.Clear();
+            (_inner as IDisposable)?.Dispose();
         }
     }
 }

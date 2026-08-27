@@ -65,10 +65,12 @@ namespace Dosaic.Plugins.Jobs.Hangfire
             ConfigureServers(serviceCollection);
             serviceCollection.AddSingleton<IJobBatchDispatcher>(sp =>
             {
+                // resolving the storage first is what runs the AddHangfire callback above, and therefore what
+                // assigns _managedStorage — checking the field before that would always read null
+                var storage = sp.GetRequiredService<JobStorage>();
                 // a configurator may still have replaced the storage after ours was registered — in that case
                 // we must not bulk write to the connection string from our own configuration
-                var ownsStorage = _managedStorage is not null &&
-                                  ReferenceEquals(sp.GetRequiredService<JobStorage>(), _managedStorage);
+                var ownsStorage = _managedStorage is not null && ReferenceEquals(storage, _managedStorage);
                 return ownsStorage
                     ? new PostgresJobBatchDispatcher(CreateConnection, _hangfireConfig.SchemaName,
                         _hangfireConfig.BatchChunkSize)
@@ -95,6 +97,7 @@ namespace Dosaic.Plugins.Jobs.Hangfire
 
         private JobStorage CreatePostgresStorage()
         {
+            PostgresSchemaGuard.ValidateName(_hangfireConfig.SchemaName);
             var storageOptions = new PostgreSqlStorageOptions
             {
                 InvisibilityTimeout = TimeSpan.FromMinutes(_hangfireConfig.InvisibilityTimeoutInMinutes),
@@ -208,6 +211,9 @@ namespace Dosaic.Plugins.Jobs.Hangfire
         private void RegisterUniquenessStore(JobStorage jobStorage)
         {
             if (_managedStorage is null || !ReferenceEquals(jobStorage, _managedStorage)) return;
+            // batching and prefetching write Hangfire.PostgreSql's private tables directly, so a schema this
+            // plugin was not written against has to stop the host instead of corrupting job state
+            PostgresSchemaGuard.AssertSupportedVersion(CreateConnection, _hangfireConfig.SchemaName);
             JobUniquenessStores.Use(jobStorage,
                 new PostgresJobUniquenessStore(CreateConnection, _hangfireConfig.SchemaName));
         }

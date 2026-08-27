@@ -4,6 +4,7 @@ using Dosaic.Plugins.Jobs.Hangfire.Attributes;
 using Dosaic.Plugins.Jobs.Hangfire.Job;
 using Dosaic.Plugins.Jobs.Hangfire.Uniqueness;
 using Hangfire;
+using Hangfire.Common;
 using Hangfire.States;
 
 namespace Dosaic.Plugins.Jobs.Hangfire.Batching
@@ -56,11 +57,10 @@ namespace Dosaic.Plugins.Jobs.Hangfire.Batching
         public async Task<IReadOnlyList<string>> SaveAsync(CancellationToken cancellationToken = default)
         {
             if (_saved) throw new InvalidOperationException("This job batch has already been saved.");
-            if (_entries.Count == 0)
-            {
-                _saved = true;
-                return [];
-            }
+            // closed before dispatching, not after: a dispatch that throws may still have written jobs, so
+            // saving the same batch a second time could create every job twice
+            _saved = true;
+            if (_entries.Count == 0) return [];
 
             var ids = await _dispatcher.DispatchAsync(_entries, cancellationToken).ConfigureAwait(false);
             if (ids.Count != _entries.Count)
@@ -72,10 +72,14 @@ namespace Dosaic.Plugins.Jobs.Hangfire.Batching
                 _items[i].IsSuppressed = ids[i] is null;
             }
 
-            _saved = true;
             return ids;
         }
 
+        /// <summary>
+        ///     Blocking wrapper around <see cref="SaveAsync" />, kept for parity with the rest of
+        ///     <see cref="IJobManager" />. It occupies a thread pool thread for the whole write - prefer
+        ///     <see cref="SaveAsync" />.
+        /// </summary>
         public IReadOnlyList<string> Save() => SaveAsync().ConfigureAwait(false).GetAwaiter().GetResult();
 
         private IJobBatchItem AddScheduled(global::Hangfire.Common.Job job, DateTimeOffset enqueueAt, string queue)
@@ -103,7 +107,7 @@ namespace Dosaic.Plugins.Jobs.Hangfire.Batching
             var fingerprint = GetFingerprint(unique, state, job);
             var duplicate = fingerprint is not null && !_claimedFingerprints.Add(fingerprint);
             if (fingerprint is not null && !duplicate)
-                parameters[JobFingerprint.ClaimParameterName] = $"\"{fingerprint}\"";
+                parameters[JobFingerprint.ClaimParameterName] = SerializationHelper.Serialize(fingerprint, SerializationOption.User);
             _entries.Add(new BatchJobEntry
             {
                 Index = index,
@@ -168,8 +172,8 @@ namespace Dosaic.Plugins.Jobs.Hangfire.Batching
             // including the empty name of the invariant culture - keep parity.
             return new Dictionary<string, string>
             {
-                ["CurrentCulture"] = $"\"{CultureInfo.CurrentCulture.Name}\"",
-                ["CurrentUICulture"] = $"\"{CultureInfo.CurrentUICulture.Name}\""
+                ["CurrentCulture"] = SerializationHelper.Serialize(CultureInfo.CurrentCulture.Name, SerializationOption.User),
+                ["CurrentUICulture"] = SerializationHelper.Serialize(CultureInfo.CurrentUICulture.Name, SerializationOption.User)
             };
         }
 

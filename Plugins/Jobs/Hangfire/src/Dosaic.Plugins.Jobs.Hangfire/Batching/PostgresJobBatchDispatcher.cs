@@ -14,13 +14,13 @@ namespace Dosaic.Plugins.Jobs.Hangfire.Batching
     internal sealed class PostgresJobBatchDispatcher : IJobBatchDispatcher
     {
         private readonly Func<NpgsqlConnection> _connectionFactory;
-        private readonly string _schema;
+        private readonly string _sql;
         private readonly int _chunkSize;
 
         public PostgresJobBatchDispatcher(Func<NpgsqlConnection> connectionFactory, string schema, int chunkSize)
         {
             _connectionFactory = connectionFactory;
-            _schema = schema;
+            _sql = BuildSql(PostgresSchemaGuard.ValidateName(schema));
             _chunkSize = chunkSize;
         }
 
@@ -31,16 +31,21 @@ namespace Dosaic.Plugins.Jobs.Hangfire.Batching
             var ids = new string[entries.Count];
             await using var connection = _connectionFactory();
             await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
+            // a batch is all or nothing - without this, a failing chunk would leave the earlier chunks
+            // committed while the caller gets an exception and no job ids at all
+            await using var transaction = await connection.BeginTransactionAsync(cancellationToken)
+                .ConfigureAwait(false);
             foreach (var chunk in BatchChunker.Chunk(entries, _chunkSize))
-                await WriteAsync(connection, chunk, ids, cancellationToken).ConfigureAwait(false);
+                await WriteAsync(connection, transaction, chunk, ids, cancellationToken).ConfigureAwait(false);
+            await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
             return ids;
         }
 
-        private async Task WriteAsync(NpgsqlConnection connection, IReadOnlyList<BatchJobEntry> chunk, string[] ids,
-            CancellationToken cancellationToken)
+        private async Task WriteAsync(NpgsqlConnection connection, NpgsqlTransaction transaction,
+            IReadOnlyList<BatchJobEntry> chunk, string[] ids, CancellationToken cancellationToken)
         {
             var parameters = BuildParameters(chunk);
-            await using var command = new NpgsqlCommand(BuildSql(_schema), connection);
+            await using var command = new NpgsqlCommand(_sql, connection, transaction);
             Add(command, "invocationdata", NpgsqlDbType.Array | NpgsqlDbType.Text, parameters.InvocationData);
             Add(command, "arguments", NpgsqlDbType.Array | NpgsqlDbType.Text, parameters.Arguments);
             Add(command, "statename", NpgsqlDbType.Array | NpgsqlDbType.Text, parameters.StateNames);

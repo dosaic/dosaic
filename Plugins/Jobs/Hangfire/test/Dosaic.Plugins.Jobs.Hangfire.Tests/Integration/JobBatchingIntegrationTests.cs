@@ -1,6 +1,7 @@
 using AwesomeAssertions;
 using Dosaic.Plugins.Jobs.Hangfire.Batching;
 using Hangfire;
+using Hangfire.States;
 using Newtonsoft.Json.Linq;
 using NUnit.Framework;
 
@@ -196,6 +197,46 @@ namespace Dosaic.Plugins.Jobs.Hangfire.Tests.Integration
             connection.GetStateData(ids[1]).Data["ParentId"].Should().Be(ids[0]);
             connection.GetStateData(ids[2]).Data["ParentId"].Should().Be(ids[1]);
             (await CountExecutedStatementsAsync(mark, @"WITH ""input"" AS")).Should().Be(2);
+        }
+
+        [Test]
+        public async Task AFailingChunkRollsBackTheChunksBeforeIt()
+        {
+            var before = await ScalarAsync<long>($"""SELECT COUNT(*) FROM "{SchemaName}"."job";""");
+            var dispatcher = new PostgresJobBatchDispatcher(CreateConnection, SchemaName, 1);
+            var entries = new[]
+            {
+                Entry(1, new EnqueuedState("rollback")),
+                Entry(2, new ThrowingState())
+            };
+
+            var act = async () => await dispatcher.DispatchAsync(entries);
+
+            await act.Should().ThrowAsync<InvalidOperationException>();
+            var after = await ScalarAsync<long>($"""SELECT COUNT(*) FROM "{SchemaName}"."job";""");
+            after.Should().Be(before, "a batch is written all at once or not at all");
+            Storage.GetMonitoringApi().EnqueuedCount("rollback").Should().Be(0);
+        }
+
+        private static BatchJobEntry Entry(int index, IState state) => new()
+        {
+            Index = index,
+            Job = global::Hangfire.Common.Job.FromExpression<RecordingJob>(x =>
+                x.ExecuteAsync($"rollback-{index}", CancellationToken.None)),
+            State = state,
+            Queue = state is EnqueuedState enqueued ? enqueued.Queue : null
+        };
+
+        /// <summary>Fails while the chunk is flattened, so the first chunk is already written.</summary>
+        private sealed class ThrowingState : IState
+        {
+            public string Name => "Enqueued";
+            public string Reason => null;
+            public bool IsFinal => false;
+            public bool IgnoreJobLoadException => false;
+
+            public Dictionary<string, string> SerializeData() =>
+                throw new InvalidOperationException("boom");
         }
     }
 }

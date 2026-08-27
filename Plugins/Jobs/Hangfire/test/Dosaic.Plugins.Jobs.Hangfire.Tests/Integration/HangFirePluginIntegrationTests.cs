@@ -62,6 +62,16 @@ namespace Dosaic.Plugins.Jobs.Hangfire.Tests.Integration
         }
 
         [Test]
+        public async Task TheBulkDispatcherIsPickedEvenWhenItIsResolvedBeforeTheStorage()
+        {
+            var plugin = new HangFirePlugin(GetConfiguration(), Substitute.For<IImplementationResolver>(), []);
+            await using var provider = Build(plugin);
+
+            // resolving the dispatcher first is what has to force the Hangfire configuration callback to run
+            provider.GetRequiredService<IJobBatchDispatcher>().Should().BeOfType<PostgresJobBatchDispatcher>();
+        }
+
+        [Test]
         public async Task PluginConfiguredJobsRunThroughTheDedicatedPrefetchingServer()
         {
             var plugin = new HangFirePlugin(GetConfiguration(), Substitute.For<IImplementationResolver>(), []);

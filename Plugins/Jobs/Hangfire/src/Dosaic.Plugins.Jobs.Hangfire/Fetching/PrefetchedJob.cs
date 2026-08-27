@@ -1,3 +1,4 @@
+using System.Globalization;
 using Hangfire.Storage;
 
 namespace Dosaic.Plugins.Jobs.Hangfire.Fetching
@@ -8,15 +9,22 @@ namespace Dosaic.Plugins.Jobs.Hangfire.Fetching
     internal sealed class PrefetchedJob : IFetchedJob
     {
         private readonly IJobQueueClient _client;
-        private readonly long _queueEntryId;
+        private readonly PrefetchedQueueEntry _entry;
         private readonly Timer _slidingTimer;
+
+        /// <summary>
+        ///     Guards <see cref="_completed" /> and the fetch timestamp against the keep-alive timer thread,
+        ///     the same way Hangfire's own <c>PostgreSqlFetchedJob</c> does.
+        /// </summary>
+        private readonly object _gate = new();
+
         private bool _completed;
 
-        public PrefetchedJob(IJobQueueClient client, long queueEntryId, string jobId, TimeSpan? slidingInterval)
+        public PrefetchedJob(IJobQueueClient client, PrefetchedQueueEntry entry, TimeSpan? slidingInterval)
         {
             _client = client;
-            _queueEntryId = queueEntryId;
-            JobId = jobId;
+            _entry = entry;
+            JobId = entry.JobId.ToString(CultureInfo.InvariantCulture);
             if (slidingInterval.HasValue)
                 _slidingTimer = new Timer(_ => KeepAlive(), null, slidingInterval.Value, slidingInterval.Value);
         }
@@ -25,28 +33,48 @@ namespace Dosaic.Plugins.Jobs.Hangfire.Fetching
 
         public void RemoveFromQueue()
         {
-            if (_completed) return;
-            _completed = true;
-            _client.Remove(_queueEntryId);
+            lock (_gate)
+            {
+                if (_completed) return;
+                _completed = true;
+                _client.Remove(_entry.QueueEntryId, _entry.FetchedAt);
+            }
         }
 
         public void Requeue()
         {
-            if (_completed) return;
-            _completed = true;
-            _client.Requeue(_queueEntryId);
+            lock (_gate)
+            {
+                if (_completed) return;
+                _completed = true;
+                _client.Requeue(_entry.QueueEntryId, _entry.FetchedAt);
+            }
         }
 
         public void Dispose()
         {
-            _slidingTimer?.Dispose();
+            // must not hold the gate here — a running keep-alive callback needs it to finish
+            StopTimer();
             Requeue();
+        }
+
+        private void StopTimer()
+        {
+            if (_slidingTimer is null) return;
+            using var stopped = new ManualResetEvent(false);
+            if (_slidingTimer.Dispose(stopped)) stopped.WaitOne();
         }
 
         private void KeepAlive()
         {
-            if (_completed) return;
-            _client.KeepAlive(_queueEntryId);
+            lock (_gate)
+            {
+                if (_completed) return;
+                var renewed = _client.KeepAlive(_entry.QueueEntryId, _entry.FetchedAt);
+                // no row matched — another server took the fetch over, so this job is no longer ours to release
+                if (renewed is null) _completed = true;
+                else _entry.FetchedAt = renewed.Value;
+            }
         }
     }
 }

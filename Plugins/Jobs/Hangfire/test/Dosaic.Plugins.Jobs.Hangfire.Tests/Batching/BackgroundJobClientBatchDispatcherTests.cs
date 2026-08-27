@@ -59,5 +59,34 @@ namespace Dosaic.Plugins.Jobs.Hangfire.Tests.Batching
             ids.Should().Equal("1", null, null);
             client.Received(1).Create(Arg.Any<global::Hangfire.Common.Job>(), Arg.Any<IState>());
         }
+
+        [Test]
+        public async Task ScheduledJobsKeepTheirQueue()
+        {
+            var client = Substitute.For<IBackgroundJobClient>();
+            client.Create(Arg.Any<global::Hangfire.Common.Job>(), Arg.Any<IState>()).Returns("1");
+
+            var batch = new JobBatch(new BackgroundJobClientBatchDispatcher(client));
+            batch.Schedule<TestJob>(TimeSpan.FromMinutes(5), "bulk");
+            await batch.SaveAsync();
+
+            // the schedule set and the delayed job scheduler both read the queue off the job
+            client.Received(1).Create(Arg.Is<global::Hangfire.Common.Job>(x => x.Queue == "bulk"),
+                Arg.Any<ScheduledState>());
+        }
+
+        [Test]
+        public async Task EnqueuedJobsKeepTheQueueOnTheirState()
+        {
+            var client = Substitute.For<IBackgroundJobClient>();
+            client.Create(Arg.Any<global::Hangfire.Common.Job>(), Arg.Any<IState>()).Returns("1");
+
+            var batch = new JobBatch(new BackgroundJobClientBatchDispatcher(client));
+            batch.Enqueue<TestJob>("bulk");
+            await batch.SaveAsync();
+
+            client.Received(1).Create(Arg.Any<global::Hangfire.Common.Job>(),
+                Arg.Is<EnqueuedState>(x => x.Queue == "bulk"));
+        }
     }
 }

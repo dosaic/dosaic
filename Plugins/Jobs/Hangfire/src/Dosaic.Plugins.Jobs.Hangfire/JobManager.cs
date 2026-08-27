@@ -188,14 +188,23 @@ namespace Dosaic.Plugins.Jobs.Hangfire
             CancellationToken cancellationToken = default) where TJob : IParameterizedAsyncJob<TJobParams> =>
             BuildScheduledBatch<TJob, TJobParams>(parameters, schedule, queue).SaveAsync(cancellationToken);
 
+        public IReadOnlyList<string> ScheduleBatchAt<TJob, TJobParams>(IEnumerable<TJobParams> parameters,
+            DateTimeOffset enqueueAt, string queue = EnqueuedState.DefaultQueue)
+            where TJob : IParameterizedAsyncJob<TJobParams> =>
+            BuildScheduledAtBatch<TJob, TJobParams>(parameters, enqueueAt, queue).Save();
+
         public Task<IReadOnlyList<string>> ScheduleBatchAtAsync<TJob, TJobParams>(IEnumerable<TJobParams> parameters,
             DateTimeOffset enqueueAt, string queue = EnqueuedState.DefaultQueue,
-            CancellationToken cancellationToken = default) where TJob : IParameterizedAsyncJob<TJobParams>
+            CancellationToken cancellationToken = default) where TJob : IParameterizedAsyncJob<TJobParams> =>
+            BuildScheduledAtBatch<TJob, TJobParams>(parameters, enqueueAt, queue).SaveAsync(cancellationToken);
+
+        private IJobBatch BuildScheduledAtBatch<TJob, TJobParams>(IEnumerable<TJobParams> parameters,
+            DateTimeOffset enqueueAt, string queue) where TJob : IParameterizedAsyncJob<TJobParams>
         {
             var batch = CreateBatch();
             foreach (var parameter in parameters)
                 batch.ScheduleAt<TJob, TJobParams>(parameter, enqueueAt, queue);
-            return batch.SaveAsync(cancellationToken);
+            return batch;
         }
 
         private IJobBatch BuildScheduledBatch<TJob, TJobParams>(IEnumerable<TJobParams> parameters, TimeSpan schedule,

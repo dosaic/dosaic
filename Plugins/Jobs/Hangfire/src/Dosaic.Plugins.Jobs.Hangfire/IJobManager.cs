@@ -54,6 +54,11 @@ namespace Dosaic.Plugins.Jobs.Hangfire
             CancellationToken cancellationToken = default) where TJob : IParameterizedAsyncJob<TJobParams>;
 
         /// <summary>Schedules one job per parameter set for an absolute point in time, in a single round trip.</summary>
+        IReadOnlyList<string> ScheduleBatchAt<TJob, TJobParams>(IEnumerable<TJobParams> parameters,
+            DateTimeOffset enqueueAt, string queue = EnqueuedState.DefaultQueue)
+            where TJob : IParameterizedAsyncJob<TJobParams>;
+
+        /// <summary>Schedules one job per parameter set for an absolute point in time, in a single round trip.</summary>
         Task<IReadOnlyList<string>> ScheduleBatchAtAsync<TJob, TJobParams>(IEnumerable<TJobParams> parameters,
             DateTimeOffset enqueueAt, string queue = EnqueuedState.DefaultQueue,
             CancellationToken cancellationToken = default) where TJob : IParameterizedAsyncJob<TJobParams>;

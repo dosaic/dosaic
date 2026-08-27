@@ -133,12 +133,16 @@ namespace Dosaic.Plugins.Jobs.Hangfire.Tests.Integration
             fetched.Should().HaveCount(2);
             Storage.GetMonitoringApi().EnqueuedCount("requeue").Should().Be(0);
 
-            client.KeepAlive(fetched[1].QueueEntryId);
+            var renewed = client.KeepAlive(fetched[1].QueueEntryId, fetched[1].FetchedAt);
+            renewed.Should().NotBeNull();
+            client.KeepAlive(fetched[1].QueueEntryId, fetched[1].FetchedAt).Should()
+                .BeNull("the old fetch timestamp no longer matches");
+            fetched[1].FetchedAt = renewed.Value;
             Storage.GetMonitoringApi().FetchedCount("requeue").Should().Be(2,
                 "keeping a job alive must not make it visible again");
 
-            client.Remove(fetched[0].QueueEntryId);
-            client.Requeue(fetched[1].QueueEntryId);
+            client.Remove(fetched[0].QueueEntryId, fetched[0].FetchedAt);
+            client.Requeue(fetched[1].QueueEntryId, fetched[1].FetchedAt);
 
             Storage.GetMonitoringApi().EnqueuedCount("requeue").Should().Be(1);
             var again = client.Fetch(["requeue"], 5, TimeSpan.FromMinutes(30));

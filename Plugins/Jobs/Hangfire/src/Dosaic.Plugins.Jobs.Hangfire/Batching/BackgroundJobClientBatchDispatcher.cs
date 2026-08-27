@@ -31,6 +31,7 @@ namespace Dosaic.Plugins.Jobs.Hangfire.Batching
                 // cannot see that, because that job does not exist in the storage yet
                 if (entry.UniqueDuplicate) continue;
                 var state = entry.State;
+                var job = WithQueue(entry);
                 if (entry.ParentIndex.HasValue)
                 {
                     var parentId = ids[entry.ParentIndex.Value - 1];
@@ -39,10 +40,23 @@ namespace Dosaic.Plugins.Jobs.Hangfire.Batching
                         state = new AwaitingState(parentId, awaiting.NextState, awaiting.Options);
                 }
 
-                ids[entry.Index - 1] = _backgroundJobClient.Create(entry.Job, state);
+                ids[entry.Index - 1] = _backgroundJobClient.Create(job, state);
             }
 
             return Task.FromResult<IReadOnlyList<string>>(ids);
+        }
+
+        /// <summary>
+        ///     A scheduled entry carries its queue in <see cref="BatchJobEntry.SetValuePrefix" />, because the
+        ///     bulk statement writes the schedule set itself. Here the state handler writes that set, and it
+        ///     reads the queue off the job - without it the delayed job scheduler would enqueue to default.
+        /// </summary>
+        private static global::Hangfire.Common.Job WithQueue(BatchJobEntry entry)
+        {
+            if (entry.State is not ScheduledState || entry.SetValuePrefix is null) return entry.Job;
+            if (entry.Job.Queue is not null) return entry.Job;
+            return new global::Hangfire.Common.Job(entry.Job.Type, entry.Job.Method, entry.Job.Args,
+                entry.SetValuePrefix);
         }
     }
 }
