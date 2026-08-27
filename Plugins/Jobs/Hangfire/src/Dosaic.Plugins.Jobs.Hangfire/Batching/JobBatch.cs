@@ -109,12 +109,13 @@ namespace Dosaic.Plugins.Jobs.Hangfire.Batching
 
         private static IDictionary<string, string> CaptureCulture()
         {
-            var parameters = new Dictionary<string, string>();
-            var culture = CultureInfo.CurrentCulture.Name;
-            var uiCulture = CultureInfo.CurrentUICulture.Name;
-            if (!string.IsNullOrEmpty(culture)) parameters["CurrentCulture"] = $"\"{culture}\"";
-            if (!string.IsNullOrEmpty(uiCulture)) parameters["CurrentUICulture"] = $"\"{uiCulture}\"";
-            return parameters;
+            // Hangfire's CaptureCultureAttribute writes both parameters unconditionally,
+            // including the empty name of the invariant culture - keep parity.
+            return new Dictionary<string, string>
+            {
+                ["CurrentCulture"] = $"\"{CultureInfo.CurrentCulture.Name}\"",
+                ["CurrentUICulture"] = $"\"{CultureInfo.CurrentUICulture.Name}\""
+            };
         }
 
         private static double ToTimestamp(DateTime value) => (long)(value.ToUniversalTime() - _epoch).TotalSeconds;
