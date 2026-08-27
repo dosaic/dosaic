@@ -100,6 +100,28 @@ namespace Dosaic.Plugins.Jobs.Hangfire.Tests.Integration
         }
 
         [Test]
+        public void TheRealSchemaIsTheVersionBatchingWasWrittenAgainst()
+        {
+            var act = () => PostgresSchemaGuard.AssertSupportedVersion(CreateConnection, SchemaName);
+            act.Should().NotThrow();
+        }
+
+        [Test]
+        public async Task ASchemaThatMigratedPastUsStopsTheHost()
+        {
+            await ExecuteAsync($"""INSERT INTO "{SchemaName}"."schema" ("version") VALUES (99);""");
+            try
+            {
+                var act = () => PostgresSchemaGuard.AssertSupportedVersion(CreateConnection, SchemaName);
+                act.Should().Throw<InvalidOperationException>().WithMessage("*version 99*");
+            }
+            finally
+            {
+                await ExecuteAsync($"""DELETE FROM "{SchemaName}"."schema" WHERE "version" = 99;""");
+            }
+        }
+
+        [Test]
         public void PluginRegistersOneServerPerConfiguredQueueAgainstRealStorage()
         {
             var plugin = new HangFirePlugin(GetConfiguration(), Substitute.For<IImplementationResolver>(), []);

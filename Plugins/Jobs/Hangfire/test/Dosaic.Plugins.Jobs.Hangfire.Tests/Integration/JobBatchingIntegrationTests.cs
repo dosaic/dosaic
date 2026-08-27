@@ -18,7 +18,7 @@ namespace Dosaic.Plugins.Jobs.Hangfire.Tests.Integration
         [Test]
         public async Task ABatchOfThousandJobsCostsExactlyOneStatement()
         {
-            var mark = await MarkLogAsync();
+            await ResetStatementCountsAsync();
             var before = await ScalarAsync<long>($"""SELECT COUNT(*) FROM "{SchemaName}"."job";""");
 
             var batch = NewBatch();
@@ -29,7 +29,7 @@ namespace Dosaic.Plugins.Jobs.Hangfire.Tests.Integration
             ids.Should().HaveCount(1000).And.OnlyHaveUniqueItems();
             var after = await ScalarAsync<long>($"""SELECT COUNT(*) FROM "{SchemaName}"."job";""");
             (after - before).Should().Be(1000);
-            var statements = await CountExecutedStatementsAsync(mark, @"WITH ""input"" AS");
+            var statements = await CountExecutedStatementsAsync(@"WITH ""input"" AS");
             statements.Should().Be(1, "the whole batch must be written in a single round trip");
         }
 
@@ -125,7 +125,7 @@ namespace Dosaic.Plugins.Jobs.Hangfire.Tests.Integration
         [Test]
         public async Task OneJobCanFanOutIntoSeveralContinuationsInTheSameStatement()
         {
-            var mark = await MarkLogAsync();
+            await ResetStatementCountsAsync();
             var batch = NewBatch();
             var root = batch.Enqueue<RecordingJob, string>("fanout-root", "fanout");
             root.ContinueWith<RecordingJob, string>("fanout-a", "fanout");
@@ -142,7 +142,7 @@ namespace Dosaic.Plugins.Jobs.Hangfire.Tests.Integration
             continuations.Select(x => x["Options"]!.Value<int>()).Should()
                 .Equal((int)JobContinuationOptions.OnlyOnSucceededState,
                     (int)JobContinuationOptions.OnAnyFinishedState);
-            (await CountExecutedStatementsAsync(mark, @"WITH ""input"" AS")).Should().Be(1);
+            (await CountExecutedStatementsAsync(@"WITH ""input"" AS")).Should().Be(1);
         }
 
         [Test]
@@ -164,7 +164,7 @@ namespace Dosaic.Plugins.Jobs.Hangfire.Tests.Integration
         [Test]
         public async Task MixedBatchesWriteEveryStateInOneStatement()
         {
-            var mark = await MarkLogAsync();
+            await ResetStatementCountsAsync();
             var batch = NewBatch();
             batch.Enqueue<NoopJob>("mixed");
             batch.Schedule<RecordingJob, string>("later", TimeSpan.FromHours(2), "mixed");
@@ -177,13 +177,13 @@ namespace Dosaic.Plugins.Jobs.Hangfire.Tests.Integration
             connection.GetJobData(ids[1]).State.Should().Be("Scheduled");
             connection.GetJobData(ids[2]).State.Should().Be("Enqueued");
             connection.GetJobData(ids[3]).State.Should().Be("Awaiting");
-            (await CountExecutedStatementsAsync(mark, @"WITH ""input"" AS")).Should().Be(1);
+            (await CountExecutedStatementsAsync(@"WITH ""input"" AS")).Should().Be(1);
         }
 
         [Test]
         public async Task ChunkingSplitsIntoSeveralStatementsButKeepsChainsIntact()
         {
-            var mark = await MarkLogAsync();
+            await ResetStatementCountsAsync();
             var batch = new JobBatch(new PostgresJobBatchDispatcher(CreateConnection, SchemaName, 2));
             batch.Enqueue<RecordingJob, string>("a", "chunked")
                 .ContinueWith<RecordingJob, string>("b", "chunked")
@@ -196,7 +196,7 @@ namespace Dosaic.Plugins.Jobs.Hangfire.Tests.Integration
             using var connection = Storage.GetConnection();
             connection.GetStateData(ids[1]).Data["ParentId"].Should().Be(ids[0]);
             connection.GetStateData(ids[2]).Data["ParentId"].Should().Be(ids[1]);
-            (await CountExecutedStatementsAsync(mark, @"WITH ""input"" AS")).Should().Be(2);
+            (await CountExecutedStatementsAsync(@"WITH ""input"" AS")).Should().Be(2);
         }
 
         [Test]

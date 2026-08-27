@@ -68,14 +68,14 @@ namespace Dosaic.Plugins.Jobs.Hangfire.Tests.Integration
         [Test]
         public async Task TheClaimIsTakenByTheSameStatementThatWritesTheJobs()
         {
-            var mark = await MarkLogAsync();
+            await ResetStatementCountsAsync();
             var batch = NewBatch();
             for (var i = 0; i < 100; i++)
                 batch.Enqueue<UniqueRecordingJob, string>($"single-statement-{i}");
             var ids = await batch.SaveAsync();
 
             ids.Should().HaveCount(100).And.NotContainNulls();
-            (await CountExecutedStatementsAsync(mark, @"WITH ""input"" AS")).Should()
+            (await CountExecutedStatementsAsync(@"WITH ""input"" AS")).Should()
                 .Be(1, "claiming 100 fingerprints must not cost 100 round trips");
         }
 

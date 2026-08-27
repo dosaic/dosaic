@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.Text.RegularExpressions;
 using Dosaic.Plugins.Jobs.Hangfire.Attributes;
 using Hangfire;
 using Hangfire.PostgreSql;
@@ -38,11 +37,13 @@ namespace Dosaic.Plugins.Jobs.Hangfire.Tests.Integration
                 .WithDatabase(DatabaseName)
                 .WithUsername(DatabaseUser)
                 .WithPassword(DatabasePassword)
+                // pg_stat_statements is what CountExecutedStatementsAsync counts with, and it has to be
+                // preloaded at server start - the extension cannot be added to a running server
+                .WithCommand("-c", "shared_preload_libraries=pg_stat_statements")
                 .Build();
             await _postgres.StartAsync();
             ConnectionString = _postgres.GetConnectionString();
-            await ExecuteAsync("ALTER SYSTEM SET log_statement = 'all';");
-            await ExecuteAsync("SELECT pg_reload_conf();");
+            await ExecuteAsync("CREATE EXTENSION IF NOT EXISTS pg_stat_statements;");
 
             var storageOptions = new PostgreSqlStorageOptions
             {
@@ -90,30 +91,26 @@ namespace Dosaic.Plugins.Jobs.Hangfire.Tests.Integration
         }
 
         /// <summary>
-        ///     Remembers how much of PostgreSQL's statement log has been written so far, so that
+        ///     Forgets everything PostgreSQL counted so far, so that
         ///     <see cref="CountExecutedStatementsAsync" /> only counts what happens afterwards.
         /// </summary>
-        protected async Task<LogMark> MarkLogAsync()
-        {
-            await Task.Delay(TimeSpan.FromSeconds(1));
-            var logs = await _postgres.GetLogsAsync();
-            return new LogMark(logs.Stdout.Length, logs.Stderr.Length);
-        }
+        protected Task ResetStatementCountsAsync() => ExecuteAsync("SELECT pg_stat_statements_reset();");
 
         /// <summary>
         ///     Counts how often the database was actually asked to run a statement matching
-        ///     <paramref name="statementPattern" />, by reading PostgreSQL's own statement log.
+        ///     <paramref name="statementPattern" />, by asking PostgreSQL's own statement statistics.
+        ///     Exact and immediate - the counter is updated when the statement finishes.
         /// </summary>
-        protected async Task<int> CountExecutedStatementsAsync(LogMark mark, string statementPattern)
+        protected async Task<int> CountExecutedStatementsAsync(string statementPattern)
         {
-            await Task.Delay(TimeSpan.FromSeconds(2));
-            var logs = await _postgres.GetLogsAsync();
-            var pattern = new Regex($@"(statement|execute [^:]*):\s*{statementPattern}", RegexOptions.IgnoreCase);
-            return pattern.Matches(logs.Stdout[Math.Min(mark.Stdout, logs.Stdout.Length)..]).Count
-                   + pattern.Matches(logs.Stderr[Math.Min(mark.Stderr, logs.Stderr.Length)..]).Count;
+            await using var connection = CreateConnection();
+            await connection.OpenAsync();
+            await using var command = new NpgsqlCommand(
+                """SELECT COALESCE(SUM("calls"), 0) FROM pg_stat_statements WHERE "query" ~ @pattern;""",
+                connection);
+            command.Parameters.Add(new NpgsqlParameter("pattern", statementPattern));
+            return Convert.ToInt32(await command.ExecuteScalarAsync(), CultureInfo.InvariantCulture);
         }
-
-        protected sealed record LogMark(int Stdout, int Stderr);
 
         protected static async Task WaitUntilAsync(Func<bool> condition, TimeSpan timeout, string because)
         {
