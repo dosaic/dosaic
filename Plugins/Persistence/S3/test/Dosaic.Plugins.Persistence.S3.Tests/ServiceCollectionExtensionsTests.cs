@@ -1,3 +1,4 @@
+using Amazon.S3;
 using AwesomeAssertions;
 using Dosaic.Plugins.Persistence.S3.Blob;
 using Dosaic.Plugins.Persistence.S3.File;
@@ -7,7 +8,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using MimeDetective;
 using MimeDetective.Storage;
-using Minio;
 using NUnit.Framework;
 
 namespace Dosaic.Plugins.Persistence.S3.Tests;
@@ -33,8 +33,8 @@ public class ServiceCollectionExtensionsTests
         });
 
         _serviceCollection.Should().Contain(x =>
-            x.ServiceType == typeof(IMinioClient) &&
-            x.ImplementationInstance.GetType() == typeof(MinioClient));
+            x.ServiceType == typeof(IAmazonS3) &&
+            x.ImplementationInstance.GetType() == typeof(AmazonS3Client));
 
         _serviceCollection.Should().Contain(x =>
             x.ServiceType == typeof(IContentInspector) &&

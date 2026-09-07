@@ -1,12 +1,12 @@
+using Amazon.S3;
+using Amazon.S3.Model;
 using Dosaic.Plugins.Persistence.S3.File;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Minio;
-using Minio.DataModel.Args;
 
 namespace Dosaic.Plugins.Persistence.S3.Blob;
 
-internal class BlobStorageBucketMigrationService<T>(S3Configuration config, IMinioClient minioClient, ILogger logger, IFileStorage storage)
+internal class BlobStorageBucketMigrationService<T>(S3Configuration config, IAmazonS3 s3Client, ILogger logger, IFileStorage storage)
     : BackgroundService where T : struct, Enum
 {
     private int _retryCount = 1;
@@ -28,7 +28,7 @@ internal class BlobStorageBucketMigrationService<T>(S3Configuration config, IMin
                     .ToList();
 
                 var existingBuckets =
-                    (await minioClient.ListBucketsAsync(stoppingToken)).Buckets.Select(x => x.Name).ToList();
+                    (await s3Client.ListBucketsAsync(stoppingToken)).Buckets?.Select(x => x.BucketName).ToList() ?? [];
 
                 var missingBuckets = requiredBuckets.Except(existingBuckets).ToList();
                 logger.LogInformation("S3 buckets<{bucketType} {@Buckets}", bucketTypeName,
@@ -44,8 +44,8 @@ internal class BlobStorageBucketMigrationService<T>(S3Configuration config, IMin
                 {
                     logger.LogInformation("S3 buckets<{bucketType}>: create missing bucket {missingBucket}",
                         bucketTypeName, missingBucket);
-                    await minioClient.MakeBucketAsync(
-                        new MakeBucketArgs().WithBucket(missingBucket), stoppingToken);
+                    await s3Client.PutBucketAsync(new PutBucketRequest { BucketName = missingBucket },
+                        stoppingToken);
                 }
 
                 return;

@@ -1,12 +1,9 @@
+using Amazon.S3;
+using Amazon.S3.Model;
 using AwesomeAssertions;
 using Dosaic.Plugins.Persistence.S3.Blob;
 using Dosaic.Plugins.Persistence.S3.File;
 using Dosaic.Testing.NUnit.Assertions;
-using Dosaic.Testing.NUnit.Extensions;
-using Minio;
-using Minio.DataModel;
-using Minio.DataModel.Args;
-using Minio.DataModel.Result;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
 using NUnit.Framework;
@@ -18,20 +15,19 @@ public class BlobStorageBucketMigrationServiceTests
     [Test]
     public async Task ShouldMigrateBlobStorageBucket()
     {
-        var mc = Substitute.For<IMinioClient>();
+        var mc = Substitute.For<IAmazonS3>();
 
         mc.ListBucketsAsync(Arg.Any<CancellationToken>())
             .Returns(_ => throw new Exception("retry"),
-                _ => new ListAllMyBucketsResult
+                _ => new ListBucketsResponse
                 {
                     Buckets =
                     [
-                        new Bucket { Name = "NOT_REQUIRED_BUCKET" },
-                        new Bucket { Name = "logos" }
+                        new S3Bucket { BucketName = "NOT_REQUIRED_BUCKET" },
+                        new S3Bucket { BucketName = "logos" }
                     ]
                 });
 
-        var buckets = Enum.GetValues<SampleBucket>().Select(x => x.GetName()).ToList();
         var fakeLogger = new FakeLogger<BlobStorageBucketMigrationService<SampleBucket>>();
         var fileStorage = Substitute.For<IFileStorage>();
         fileStorage.ResolveBucketName(Arg.Any<string>()).Returns(info => $"dev-{info.Args()[0]}");
@@ -42,10 +38,10 @@ public class BlobStorageBucketMigrationServiceTests
         await svc.StopAsync(CancellationToken.None);
         await mc.Received(2).ListBucketsAsync(Arg.Any<CancellationToken>());
         await mc.Received(1)
-            .MakeBucketAsync(ArgExt.Is<MakeBucketArgs>(m => m.GetInaccessibleValue<string>("BucketName").Should().Be("dev-test-logos")),
+            .PutBucketAsync(Arg.Is<PutBucketRequest>(r => r.BucketName == "dev-test-logos"),
                 Arg.Any<CancellationToken>());
         await mc.Received(1)
-            .MakeBucketAsync(ArgExt.Is<MakeBucketArgs>(m => m.GetInaccessibleValue<string>("BucketName").Should().Be("dev-test.docs")),
+            .PutBucketAsync(Arg.Is<PutBucketRequest>(r => r.BucketName == "dev-test.docs"),
                 Arg.Any<CancellationToken>());
 
         fakeLogger.Entries[0].Message.Should().Be("Could not migrate s3 buckets<SampleBucket> -> retrying");
@@ -60,7 +56,7 @@ public class BlobStorageBucketMigrationServiceTests
     [Test]
     public async Task ShouldRetry3TimesMigrateBlobStorageBucket()
     {
-        var mc = Substitute.For<IMinioClient>();
+        var mc = Substitute.For<IAmazonS3>();
 
         mc.ListBucketsAsync(Arg.Any<CancellationToken>())
             .ThrowsAsyncForAnyArgs(new Exception("retry"));
@@ -84,7 +80,7 @@ public class BlobStorageBucketMigrationServiceTests
     [Test]
     public async Task ShouldNotMigrateBucketsWhenUsingLocalFileSystem()
     {
-        var mc = Substitute.For<IMinioClient>();
+        var mc = Substitute.For<IAmazonS3>();
 
         mc.ListBucketsAsync(Arg.Any<CancellationToken>())
             .ThrowsAsyncForAnyArgs(new Exception("retry"));

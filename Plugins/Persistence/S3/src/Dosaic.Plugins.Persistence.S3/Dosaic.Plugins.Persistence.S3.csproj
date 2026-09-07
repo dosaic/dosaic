@@ -5,7 +5,7 @@
 
   <ItemGroup>
     <PackageReference Include="AspNetCore.HealthChecks.Uris" />
-    <PackageReference Include="Minio" />
+    <PackageReference Include="AWSSDK.S3" />
     <PackageReference Include="Mime-Detective" />
     <PackageReference Include="Sqids" />
   </ItemGroup>

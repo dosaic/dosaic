@@ -1,10 +1,11 @@
+using Amazon.Runtime;
+using Amazon.S3;
 using Dosaic.Hosting.Abstractions;
 using Dosaic.Hosting.Abstractions.Plugins;
 using Dosaic.Plugins.Persistence.S3.File;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using MimeDetective;
-using Minio;
 
 namespace Dosaic.Plugins.Persistence.S3;
 
@@ -20,7 +21,7 @@ public class S3FileStoragePlugin(S3Configuration configuration)
         }
         else
         {
-            serviceCollection.AddSingleton(GetMinioClient());
+            serviceCollection.AddSingleton(GetS3Client());
             serviceCollection.AddFileStorage();
         }
 
@@ -43,8 +44,7 @@ public class S3FileStoragePlugin(S3Configuration configuration)
         }
         else
         {
-            var urlScheme = configuration.UseSsl ? "https" : "http";
-            var url = $"{urlScheme}://{configuration.Endpoint}";
+            var url = configuration.GetServiceUrl();
             if (!string.IsNullOrEmpty(configuration.HealthCheckPath))
                 url += $"/{configuration.HealthCheckPath.TrimStart('/')}";
             healthChecksBuilder.AddUrlGroup(new Uri(url), "s3", HealthStatus.Unhealthy,
@@ -52,15 +52,28 @@ public class S3FileStoragePlugin(S3Configuration configuration)
         }
     }
 
-    private IMinioClient GetMinioClient()
+    internal IAmazonS3 GetS3Client()
     {
-        var minioClient = new MinioClient().WithEndpoint(configuration.Endpoint);
-        if (!string.IsNullOrEmpty(configuration.AccessKey))
-            minioClient = minioClient.WithCredentials(configuration.AccessKey, configuration.SecretKey);
-        if (!string.IsNullOrEmpty(configuration.Region))
-            minioClient = minioClient.WithRegion(configuration.Region);
-        if (configuration.UseSsl)
-            minioClient = minioClient.WithSSL();
-        return minioClient.Build();
+        var s3Config = new AmazonS3Config
+        {
+            ServiceURL = configuration.GetServiceUrl(),
+            AuthenticationRegion = configuration.GetSigningRegion(),
+            ForcePathStyle = configuration.ForcePathStyle,
+            RequestChecksumCalculation = configuration.UseChecksums
+                ? RequestChecksumCalculation.WHEN_SUPPORTED
+                : RequestChecksumCalculation.WHEN_REQUIRED,
+            ResponseChecksumValidation = configuration.UseChecksums
+                ? ResponseChecksumValidation.WHEN_SUPPORTED
+                : ResponseChecksumValidation.WHEN_REQUIRED
+        };
+        var credentials = GetCredentials();
+        // without explicit credentials the AWS SDK default credential chain is used
+        // (environment variables, shared config file, EC2/ECS/EKS instance metadata, ...)
+        return credentials is null ? new AmazonS3Client(s3Config) : new AmazonS3Client(credentials, s3Config);
     }
+
+    internal AWSCredentials GetCredentials() =>
+        string.IsNullOrEmpty(configuration.AccessKey)
+            ? null
+            : new BasicAWSCredentials(configuration.AccessKey, configuration.SecretKey);
 }
