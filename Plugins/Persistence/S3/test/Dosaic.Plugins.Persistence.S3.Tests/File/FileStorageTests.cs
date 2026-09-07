@@ -1,22 +1,17 @@
 using System.Collections.Immutable;
-using System.Globalization;
 using System.Net;
 using System.Text;
+using Amazon.S3;
+using Amazon.S3.Model;
 using AwesomeAssertions;
-using AwesomeAssertions.Common;
 using Dosaic.Hosting.Abstractions.Exceptions;
 using Dosaic.Plugins.Persistence.S3.Blob;
 using Dosaic.Plugins.Persistence.S3.File;
 using Dosaic.Testing.NUnit.Assertions;
-using Dosaic.Testing.NUnit.Extensions;
 using Microsoft.AspNetCore.Http;
 using MimeDetective;
 using MimeDetective.Definitions;
 using MimeDetective.Storage;
-using Minio;
-using Minio.DataModel;
-using Minio.DataModel.Args;
-using Minio.DataModel.Response;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
 using NUnit.Framework;
@@ -26,7 +21,7 @@ namespace Dosaic.Plugins.Persistence.S3.Tests.File
 {
     public class FileStorageTests
     {
-        private IMinioClient _minioClient;
+        private IAmazonS3 _s3Client;
         private IContentInspector _contentInspector;
         private IFileStorage<SampleBucket> _fileStorageSampleBucket;
         private IFileStorage _fileStorage;
@@ -41,14 +36,14 @@ namespace Dosaic.Plugins.Persistence.S3.Tests.File
         [SetUp]
         public void Setup()
         {
-            _minioClient = Substitute.For<IMinioClient>();
+            _s3Client = Substitute.For<IAmazonS3>();
             _contentInspector = new ContentInspectorBuilder
             {
                 Definitions =
                     [.. DefaultDefinitions.FileTypes.Images.JPEG(), .. DefaultDefinitions.FileTypes.Documents.PDF()]
             }.Build();
             _configuration = new S3Configuration { BucketPrefix = "dev-" };
-            _fileStorage = new FileStorage(_minioClient, _contentInspector,
+            _fileStorage = new FileStorage(_s3Client, _contentInspector,
                 new FakeLogger<FileStorage>(), _configuration, _testFileTypeDefinitionResolver);
             _fileStorageSampleBucket = new FileStorage<SampleBucket>(_fileStorage);
         }
@@ -56,7 +51,7 @@ namespace Dosaic.Plugins.Persistence.S3.Tests.File
         [TearDown]
         public void TearDown()
         {
-            _minioClient.Dispose();
+            _s3Client.Dispose();
         }
 
         private static Stream CreateStream(string content, byte[] signature)
@@ -72,77 +67,79 @@ namespace Dosaic.Plugins.Persistence.S3.Tests.File
         private static FileId<SampleBucket> GetId(string id, SampleBucket bucket = SampleBucket.Logos) =>
             new(bucket, id);
 
-        private static ObjectStat GetObjectStat(string objName, string etag = null, string lastModified = null,
-            string filename = null,
-            string other = null)
+        private static GetObjectMetadataResponse GetObjectMetadata(string etag = null, DateTime? lastModified = null,
+            string filename = null, string other = null)
         {
-            var headers = new Dictionary<string, string>
+            var response = new GetObjectMetadataResponse
             {
-                { "etag", etag ?? "" },
-                {
-                    "last-modified",
-                    lastModified ?? DateTime.UtcNow.ToDateTimeOffset().ToString(CultureInfo.InvariantCulture)
-                },
-                { "x-amz-meta-other", other ?? "test" },
-                { "x-amz-meta-original-filename", filename ?? "test.pdf" },
-                { "x-amz-meta-hash", "file-hash" },
+                ETag = etag ?? "",
+                LastModified = lastModified ?? DateTime.UtcNow,
+                ContentLength = 42
             };
-            return ObjectStat.FromResponseHeaders(objName, headers);
+            response.Headers.ContentType = "application/pdf";
+            response.Metadata.Add("other", other ?? "test");
+            response.Metadata.Add(BlobFileMetaData.Filename, filename ?? "test.pdf");
+            response.Metadata.Add(BlobFileMetaData.Hash, "file-hash");
+            return response;
         }
+
+        private static PutObjectResponse OkPutResponse() => new() { HttpStatusCode = HttpStatusCode.OK };
 
         [Test]
         public async Task GetAsyncWorks()
         {
-            var lastModified = DateTime.UtcNow;
-            _minioClient.StatObjectAsync(Arg.Any<StatObjectArgs>(), Arg.Any<CancellationToken>())
-                .Returns(GetObjectStat("testObj", "etag", lastModified.ToString(CultureInfo.InvariantCulture), null,
-                    "OTHER"));
+            var lastModified = new DateTime(2026, 1, 2, 3, 4, 5, DateTimeKind.Utc);
+            _s3Client.GetObjectMetadataAsync(Arg.Any<GetObjectMetadataRequest>(), Arg.Any<CancellationToken>())
+                .Returns(GetObjectMetadata("etag", lastModified, null, "OTHER"));
             var result = await _fileStorageSampleBucket.GetFileAsync(GetId("123"));
             result.MetaData[BlobFileMetaData.Filename].Should().Be("test.pdf");
             result.MetaData[BlobFileMetaData.ETag].Should().Be("\"etag\"");
+            result.MetaData[BlobFileMetaData.ContentType].Should().Be("application/pdf");
+            result.MetaData[BlobFileMetaData.ContentLength].Should().Be("42");
             result.MetaData[BlobFileMetaData.Hash].Should().Be("file-hash");
             result.MetaData.GetMetadata().Should().HaveCount(5);
-            result.LastModified.Should().Be(DateTime.Parse(lastModified.ToString(CultureInfo.InvariantCulture),
-                CultureInfo.InvariantCulture));
+            result.LastModified.Should().Be(new DateTimeOffset(lastModified));
         }
 
         [Test]
-        public async Task GetAsyncThrowsOnDifferentFileIds()
+        public async Task GetAsyncResolvesPrefixedBucketAndKey()
         {
-            var lastModified = DateTime.UtcNow;
-            _minioClient.StatObjectAsync(Arg.Any<StatObjectArgs>(), Arg.Any<CancellationToken>())
-                .Returns(GetObjectStat("testObj", "etag", lastModified.ToString(CultureInfo.InvariantCulture), null,
-                    "OTHER"));
-            var result = await _fileStorageSampleBucket.GetFileAsync(GetId("123"));
-            result.MetaData[BlobFileMetaData.Filename].Should().Be("test.pdf");
-            result.MetaData[BlobFileMetaData.ETag].Should().Be("\"etag\"");
-            result.MetaData[BlobFileMetaData.Hash].Should().Be("file-hash");
-            result.MetaData.GetMetadata().Should().HaveCount(5);
-            result.LastModified.Should().Be(DateTime.Parse(lastModified.ToString(CultureInfo.InvariantCulture),
-                CultureInfo.InvariantCulture));
+            _s3Client.GetObjectMetadataAsync(Arg.Any<GetObjectMetadataRequest>(), Arg.Any<CancellationToken>())
+                .Returns(GetObjectMetadata("etag"));
+            await _fileStorageSampleBucket.GetFileAsync(GetId("123"));
+            await _s3Client.Received(1).GetObjectMetadataAsync(
+                Arg.Is<GetObjectMetadataRequest>(r => r.BucketName == "dev-test-logos" && r.Key == "123"),
+                Arg.Any<CancellationToken>());
         }
 
         [Test]
         public async Task GetAsyncWorksWithRealFilename()
         {
-            var lastModified = DateTime.UtcNow;
-            _minioClient.StatObjectAsync(Arg.Any<StatObjectArgs>(), Arg.Any<CancellationToken>())
-                .Returns(GetObjectStat("testObj", "etag", lastModified.ToString(CultureInfo.InvariantCulture),
-                    "inv.pdf",
-                    "OTHER"));
+            _s3Client.GetObjectMetadataAsync(Arg.Any<GetObjectMetadataRequest>(), Arg.Any<CancellationToken>())
+                .Returns(GetObjectMetadata("etag", null, "inv.pdf", "OTHER"));
             var result = await _fileStorageSampleBucket.GetFileAsync(GetId("123"));
             result.MetaData[BlobFileMetaData.Filename].Should().Be("inv.pdf");
             result.MetaData[BlobFileMetaData.ETag].Should().Be("\"etag\"");
             result.MetaData[BlobFileMetaData.Hash].Should().Be("file-hash");
             result.MetaData.GetMetadata().Should().HaveCount(5);
-            result.LastModified.Should().Be(DateTime.Parse(lastModified.ToString(CultureInfo.InvariantCulture),
-                CultureInfo.InvariantCulture));
         }
 
         [Test]
-        public async Task GetAsyncDisposesStreamOnExceptions()
+        public async Task GetAsyncFallsBackToKeyWhenFilenameMetadataIsMissing()
         {
-            _minioClient.GetObjectAsync(Arg.Any<GetObjectArgs>(), Arg.Any<CancellationToken>())
+            var response = new GetObjectMetadataResponse { ETag = "etag", LastModified = DateTime.UtcNow };
+            response.Headers.ContentType = "application/pdf";
+            _s3Client.GetObjectMetadataAsync(Arg.Any<GetObjectMetadataRequest>(), Arg.Any<CancellationToken>())
+                .Returns(response);
+            var result = await _fileStorageSampleBucket.GetFileAsync(GetId("123"));
+            result.MetaData[BlobFileMetaData.Filename].Should().Be("123");
+            result.MetaData.GetMetadata().Should().HaveCount(4);
+        }
+
+        [Test]
+        public async Task GetAsyncPropagatesExceptions()
+        {
+            _s3Client.GetObjectMetadataAsync(Arg.Any<GetObjectMetadataRequest>(), Arg.Any<CancellationToken>())
                 .Throws(new Exception("test"));
             await _fileStorageSampleBucket.Invoking(async x => await x.GetFileAsync(GetId("123"))).Should()
                 .ThrowAsync<Exception>();
@@ -151,13 +148,16 @@ namespace Dosaic.Plugins.Persistence.S3.Tests.File
         [Test]
         public async Task ConsumeAsyncWorks()
         {
+            _s3Client.GetObjectAsync(Arg.Any<GetObjectRequest>(), Arg.Any<CancellationToken>())
+                .Returns(new GetObjectResponse { ResponseStream = new MemoryStream("test"u8.ToArray()) });
+
             using var stream = new MemoryStream();
             await _fileStorageSampleBucket.ConsumeStreamAsync(GetId("123"),
                 (stream1, token) => stream1.CopyToAsync(stream, token));
-            var args = _minioClient.ReceivedCalls().First().GetArguments().OfType<GetObjectArgs>().First();
-            var cb = args.GetInaccessibleValue<Func<Stream, CancellationToken, Task>>("CallBack");
-            cb.Should().NotBeNull();
-            await cb.Invoke(new MemoryStream("test"u8.ToArray()), CancellationToken.None);
+
+            await _s3Client.Received(1).GetObjectAsync(
+                Arg.Is<GetObjectRequest>(r => r.BucketName == "dev-test-logos" && r.Key == "123"),
+                Arg.Any<CancellationToken>());
 
             stream.Seek(0, SeekOrigin.Begin);
             using var sr = new StreamReader(stream);
@@ -168,8 +168,8 @@ namespace Dosaic.Plugins.Persistence.S3.Tests.File
         [Test]
         public async Task SetWithFilenameAsyncWorks()
         {
-            _minioClient.PutObjectAsync(Arg.Any<PutObjectArgs>(), Arg.Any<CancellationToken>())
-                .Returns(new PutObjectResponse(HttpStatusCode.OK, "", new Dictionary<string, string>(), 1, ""));
+            _s3Client.PutObjectAsync(Arg.Any<PutObjectRequest>(), Arg.Any<CancellationToken>())
+                .Returns(OkPutResponse());
             await using var imageStream = CreateStream("test", _imageSignature);
             var blob = new BlobFile<SampleBucket>(SampleBucket.Logos, "test");
             blob.MetaData.Set(new Dictionary<string, string>
@@ -182,28 +182,26 @@ namespace Dosaic.Plugins.Persistence.S3.Tests.File
             result.Bucket.Should().Be(SampleBucket.Logos);
             result.Key.Should().Be("test");
 
-            var args = _minioClient.ReceivedCalls().First().GetArguments().OfType<PutObjectArgs>().First();
-            args.Should().NotBeNull();
-            args.GetInaccessibleValue<string>("BucketName").Should()
-                .Be($"{_configuration.BucketPrefix}{SampleBucket.Logos.GetName()}");
-            args.GetInaccessibleValue<string>("ContentType").Should().Be("image/jpeg");
-            args.GetInaccessibleValue<string>("ObjectName").Should().Be("test");
-            const string FilenameKey = "x-amz-meta-" + BlobFileMetaData.Filename;
-            const string HashKey = "x-amz-meta-" + BlobFileMetaData.Hash;
-            args.GetInaccessibleValue<Dictionary<string, string>>("Headers")[FilenameKey].Should().Be("test.pdf");
-            args.GetInaccessibleValue<Dictionary<string, string>>("Headers")["x-amz-meta-something-custom"].Should()
-                .Be("test");
-            args.GetInaccessibleValue<Dictionary<string, string>>("Headers")[HashKey].Should().NotBeNullOrWhiteSpace();
-            await using var data = args.GetInaccessibleValue<Stream>("ObjectStreamData");
-            using var sr = new StreamReader(data);
+            var request = _s3Client.ReceivedCalls().Last().GetArguments().OfType<PutObjectRequest>().First();
+            request.Should().NotBeNull();
+            request.BucketName.Should().Be($"{_configuration.BucketPrefix}{SampleBucket.Logos.GetName()}");
+            request.ContentType.Should().Be("image/jpeg");
+            request.Key.Should().Be("test");
+            request.AutoCloseStream.Should().BeFalse();
+            request.Metadata[BlobFileMetaData.Filename].Should().Be("test.pdf");
+            request.Metadata["something-custom"].Should().Be("test");
+            request.Metadata[BlobFileMetaData.Hash].Should().NotBeNullOrWhiteSpace();
+            request.InputStream.Should().BeSameAs(imageStream);
+            imageStream.Seek(0, SeekOrigin.Begin);
+            using var sr = new StreamReader(imageStream);
             (await sr.ReadToEndAsync()).Should().EndWith("test");
         }
 
         [Test]
         public async Task SetWithFileExtensionAsyncWorks()
         {
-            _minioClient.PutObjectAsync(Arg.Any<PutObjectArgs>(), Arg.Any<CancellationToken>())
-                .Returns(new PutObjectResponse(HttpStatusCode.OK, "", new Dictionary<string, string>(), 1, ""));
+            _s3Client.PutObjectAsync(Arg.Any<PutObjectRequest>(), Arg.Any<CancellationToken>())
+                .Returns(OkPutResponse());
             await using var imageStream = CreateStream("test", _imageSignature);
             var result = await _fileStorageSampleBucket.SetAsync(
                 new BlobFile<SampleBucket>(SampleBucket.Logos, "test").WithFileExtension(".jpg"),
@@ -211,16 +209,10 @@ namespace Dosaic.Plugins.Persistence.S3.Tests.File
             result.Bucket.Should().Be(SampleBucket.Logos);
             result.Key.Should().Be("test");
 
-            var args = _minioClient.ReceivedCalls().First().GetArguments().OfType<PutObjectArgs>().First();
-            args.Should().NotBeNull();
-
-            const string FileExtensionKey = "x-amz-meta-" + BlobFileMetaData.FileExtension;
-            const string HashKey = "x-amz-meta-" + BlobFileMetaData.Hash;
-            args.GetInaccessibleValue<Dictionary<string, string>>("Headers")[FileExtensionKey].Should().Be(".jpg");
-            args.GetInaccessibleValue<Dictionary<string, string>>("Headers")[HashKey].Should().NotBeNullOrWhiteSpace();
-            await using var data = args.GetInaccessibleValue<Stream>("ObjectStreamData");
-            using var sr = new StreamReader(data);
-            (await sr.ReadToEndAsync()).Should().EndWith("test");
+            var request = _s3Client.ReceivedCalls().Last().GetArguments().OfType<PutObjectRequest>().First();
+            request.Should().NotBeNull();
+            request.Metadata[BlobFileMetaData.FileExtension].Should().Be(".jpg");
+            request.Metadata[BlobFileMetaData.Hash].Should().NotBeNullOrWhiteSpace();
         }
 
         [Test]
@@ -234,6 +226,20 @@ namespace Dosaic.Plugins.Persistence.S3.Tests.File
                     imgStream)).Should().ThrowAsync<DosaicException>()).Subject.First();
             ex.HttpStatus.Should()
                 .Be(StatusCodes.Status500InternalServerError);
+            ex.Message.Should().Be("Could not save file dev-test-logos:test to s3");
+        }
+
+        [Test]
+        public async Task SetAsyncThrowsUnhandledOnErrorStatusCode()
+        {
+            _s3Client.PutObjectAsync(Arg.Any<PutObjectRequest>(), Arg.Any<CancellationToken>())
+                .Returns(new PutObjectResponse { HttpStatusCode = HttpStatusCode.Forbidden });
+            await using var imgStream = CreateStream("test", _imageSignature);
+            var ex = (await _fileStorageSampleBucket
+                .Invoking(async x => await x.SetAsync(
+                    new BlobFile<SampleBucket>(SampleBucket.Logos, "test"),
+                    // ReSharper disable once AccessToDisposedClosure
+                    imgStream)).Should().ThrowAsync<DosaicException>()).Subject.First();
             ex.Message.Should().Be("Could not save file dev-test-logos:test to s3");
         }
 
@@ -274,27 +280,23 @@ namespace Dosaic.Plugins.Persistence.S3.Tests.File
         {
             var action = async () => await _fileStorageSampleBucket.DeleteFileAsync(GetId("123"));
             await action.Should().NotThrowAsync();
-            await _minioClient.Received(1)
-                .RemoveObjectAsync(ArgExt.Is<RemoveObjectArgs>(r =>
-                {
-                    var bucketName = r.GetInaccessibleValue<string>("BucketName");
-                    var objectName = r.GetInaccessibleValue<string>("ObjectName");
-                    bucketName.Should().Be("dev-test-logos");
-                    objectName.Should().Be("123");
-                }));
+            await _s3Client.Received(1)
+                .DeleteObjectAsync(
+                    Arg.Is<DeleteObjectRequest>(r => r.BucketName == "dev-test-logos" && r.Key == "123"),
+                    Arg.Any<CancellationToken>());
         }
 
         [Test]
         public async Task SkipDeleteAsyncWorks()
         {
             _configuration = new S3Configuration { BucketPrefix = "dev-", SkipFileDeletion = true };
-            _fileStorage = new FileStorage(_minioClient, _contentInspector,
+            _fileStorage = new FileStorage(_s3Client, _contentInspector,
                 new FakeLogger<FileStorage>(), _configuration, _testFileTypeDefinitionResolver);
             _fileStorageSampleBucket = new FileStorage<SampleBucket>(_fileStorage);
             var action = async () => await _fileStorageSampleBucket.DeleteFileAsync(GetId("123"));
             await action.Should().NotThrowAsync();
-            await _minioClient.Received(0)
-                .RemoveObjectAsync(Arg.Any<RemoveObjectArgs>());
+            await _s3Client.Received(0)
+                .DeleteObjectAsync(Arg.Any<DeleteObjectRequest>(), Arg.Any<CancellationToken>());
         }
 
         [Test]
@@ -302,6 +304,9 @@ namespace Dosaic.Plugins.Persistence.S3.Tests.File
         {
             var action = async () => await _fileStorage.CreateBucketAsync("test-bucket");
             await action.Should().NotThrowAsync();
+            await _s3Client.Received(1)
+                .PutBucketAsync(Arg.Is<PutBucketRequest>(r => r.BucketName == "dev-test-bucket"),
+                    Arg.Any<CancellationToken>());
         }
 
         [Test]
@@ -341,60 +346,96 @@ namespace Dosaic.Plugins.Persistence.S3.Tests.File
         [Test]
         public async Task ListObjectsAsyncReturnsItems()
         {
-            var item1 = new Item { Key = "logo.png", ETag = "etag1", Size = 2048, IsDir = false };
-            var item2 = new Item { Key = "sub/", IsDir = true };
-            _minioClient.ListObjectsEnumAsync(Arg.Any<ListObjectsArgs>(), Arg.Any<CancellationToken>())
-                .Returns(CreateAsyncItems(item1, item2));
+            var lastModified = new DateTime(2026, 1, 2, 3, 4, 5, DateTimeKind.Utc);
+            _s3Client.ListObjectsV2Async(Arg.Any<ListObjectsV2Request>(), Arg.Any<CancellationToken>())
+                .Returns(new ListObjectsV2Response
+                {
+                    S3Objects =
+                    [
+                        new S3Object
+                        {
+                            Key = "logo.png", ETag = "\"etag1\"", Size = 2048, LastModified = lastModified
+                        }
+                    ],
+                    CommonPrefixes = ["sub/"]
+                });
 
             var result = new List<FileListItem>();
             await foreach (var item in _fileStorage.ListObjectsAsync("test-logos", new ListObjectOptions()))
                 result.Add(item);
 
             result.Should().HaveCount(2);
-            result[0].FileId.Key.Should().Be("logo.png");
-            result[0].FileId.Bucket.Should().Be("test-logos");
-            result[0].ETag.Should().Be("etag1");
-            result[0].Size.Should().Be(2048);
-            result[0].IsDir.Should().BeFalse();
-            result[1].FileId.Key.Should().Be("sub/");
-            result[1].IsDir.Should().BeTrue();
+            result[0].FileId.Key.Should().Be("sub/");
+            result[0].IsDir.Should().BeTrue();
+            result[1].FileId.Key.Should().Be("logo.png");
+            result[1].FileId.Bucket.Should().Be("test-logos");
+            result[1].ETag.Should().Be("etag1");
+            result[1].Size.Should().Be(2048);
+            result[1].LastModified.Should().Be(new DateTimeOffset(lastModified));
+            result[1].IsDir.Should().BeFalse();
         }
 
         [Test]
-        public async Task ListObjectsAsyncPassesOptionsToMinio()
+        public async Task ListObjectsAsyncFollowsContinuationToken()
         {
-            _minioClient.ListObjectsEnumAsync(Arg.Any<ListObjectsArgs>(), Arg.Any<CancellationToken>())
-                .Returns(CreateAsyncItems());
+            _s3Client.ListObjectsV2Async(Arg.Any<ListObjectsV2Request>(), Arg.Any<CancellationToken>())
+                .Returns(
+                    _ => new ListObjectsV2Response
+                    {
+                        S3Objects = [new S3Object { Key = "a" }],
+                        NextContinuationToken = "token"
+                    },
+                    _ => new ListObjectsV2Response { S3Objects = [new S3Object { Key = "b" }] });
 
-            await foreach (var _ in _fileStorage.ListObjectsAsync("test-logos", new ListObjectOptions { Prefix = "docs/", Recursive = true })) { }
+            var result = new List<FileListItem>();
+            await foreach (var item in _fileStorage.ListObjectsAsync("test-logos"))
+                result.Add(item);
 
-            var args = _minioClient.ReceivedCalls().First().GetArguments().OfType<ListObjectsArgs>().First();
-            args.GetInaccessibleValue<string>("Prefix").Should().Be("docs/");
-            args.GetInaccessibleValue<bool>("Recursive").Should().BeTrue();
+            result.Select(x => x.FileId.Key).Should().Equal("a", "b");
+            await _s3Client.Received(2)
+                .ListObjectsV2Async(Arg.Any<ListObjectsV2Request>(), Arg.Any<CancellationToken>());
         }
 
         [Test]
-        public async Task ListObjectsAsyncWithDefaultOptionsPassesNoPrefix()
+        public async Task ListObjectsAsyncPassesOptionsToS3()
         {
-            _minioClient.ListObjectsEnumAsync(Arg.Any<ListObjectsArgs>(), Arg.Any<CancellationToken>())
-                .Returns(CreateAsyncItems());
+            _s3Client.ListObjectsV2Async(Arg.Any<ListObjectsV2Request>(), Arg.Any<CancellationToken>())
+                .Returns(new ListObjectsV2Response());
+
+            await foreach (var _ in _fileStorage.ListObjectsAsync("test-logos",
+                               new ListObjectOptions { Prefix = "docs/", Recursive = true })) { }
+
+            await _s3Client.Received(1).ListObjectsV2Async(
+                Arg.Is<ListObjectsV2Request>(r =>
+                    r.BucketName == "dev-test-logos" && r.Prefix == "docs/" && r.Delimiter == null),
+                Arg.Any<CancellationToken>());
+        }
+
+        [Test]
+        public async Task ListObjectsAsyncWithDefaultOptionsPassesNoPrefixAndDelimiter()
+        {
+            _s3Client.ListObjectsV2Async(Arg.Any<ListObjectsV2Request>(), Arg.Any<CancellationToken>())
+                .Returns(new ListObjectsV2Response());
 
             await foreach (var _ in _fileStorage.ListObjectsAsync("test-logos")) { }
 
-            var args = _minioClient.ReceivedCalls().First().GetArguments().OfType<ListObjectsArgs>().First();
-            args.GetInaccessibleValue<string>("Prefix").Should().BeNullOrEmpty();
-            args.GetInaccessibleValue<bool>("Recursive").Should().BeFalse();
+            await _s3Client.Received(1).ListObjectsV2Async(
+                Arg.Is<ListObjectsV2Request>(r => r.Prefix == null && r.Delimiter == "/"),
+                Arg.Any<CancellationToken>());
         }
 
         [Test]
         public async Task ListObjectsAsyncTypedMapsItemsToBucketEnum()
         {
-            var item = new Item { Key = "logo.png", ETag = "img-etag", Size = 512, IsDir = false };
-            _minioClient.ListObjectsEnumAsync(Arg.Any<ListObjectsArgs>(), Arg.Any<CancellationToken>())
-                .Returns(CreateAsyncItems(item));
+            _s3Client.ListObjectsV2Async(Arg.Any<ListObjectsV2Request>(), Arg.Any<CancellationToken>())
+                .Returns(new ListObjectsV2Response
+                {
+                    S3Objects = [new S3Object { Key = "logo.png", ETag = "\"img-etag\"", Size = 512 }]
+                });
 
             var result = new List<FileListItem<SampleBucket>>();
-            await foreach (var i in _fileStorageSampleBucket.ListObjectsAsync(SampleBucket.Logos, new ListObjectOptions()))
+            await foreach (var i in _fileStorageSampleBucket.ListObjectsAsync(SampleBucket.Logos,
+                               new ListObjectOptions()))
                 result.Add(i);
 
             result.Should().HaveCount(1);
@@ -403,13 +444,6 @@ namespace Dosaic.Plugins.Persistence.S3.Tests.File
             result[0].ETag.Should().Be("img-etag");
             result[0].Size.Should().Be(512);
             result[0].IsDir.Should().BeFalse();
-        }
-
-        private static async IAsyncEnumerable<Item> CreateAsyncItems(params Item[] items)
-        {
-            foreach (var item in items)
-                yield return item;
-            await Task.CompletedTask;
         }
 
         [Test]

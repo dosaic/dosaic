@@ -1,5 +1,7 @@
 using System.Collections.Immutable;
 using System.Net.Http;
+using Amazon.Runtime;
+using Amazon.S3;
 using AwesomeAssertions;
 using Dosaic.Plugins.Persistence.S3.File;
 using Dosaic.Testing.NUnit;
@@ -11,7 +13,6 @@ using Microsoft.Extensions.Diagnostics.HealthChecks;
 using MimeDetective;
 using MimeDetective.Definitions;
 using MimeDetective.Storage;
-using Minio;
 using NSubstitute;
 using NUnit.Framework;
 using FileType = Dosaic.Plugins.Persistence.S3.File.FileType;
@@ -47,22 +48,17 @@ namespace Dosaic.Plugins.Persistence.S3.Tests
             sc.AddSingleton<S3Configuration>();
             var sp = sc.BuildServiceProvider();
 
-            var client = sp.GetRequiredService<IMinioClient>();
+            var client = sp.GetRequiredService<IAmazonS3>();
             client.Should().NotBeNull();
-            var baseUrl = client.Config.BaseUrl;
-            baseUrl.Should().NotBeNull();
-            baseUrl.Should().Be(_configuration.Endpoint);
-            var accessKey = client.Config.AccessKey;
-            accessKey.Should().NotBeNull();
-            accessKey.Should().Be(_configuration.AccessKey);
-            var secretKey = client.Config.SecretKey;
-            secretKey.Should().NotBeNull();
-            secretKey.Should().Be(_configuration.SecretKey);
-            var region = client.Config.Region;
-            region.Should().NotBeNull();
-            region.Should().Be(_configuration.Region);
-            var secure = client.Config.Secure;
-            secure.Should().Be(_configuration.UseSsl);
+            var s3Config = client.Config.Should().BeOfType<AmazonS3Config>().Subject;
+            s3Config.ServiceURL.Should().Be($"https://{_configuration.Endpoint}/");
+            s3Config.AuthenticationRegion.Should().Be(_configuration.Region);
+            s3Config.ForcePathStyle.Should().BeTrue();
+            s3Config.RequestChecksumCalculation.Should().Be(RequestChecksumCalculation.WHEN_REQUIRED);
+            s3Config.ResponseChecksumValidation.Should().Be(ResponseChecksumValidation.WHEN_REQUIRED);
+            var credentials = _plugin.GetCredentials().GetCredentials();
+            credentials.AccessKey.Should().Be(_configuration.AccessKey);
+            credentials.SecretKey.Should().Be(_configuration.SecretKey);
 
             sp.GetRequiredService<IFileTypeDefinitionResolver>().Should().NotBeNull();
             sp.GetRequiredService<IFileStorage>().Should().NotBeNull();
@@ -72,6 +68,49 @@ namespace Dosaic.Plugins.Persistence.S3.Tests
             var fileStorageSampleBucket = sp.GetRequiredService<IFileStorage<SampleBucket>>();
             fileStorageSampleBucket.Should().NotBeNull();
             fileStorageSampleBucket.Should().BeOfType<FileStorage<SampleBucket>>();
+        }
+
+        [Test]
+        public void PluginUsesDefaultCredentialChainWithoutAccessKey()
+        {
+            var plugin = new S3FileStoragePlugin(new S3Configuration { Endpoint = "s3.endpoint.de" });
+
+            plugin.GetCredentials().Should().BeNull();
+        }
+
+        [Test]
+        public void PluginFallsBackToDefaultRegionAndPlainHttp()
+        {
+            var plugin = new S3FileStoragePlugin(new S3Configuration { Endpoint = "localhost:9000" });
+
+            var s3Config = plugin.GetS3Client().Config.Should().BeOfType<AmazonS3Config>().Subject;
+            s3Config.ServiceURL.Should().Be("http://localhost:9000/");
+            s3Config.AuthenticationRegion.Should().Be(S3Configuration.DefaultRegion);
+        }
+
+        [Test]
+        public void PluginUsesEndpointWithSchemeAsIs()
+        {
+            var plugin = new S3FileStoragePlugin(new S3Configuration { Endpoint = "https://s3.endpoint.de:9000" });
+
+            var s3Config = plugin.GetS3Client().Config.Should().BeOfType<AmazonS3Config>().Subject;
+            s3Config.ServiceURL.Should().Be("https://s3.endpoint.de:9000/");
+        }
+
+        [Test]
+        public void PluginRespectsForcePathStyleAndChecksumSettings()
+        {
+            var plugin = new S3FileStoragePlugin(new S3Configuration
+            {
+                Endpoint = "s3.endpoint.de",
+                ForcePathStyle = false,
+                UseChecksums = true
+            });
+
+            var s3Config = plugin.GetS3Client().Config.Should().BeOfType<AmazonS3Config>().Subject;
+            s3Config.ForcePathStyle.Should().BeFalse();
+            s3Config.RequestChecksumCalculation.Should().Be(RequestChecksumCalculation.WHEN_SUPPORTED);
+            s3Config.ResponseChecksumValidation.Should().Be(ResponseChecksumValidation.WHEN_SUPPORTED);
         }
 
         [Test]
@@ -132,7 +171,7 @@ namespace Dosaic.Plugins.Persistence.S3.Tests
                 var sp = sc.BuildServiceProvider();
 
                 sp.GetRequiredService<IFileStorage>().Should().BeOfType<LocalFileSystemBlobStorage>();
-                sp.GetService<IMinioClient>().Should().BeNull();
+                sp.GetService<IAmazonS3>().Should().BeNull();
                 sp.GetRequiredService<IFileTypeDefinitionResolver>().Should().NotBeNull();
                 sp.GetRequiredService<IFileStorage<SampleBucket>>().Should().BeOfType<FileStorage<SampleBucket>>();
             }
@@ -183,7 +222,7 @@ namespace Dosaic.Plugins.Persistence.S3.Tests
         {
             var healthChecksBuilder = Substitute.For<IHealthChecksBuilder>();
             healthChecksBuilder.Services.Returns(new ServiceCollection());
-            _configuration.HealthCheckPath = "/minio/health/live";
+            _configuration.HealthCheckPath = "/health/live";
             _plugin.ConfigureHealthChecks(healthChecksBuilder);
             AssertUriHealthCheck(healthChecksBuilder);
         }

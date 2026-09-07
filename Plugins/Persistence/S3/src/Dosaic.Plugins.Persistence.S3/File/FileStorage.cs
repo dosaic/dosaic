@@ -3,14 +3,14 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
+using Amazon.S3;
+using Amazon.S3.Model;
 using Dosaic.Hosting.Abstractions;
 using Dosaic.Hosting.Abstractions.Exceptions;
 using Dosaic.Plugins.Persistence.S3.Blob;
 using Microsoft.Extensions.Logging;
 using MimeDetective;
 using MimeDetective.Storage;
-using Minio;
-using Minio.DataModel.Args;
 
 namespace Dosaic.Plugins.Persistence.S3.File;
 
@@ -68,13 +68,14 @@ public class FileStorage<BucketEnum>(
 }
 
 public class FileStorage(
-    IMinioClient minioClient,
+    IAmazonS3 s3Client,
     IContentInspector contentInspector,
     ILogger<FileStorage> logger,
     S3Configuration configuration,
     IFileTypeDefinitionResolver fileTypeDefinitionResolver) : IFileStorage
 {
     private const string ApplicationOctetStream = "application/octet-stream";
+    private const string MetadataPrefix = "x-amz-meta-";
 
     private static void SetFileIdTags(Activity activity, FileId fileId)
     {
@@ -95,25 +96,46 @@ public class FileStorage(
         CancellationToken cancellationToken = default) => Tracing.TrackStatusAsync(async (activity) =>
     {
         SetFileIdTags(activity, id);
-        var statArgs = new StatObjectArgs().WithBucket(ResolveBucketName(id.Bucket)).WithObject(id.Key);
-        var objectStat = await minioClient.StatObjectAsync(statArgs, cancellationToken);
+        var objectStat = await s3Client.GetObjectMetadataAsync(
+            new GetObjectMetadataRequest { BucketName = ResolveBucketName(id.Bucket), Key = id.Key },
+            cancellationToken);
+        var objectMetaData = GetObjectMetaData(objectStat);
         var metaData = new Dictionary<string, string>
         {
             {
                 BlobFileMetaData.Filename,
-                objectStat.MetaData.GetValueOrDefault(BlobFileMetaData.Filename, objectStat.ObjectName)
+                objectMetaData.GetValueOrDefault(BlobFileMetaData.Filename, id.Key)
             },
-            { BlobFileMetaData.ETag, $"\"{objectStat.ETag}\"" },
-            { BlobFileMetaData.ContentType, objectStat.ContentType },
-            { BlobFileMetaData.ContentLength, objectStat.Size.ToString(CultureInfo.InvariantCulture) }
+            { BlobFileMetaData.ETag, $"\"{objectStat.ETag?.Trim('"')}\"" },
+            { BlobFileMetaData.ContentType, objectStat.Headers.ContentType },
+            { BlobFileMetaData.ContentLength, objectStat.ContentLength.ToString(CultureInfo.InvariantCulture) }
         };
         activity.SetTags(metaData, "file.metadata.");
-        if (objectStat.MetaData.TryGetValue(BlobFileMetaData.Hash, out var hashValue))
+        if (objectMetaData.TryGetValue(BlobFileMetaData.Hash, out var hashValue))
             metaData.Add(BlobFileMetaData.Hash, hashValue);
-        var blob = new BlobFile(id) { LastModified = objectStat.LastModified };
+        var blob = new BlobFile(id) { LastModified = ToDateTimeOffset(objectStat.LastModified) };
         blob.MetaData.Set(metaData);
         return blob;
     });
+
+    private static Dictionary<string, string> GetObjectMetaData(GetObjectMetadataResponse objectStat)
+    {
+        var metaData = new Dictionary<string, string>();
+        foreach (var key in objectStat.Metadata.Keys)
+        {
+            var strippedKey = key.StartsWith(MetadataPrefix, StringComparison.OrdinalIgnoreCase)
+                ? key[MetadataPrefix.Length..]
+                : key;
+            metaData[strippedKey] = objectStat.Metadata[key];
+        }
+
+        return metaData;
+    }
+
+    private static DateTimeOffset ToDateTimeOffset(DateTime? value) =>
+        value.HasValue
+            ? new DateTimeOffset(DateTime.SpecifyKind(value.Value, DateTimeKind.Utc))
+            : DateTimeOffset.MinValue;
 
     public Task DeleteFileAsync(FileId id, CancellationToken cancellationToken = default) =>
         Tracing.TrackStatusAsync((
@@ -125,8 +147,8 @@ public class FileStorage(
                 return Task.CompletedTask;
             }
 
-            return minioClient.RemoveObjectAsync(
-                new RemoveObjectArgs().WithBucket(ResolveBucketName(id.Bucket)).WithObject(id.Key),
+            return s3Client.DeleteObjectAsync(
+                new DeleteObjectRequest { BucketName = ResolveBucketName(id.Bucket), Key = id.Key },
                 cancellationToken);
         });
 
@@ -135,17 +157,17 @@ public class FileStorage(
         {
             var bucketName = ResolveBucketName(bucket);
             activity?.SetTag("s3.bucket", bucketName);
-            await minioClient.MakeBucketAsync(new MakeBucketArgs().WithBucket(bucketName),
-                cancellationToken);
+            await s3Client.PutBucketAsync(new PutBucketRequest { BucketName = bucketName }, cancellationToken);
         });
 
     public async Task ConsumeStreamAsync(FileId id, Func<Stream, CancellationToken, Task> streamConsumer,
         CancellationToken cancellationToken = default) => await Tracing.TrackStatusAsync(async (activity) =>
     {
         SetFileIdTags(activity, id);
-        var getArgs = new GetObjectArgs().WithBucket(ResolveBucketName(id.Bucket)).WithObject(id.Key)
-            .WithCallbackStream(streamConsumer);
-        await minioClient.GetObjectAsync(getArgs, cancellationToken);
+        using var response = await s3Client.GetObjectAsync(
+            new GetObjectRequest { BucketName = ResolveBucketName(id.Bucket), Key = id.Key }, cancellationToken);
+        await using var stream = response.ResponseStream;
+        await streamConsumer(stream, cancellationToken);
     });
 
     public async Task<FileId> SetAsync(BlobFile file, Stream stream, FileType fileType,
@@ -170,16 +192,19 @@ public class FileStorage(
         ValidateContentType(fileType, file.MetaData[BlobFileMetaData.ContentType]);
 
         var bucketWithPrefix = ResolveBucketName(file.Id.Bucket);
-        var arguments = new PutObjectArgs()
-            .WithBucket(bucketWithPrefix)
-            .WithObject(file.Id.Key)
-            .WithHeaders(file.MetaData.GetUrlEncodedMetadata())
-            .WithStreamData(stream)
-            .WithObjectSize(stream.Length)
-            .WithContentType(file.MetaData[BlobFileMetaData.ContentType]);
+        var request = new PutObjectRequest
+        {
+            BucketName = bucketWithPrefix,
+            Key = file.Id.Key,
+            InputStream = stream,
+            AutoCloseStream = false,
+            ContentType = file.MetaData[BlobFileMetaData.ContentType]
+        };
+        foreach (var (key, value) in file.MetaData.GetUrlEncodedMetadata())
+            request.Metadata.Add(key, value);
 
-        var result = await minioClient.PutObjectAsync(arguments, cancellationToken);
-        if (result != null)
+        var result = await s3Client.PutObjectAsync(request, cancellationToken);
+        if (result is not null && (int)result.HttpStatusCode < 300)
         {
             logger.LogDebug("Put {Bucket}:{Object} into S3", file.Id.Key, bucketWithPrefix);
             return file.Id;
@@ -227,18 +252,22 @@ public class FileStorage(
     public async IAsyncEnumerable<FileListItem> ListObjectsAsync(string bucket, ListObjectOptions options,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
-        var bucketName = ResolveBucketName(bucket);
-        var args = new ListObjectsArgs()
-            .WithBucket(bucketName)
-            .WithRecursive(options.Recursive);
-        if (!string.IsNullOrEmpty(options.Prefix))
-            args = args.WithPrefix(options.Prefix);
-        await foreach (var item in minioClient.ListObjectsEnumAsync(args, cancellationToken))
-            yield return new FileListItem(new FileId(bucket, item.Key), item.ETag, (long)item.Size,
-                item.LastModifiedDateTime.HasValue
-                    ? new DateTimeOffset(item.LastModifiedDateTime.Value)
-                    : DateTimeOffset.MinValue,
-                item.IsDir);
+        var request = new ListObjectsV2Request
+        {
+            BucketName = ResolveBucketName(bucket),
+            Prefix = string.IsNullOrEmpty(options.Prefix) ? null : options.Prefix,
+            Delimiter = options.Recursive ? null : "/"
+        };
+        do
+        {
+            var response = await s3Client.ListObjectsV2Async(request, cancellationToken);
+            foreach (var prefix in response.CommonPrefixes ?? [])
+                yield return new FileListItem(new FileId(bucket, prefix), "", 0, DateTimeOffset.MinValue, true);
+            foreach (var item in response.S3Objects ?? [])
+                yield return new FileListItem(new FileId(bucket, item.Key), item.ETag?.Trim('"') ?? "",
+                    item.Size ?? 0, ToDateTimeOffset(item.LastModified), false);
+            request.ContinuationToken = response.NextContinuationToken;
+        } while (!string.IsNullOrEmpty(request.ContinuationToken));
     }
 
     private void ValidateContentType(FileType fileType, string contentType)

@@ -1,6 +1,6 @@
 # Dosaic.Plugins.Persistence.S3
 
-`Dosaic.Plugins.Persistence.S3` is a plugin that provides S3-compatible object storage for Dosaic applications. It wraps the [Minio](https://github.com/minio/minio-dotnet) client, adds automatic MIME-type detection via [Mime-Detective](https://github.com/MediatedCommunications/Mime-Detective), bucket-prefixing, SHA-256 hashing, OpenTelemetry tracing, and a local-filesystem fallback for development and testing.
+`Dosaic.Plugins.Persistence.S3` is a plugin that provides S3-compatible object storage for Dosaic applications. It wraps the [AWS SDK for .NET](https://github.com/aws/aws-sdk-net) S3 client, adds automatic MIME-type detection via [Mime-Detective](https://github.com/MediatedCommunications/Mime-Detective), bucket-prefixing, SHA-256 hashing, OpenTelemetry tracing, and a local-filesystem fallback for development and testing.
 
 ## Installation
 
@@ -20,11 +20,13 @@ or add as a package reference to your `.csproj`:
 
 ```yaml
 s3:
-  endpoint: "s3.example.com"         # S3 / MinIO endpoint (host[:port])
-  accessKey: "your-access-key"
+  endpoint: "s3.example.com"         # S3 / MinIO endpoint (host[:port], or a full url incl. scheme)
+  accessKey: "your-access-key"       # optional, falls back to the AWS default credential chain
   secretKey: "your-secret-key"
-  region: "us-east-1"                # optional
+  region: "us-east-1"                # optional, signing region, default "us-east-1"
   useSsl: true                       # optional, default false
+  forcePathStyle: true               # optional, default true (required by MinIO, Ceph, ...)
+  useChecksums: false                # optional, default false, enable AWS SDK request/response checksums
   bucketPrefix: "myapp-"             # optional, prefixed to every bucket name
   healthCheckPath: ""                # optional, path appended to endpoint URL for readiness check
   useLocalFileSystem: false          # optional, use local filesystem instead of S3 (dev/test mode)
@@ -32,6 +34,16 @@ s3:
 ```
 
 When `useLocalFileSystem: true` the plugin stores files on the local disk at `localFileSystemPath` instead of connecting to an S3 endpoint. This is useful for local development and integration tests where no MinIO/S3 instance is available.
+
+### Credentials
+
+If `accessKey` is empty the plugin builds the client without explicit credentials, so the AWS SDK default credential chain applies (environment variables, shared config file, EC2/ECS/EKS instance metadata). Set `accessKey`/`secretKey` for MinIO or any static-key setup.
+
+### Path style and checksums
+
+`forcePathStyle` defaults to `true` (`http://endpoint/bucket/key`) because virtual hosted style (`http://bucket.endpoint/key`) needs wildcard DNS, which self-hosted S3 servers usually do not have. Set it to `false` for AWS S3.
+
+`useChecksums` defaults to `false`, mapping to `RequestChecksumCalculation.WHEN_REQUIRED` / `ResponseChecksumValidation.WHEN_REQUIRED`. AWS SDK v4 would otherwise add CRC32 checksums to every request, which not every S3-compatible server accepts. Set it to `true` against AWS S3 or a server that supports them.
 
 ## Registration and Configuration
 
@@ -96,6 +108,8 @@ services.AddS3BlobStoragePlugin(new S3Configuration
     BucketPrefix = "myapp-",   // optional
     Region = "us-east-1",      // optional
     UseSsl = true,             // optional
+    ForcePathStyle = true,     // optional, default true
+    UseChecksums = false,      // optional, default false
     HealthCheckPath = "",      // optional
 });
 ```
@@ -342,7 +356,7 @@ public class FilesController(IFileStorage<MyBucket> fileStorage) : ControllerBas
 
 ## Features
 
-- **S3-compatible storage** via the Minio .NET client (works with AWS S3, MinIO, Wasabi, etc.)
+- **S3-compatible storage** via the AWS SDK for .NET `IAmazonS3` client (works with AWS S3, MinIO, Wasabi, etc.)
 - **Local filesystem fallback** (`useLocalFileSystem: true`) for zero-dependency dev/test environments
 - **Typed enum-based buckets** with `IFileStorage<TBucket>` and per-bucket `FileType` validation
 - **Untyped bucket storage** with `IFileStorage` and runtime `CreateBucketAsync`
