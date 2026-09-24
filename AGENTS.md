@@ -7,7 +7,7 @@
 **Dosaic** is a plugin-first .NET framework for rapidly building anything hosted in the web.
 The name is a play on "mosaic" — Dotnet Orchestration Services Abstraction Integration Configuration.
 
-- **Target framework:** net10.0 (SDK 10.0.103 via `global.json`)
+- **Target framework:** net10.0 (SDK 10.0.401 via `global.json`)
 - **License:** MIT
 - **NuGet packages:** published as `Dosaic.*`
 
@@ -191,14 +191,14 @@ Defined in `PluginActivateableExtensions.GetSortOrderForPlugin`:
 
 | Package | Version | Purpose |
 |---|---|---|
-| NUnit | 4.5.0 | Test framework |
+| NUnit | 4.6.1 | Test framework |
 | NUnit3TestAdapter | 5.2.0 | **DO NOT upgrade to v6!** |
-| AwesomeAssertions | 9.4.0 | Fluent assertions (`.Should()`) — **not** FluentAssertions |
-| NSubstitute | 5.3.0 | Mocking — **not** Moq |
+| AwesomeAssertions | 9.6.0 | Fluent assertions (`.Should()`) — **not** FluentAssertions |
+| NSubstitute | 6.2.0 | Mocking — **not** Moq |
 | Bogus | 35.6.5 | Fake data generation |
 | AutoBogus | — | Convention-based fakes |
-| WireMock.Net | 1.25.0 | HTTP server mocking |
-| Testcontainers.PostgreSql | 4.14.0 | Throwaway PostgreSQL for integration tests (Hangfire plugin) |
+| WireMock.Net | 2.18.0 | HTTP server mocking |
+| Testcontainers.PostgreSql | 4.15.0 | Throwaway PostgreSQL for integration tests (Hangfire plugin) |
 | RichardSzalay.MockHttp | — | HttpClient mocking |
 | TngTech.ArchUnitNET.NUnit | — | Architecture tests |
 | Allure.NUnit | — | Test reporting |
@@ -409,7 +409,7 @@ The repository includes MCP (Model Context Protocol) servers for AI-assisted dev
 
 | File | Purpose |
 |---|---|
-| `global.json` | .NET SDK version (10.0.103) |
+| `global.json` | .NET SDK version (10.0.401) |
 | `Directory.Build.props` | Shared build properties, global usings, test assembly attributes, NuGet metadata |
 | `Directory.Packages.props` | Central package version management |
 | `.editorconfig` | Code style rules, naming conventions, diagnostic severities |
