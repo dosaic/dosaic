@@ -14,34 +14,34 @@
     <PackageVersion Include="AspNetCore.HealthChecks.System" Version="9.0.0" />
     <PackageVersion Include="AspNetCore.HealthChecks.Uris" Version="9.0.0" />
     <PackageVersion Include="AspNetCoreRateLimit" Version="5.0.0" />
-    <PackageVersion Include="AWSSDK.S3" Version="4.0.103.3" />
+    <PackageVersion Include="AWSSDK.S3" Version="4.0.104.1" />
     <PackageVersion Include="AwesomeAssertions" Version="9.6.0" />
     <PackageVersion Include="Bogus" Version="35.6.5" />
     <PackageVersion Include="BouncyCastle.NetCore" Version="2.2.1" />
     <PackageVersion Include="Buildalyzer.Workspaces" Version="9.0.0" />
     <PackageVersion Include="Chronos.Abstractions" Version="2.0.24" />
     <PackageVersion Include="Chronos.Net" Version="2.0.24" />
-    <PackageVersion Include="coverlet.collector" Version="10.0.1">
+    <PackageVersion Include="coverlet.collector" Version="10.1.0">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageVersion>
-    <PackageVersion Include="DynamicExpresso.Core" Version="2.19.5" />
+    <PackageVersion Include="DynamicExpresso.Core" Version="2.19.6" />
     <PackageVersion Include="EntityFrameworkCore.Testing.NSubstitute" Version="10.0.0" />
     <PackageVersion Include="EzSmb" Version="1.3.10" />
-    <PackageVersion Include="FluentValidation" Version="11.11.0" />
+    <PackageVersion Include="FluentValidation" Version="12.1.1" />
     <PackageVersion Include="GracefulExpandoObject" Version="1.6.0" />
     <PackageVersion Include="HangFire" Version="1.8.25" />
     <PackageVersion Include="Hangfire.MemoryStorage" Version="1.8.1.2" />
     <PackageVersion Include="Hangfire.PostgreSql" Version="1.21.1" />
-    <PackageVersion Include="LinqKit.Microsoft.EntityFrameworkCore" Version="10.0.11" />
+    <PackageVersion Include="LinqKit.Microsoft.EntityFrameworkCore" Version="10.1.0" />
     <PackageVersion Include="Linq.Expression.Optimizer" Version="1.0.39" />
     <PackageVersion Include="Mapster" Version="10.0.13" />
     <!-- MassTransit v9+ switched to a commercial license we cannot use.
     DO NOT UPDATE MassTransit / MassTransit.RabbitMQ TO V9 OR HIGHER!!!
     Stay on the last v8 release. -->
-    <PackageVersion Include="MassTransit" Version="8.5.10" />
-    <PackageVersion Include="MassTransit.RabbitMQ" Version="8.5.10" />
-    <PackageVersion Include="Metalama.Framework" Version="2026.1.28" />
+    <PackageVersion Include="MassTransit" Version="8.5.11" />
+    <PackageVersion Include="MassTransit.RabbitMQ" Version="8.5.11" />
+    <PackageVersion Include="Metalama.Framework" Version="2026.1.29" />
     <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="$(MicrosoftAspNetCoreVersion)" />
     <PackageVersion Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="$(MicrosoftAspNetCoreVersion)" />
     <PackageVersion Include="Microsoft.AspNetCore.Authorization" Version="$(MicrosoftAspNetCoreVersion)" />
@@ -88,8 +88,8 @@
     <PackageVersion Include="Microsoft.Extensions.Options" Version="$(MicrosoftExtensionsVersion)" />
     <PackageVersion Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="$(MicrosoftExtensionsVersion)" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="$(MicrosoftExtensionsVersion)" />
-    <PackageVersion Include="Microsoft.FeatureManagement" Version="4.7.0" />
-    <PackageVersion Include="Microsoft.FeatureManagement.AspNetCore" Version="4.7.0" />
+    <PackageVersion Include="Microsoft.FeatureManagement" Version="4.8.0" />
+    <PackageVersion Include="Microsoft.FeatureManagement.AspNetCore" Version="4.8.0" />
     <PackageVersion Include="Microsoft.IdentityModel.Tokens" Version="8.23.0" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.10.1" />
     <PackageVersion Include="Mime-Detective" Version="25.8.1" />
@@ -105,7 +105,7 @@
     <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
     <PackageVersion Include="NSubstitute" Version="6.2.0" />
     <PackageVersion Include="NSubstitute.Analyzers.CSharp" Version="1.0.17" />
-    <PackageVersion Include="NUnit" Version="4.6.1" />
+    <PackageVersion Include="NUnit" Version="5.0.0" />
     <!-- https://github.com/nunit/nunit3-vs-adapter:
     From version 6.0 the NUnit3TestAdapter will support MTP 2.0, and stop supporting .net core 3. Lowest version will be .net 8.0.
     This causes some problems (exact problem is unknown) with the assembly file loading at this point, no solution was found so far.
@@ -119,7 +119,7 @@
     <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.19.1" />
     <PackageVersion Include="OpenTelemetry.Extensions.Propagators" Version="1.19.1" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.19.0" />
-    <PackageVersion Include="OpenTelemetry.Instrumentation.EntityFrameworkCore" Version="1.19.0-beta.1" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.EntityFrameworkCore" Version="1.19.1-beta.1" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.Hangfire" Version="1.19.0-beta.1" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.19.0" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.Process" Version="1.19.0-rc.1" />
@@ -131,11 +131,14 @@
     <PackageVersion Include="Serilog.AspNetCore" Version="10.0.0" />
     <PackageVersion Include="Serilog.Enrichers.Span" Version="3.1.0" />
     <PackageVersion Include="Serilog.Enrichers.Thread" Version="4.0.0" />
-    <PackageVersion Include="SharpCompress" Version="0.48.1" />
+    <!-- Transitive pin (via MongoDB.Driver). SharpCompress 1.0 removed SharpCompressStream.CreateNonDisposing,
+    which MongoDB.Driver 3.12 calls for zlib compression (MissingMethodException at runtime).
+    Stay on 0.x until MongoDB.Driver supports SharpCompress 1.x. -->
+    <PackageVersion Include="SharpCompress" Version="0.50.4" />
     <PackageVersion Include="Snappier" Version="1.3.1" />
     <PackageVersion Include="Sqids" Version="3.2.1" />
     <!-- Transitive override for GHSA-2m69-gcr7-jv3q -->
-    <PackageVersion Include="SQLitePCLRaw.lib.e_sqlite3" Version="2.1.13" />
+    <PackageVersion Include="SQLitePCLRaw.lib.e_sqlite3" Version="3.53.3" />
     <PackageVersion Include="SSH.NET" Version="2026.0.0" />
     <PackageVersion Include="Swashbuckle.AspNetCore.Annotations" Version="10.2.3" />
     <PackageVersion Include="Swashbuckle.AspNetCore.SwaggerUI" Version="10.2.3" />
