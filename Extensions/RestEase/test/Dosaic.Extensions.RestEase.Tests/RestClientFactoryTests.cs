@@ -110,14 +110,14 @@ namespace Dosaic.Extensions.RestEase.Tests
         }
 
         [Test]
-        public void ExceptionsGetThrownOnFailedRequests()
+        public async Task ExceptionsGetThrownOnFailedRequests()
         {
             var id = Guid.NewGuid();
             var requestMatcher = Request.Create().WithPath($"/{id}").UsingPut();
             _server.Given(requestMatcher).RespondWith(Response.Create().WithStatusCode(500));
 
             var client = RestClientFactory.Create<ISomeApi>(_baseAddress);
-            var apiException = Assert.ThrowsAsync<ApiException>(async () => await client.Update(id, new SomeResource(), CancellationToken.None))!;
+            var apiException = await Assert.ThrowsAsync<ApiException>(async () => await client.Update(id, new SomeResource(), CancellationToken.None));
             apiException.StatusCode.Should().Be(HttpStatusCode.InternalServerError);
             _server.FindLogEntries(requestMatcher).Should().HaveCount(4);
         }

@@ -27,7 +27,7 @@ Enable via `/mcp` if not auto-loaded.
 ### Non-negotiables
 - `var` everywhere; block-scoped namespaces; braces only for multi-line
 - `Nullable` disabled repo-wide
-- NUnit 4 + **AwesomeAssertions** (not FluentAssertions) + **NSubstitute** (not Moq)
+- NUnit 5 + **AwesomeAssertions** (not FluentAssertions) + **NSubstitute** (not Moq)
 - `NUnit3TestAdapter` pinned to v5 — do not bump
 - Central package versions via `Directory.Packages.props` — no inline `Version=` on `PackageReference`
 - Coverage gate ≥80% line, enforced in CI

@@ -191,7 +191,7 @@ Defined in `PluginActivateableExtensions.GetSortOrderForPlugin`:
 
 | Package | Version | Purpose |
 |---|---|---|
-| NUnit | 4.6.1 | Test framework |
+| NUnit | 5.0.0 | Test framework |
 | NUnit3TestAdapter | 5.2.0 | **DO NOT upgrade to v6!** |
 | AwesomeAssertions | 9.6.0 | Fluent assertions (`.Should()`) — **not** FluentAssertions |
 | NSubstitute | 6.2.0 | Mocking — **not** Moq |
