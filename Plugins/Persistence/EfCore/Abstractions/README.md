@@ -56,6 +56,9 @@ or add as a package reference to your `.csproj`:
 | `ObjectChanges` | Dictionary of `propertyName → OldNewValue` representing a diff |
 | `ExcludeFromHistoryAttribute` | Property attribute — excludes a field from history diffs |
 | `ChangeTrackerExtensions` | `GetChangeSet()` / `UpdateChangeSet()` extension methods on `ChangeTracker` |
+| `DbSetHistoryExtensions` | `LoadFromHistoryAsync(id, asOf[, options])` / `LoadHistoryTimelineAsync(id[, options])` — rebuild an entity from its `History<T>` rows |
+| `HistoryReplay` | Replays `ObjectChanges` rows onto a fresh root; `ConvertValue(value, type)` is the built-in change-set value conversion |
+| `HistoryReplayOptions` | Replay options; `ValueConverter` hooks app-specific conversions in before the built-in one |
 | `IUserIdProvider` | Service interface providing `UserId`, `FallbackUserId`, and `IsUserInteraction` for audit fields |
 
 ### Database
@@ -175,6 +178,34 @@ public class Product : AuditableModel, IHistory
     [ExcludeFromHistory]
     public string InternalNote { get; set; }
 }
+```
+
+Reconstruct an entity as it was at a point in time:
+
+```csharp
+var asOf = await db.Get<Product>().LoadFromHistoryAsync(productId, new DateTime(2025, 4, 1, 0, 0, 0, DateTimeKind.Utc));
+```
+
+Change-set values are stored as JSON and converted back to the property type on replay. Besides strings, numbers,
+enums, `Guid`, `NanoId`, `DateTime`, `DateTimeOffset`, nested objects and collections, `DateOnly` (`yyyy-MM-dd`) and
+`TimeOnly` (`HH:mm:ss[.fffffff]`) are supported, including their nullable variants. A timestamp string replayed into a
+`DateOnly` property (e.g. history written before the property changed from `DateTime` to `DateOnly`) becomes its UTC date.
+
+For app-specific rules pass a `ValueConverter`. It runs before the built-in conversion for root properties,
+child-collection snapshots (`Collection.{id}`) and child properties (`Collection.{id}.Property`); return the input
+unchanged to fall back to the built-in conversion:
+
+```csharp
+var berlin = TimeZoneInfo.FindSystemTimeZoneById("Europe/Berlin");
+var options = new HistoryReplayOptions
+{
+    ValueConverter = (property, value) =>
+        (Nullable.GetUnderlyingType(property.PropertyType) ?? property.PropertyType) == typeof(DateOnly)
+        && value is string s && s.Contains('T')
+            ? DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(DateTimeOffset.Parse(s, CultureInfo.InvariantCulture), berlin).DateTime)
+            : value
+};
+var asOf = await db.Get<Product>().LoadFromHistoryAsync(productId, date, options, cancellationToken);
 ```
 
 ### 3. Create a DbContext
