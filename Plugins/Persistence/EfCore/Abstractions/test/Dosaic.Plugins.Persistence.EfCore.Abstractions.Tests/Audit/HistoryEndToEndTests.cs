@@ -238,5 +238,40 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests.Audit
             timeline[0].Snapshot.HistoryProperty.Should().Be("alpha");
             timeline[1].Snapshot.HistoryProperty.Should().Be("beta");
         }
+
+        [Test]
+        public async Task LoadFromHistoryAppliesValueConverterFromOptions()
+        {
+            var root = new TestHistoryModel { Id = "R1", HistoryProperty = "alpha" };
+            _db.Set<TestHistoryModel>().Add(root);
+            _db.Set<TestHistoryChildModel>().Add(new TestHistoryChildModel
+            {
+                Id = "CH1",
+                ParentId = "R1",
+                ChildName = "item",
+                Price = 1m
+            });
+            await _db.SaveChangesAsync();
+
+            _now = _now.AddMinutes(1);
+            _db.Set<TestHistoryChildModel>().Single(c => c.Id == (NanoId)"CH1").ChildName = "renamed";
+            await _db.SaveChangesAsync();
+
+            var options = new HistoryReplayOptions
+            {
+                ValueConverter = (property, value) =>
+                    property.PropertyType == typeof(string) && value is string s ? s.ToUpperInvariant() : value
+            };
+
+            var result = await _db.Set<TestHistoryModel>().LoadFromHistoryAsync("R1", _now, options);
+            result.HistoryProperty.Should().Be("ALPHA");
+            result.Children.Single().ChildName.Should().Be("RENAMED");
+            result.Children.Single().Price.Should().Be(1m);
+
+            var timeline = await _db.Set<TestHistoryModel>().LoadHistoryTimelineAsync("R1", options);
+            timeline.Should().HaveCount(2);
+            timeline[0].Snapshot.Children.Single().ChildName.Should().Be("ITEM");
+            timeline[1].Snapshot.Children.Single().ChildName.Should().Be("RENAMED");
+        }
     }
 }
