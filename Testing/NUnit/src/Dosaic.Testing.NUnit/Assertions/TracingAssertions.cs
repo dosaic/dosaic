@@ -26,13 +26,22 @@ namespace Dosaic.Testing.NUnit.Assertions
         public AndConstraint<TracingAssertions> RegisterSources(string[] sources, string because = "", params object[] becauseArgs)
         {
             var listener = Subject.GetInaccessibleValue<ActivityListener>("listener");
-            var registeredSources = listener?.ShouldListenTo?.Target.GetInaccessibleValue<HashSet<string>>("activitySources") ?? [];
+            var missingSources = sources.Where(s => !IsListenedTo(listener, s)).ToArray();
 
             CurrentAssertionChain.BecauseOf(because, becauseArgs)
-                .ForCondition(sources.All(s => registeredSources?.Contains(s) ?? false))
-                .FailWith($"Not all expected sources were registered. Expected: {{0}}. Registered: {{1}}", sources, registeredSources);
+                .ForCondition(missingSources.Length == 0)
+                .FailWith($"Not all expected sources were registered. Expected: {{0}}. Missing: {{1}}", sources, missingSources);
 
             return new AndConstraint<TracingAssertions>(this);
+        }
+
+        // The SDK's source filter is internal and changes shape between releases, so probe it through the public predicate instead.
+        private static bool IsListenedTo(ActivityListener listener, string source)
+        {
+            if (listener?.ShouldListenTo is null)
+                return false;
+            using var activitySource = new ActivitySource(source);
+            return listener.ShouldListenTo(activitySource);
         }
 
         public AndConstraint<TracingAssertions> RegisterInstrumentation<T>(string because = "", params object[] becauseArgs)
