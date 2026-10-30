@@ -7,7 +7,7 @@
 **Dosaic** is a plugin-first .NET framework for rapidly building anything hosted in the web.
 The name is a play on "mosaic" — Dotnet Orchestration Services Abstraction Integration Configuration.
 
-- **Target framework:** net10.0 (SDK 10.0.401 via `global.json`)
+- **Target framework:** net10.0 (SDK 10.0.403 via `global.json`)
 - **License:** MIT
 - **NuGet packages:** published as `Dosaic.*`
 
@@ -409,7 +409,7 @@ The repository includes MCP (Model Context Protocol) servers for AI-assisted dev
 
 | File | Purpose |
 |---|---|
-| `global.json` | .NET SDK version (10.0.401) |
+| `global.json` | .NET SDK version (10.0.403) |
 | `Directory.Build.props` | Shared build properties, global usings, test assembly attributes, NuGet metadata |
 | `Directory.Packages.props` | Central package version management |
 | `.editorconfig` | Code style rules, naming conventions, diagnostic severities |
