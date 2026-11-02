@@ -35,7 +35,7 @@
     <PackageVersion Include="Hangfire.PostgreSql" Version="1.21.1" />
     <PackageVersion Include="LinqKit.Microsoft.EntityFrameworkCore" Version="10.1.1" />
     <PackageVersion Include="Linq.Expression.Optimizer" Version="1.0.39" />
-    <PackageVersion Include="Mapster" Version="10.0.13" />
+    <PackageVersion Include="Mapster" Version="10.0.14" />
     <!-- MassTransit v9+ switched to a commercial license we cannot use.
     DO NOT UPDATE MassTransit / MassTransit.RabbitMQ TO V9 OR HIGHER!!!
     Stay on the last v8 release. -->
