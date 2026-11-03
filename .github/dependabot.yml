@@ -9,3 +9,8 @@ updates:
     directory: "/" # Location of package manifests
     schedule:
       interval: "weekly"
+    ignore:
+      # MassTransit v9+ switched to a commercial license we cannot use.
+      # Stay on v8; patch/minor updates within v8 are still allowed.
+      - dependency-name: "MassTransit*"
+        versions: [">= 9.0.0"]
