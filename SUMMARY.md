@@ -26,9 +26,9 @@
   * [Abstractions](Plugins/Messaging/Abstractions/README.md)
   * [MassTransit](Plugins/Messaging/MassTransit/README.md)
 * Persistence
-  * [Abstractions](Plugins/Persistence/Abstractions/README.md)
-  * [EntityFramework](Plugins/Persistence/EntityFramework/README.md)
-  * [InMemory](Plugins/Persistence/InMemory/README.md)
+  * EfCore
+    * [Abstractions](Plugins/Persistence/EfCore/Abstractions/README.md)
+    * [NpgSql](Plugins/Persistence/EfCore/NpgSql/README.md)
   * [MongoDb](Plugins/Persistence/MongoDb/README.md)
   * [S3](Plugins/Persistence/S3/README.md)
   * [Smb](Plugins/Persistence/Smb/README.md)
@@ -39,8 +39,10 @@
 
 ## Extensions
 
+* [Abstractions](Extensions/Abstractions/README.md)
 * Localization
-  * [Abstractions](Extensions/Localization/README.md)
+  * [Overview](Extensions/Localization/README.md)
+  * [Abstractions](Extensions/Localization/Abstractions/README.md)
   * [Generator](Extensions/Localization/Generator/README.md)
 * [NanoId](Extensions/NanoId/README.md)
 * [RestEase](Extensions/RestEase/README.md)
@@ -58,3 +60,7 @@
 ## Testing
 
 * [NUnit](Testing/NUnit/README.md)
+
+## Example
+
+* [Example Service](example/README.md)
