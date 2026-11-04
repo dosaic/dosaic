@@ -16,12 +16,6 @@
   * [Zitadel](Plugins/Authorization/Zitadel/README.md)
 * Caching
   * [Redis](Plugins/Caching/Redis/README.md)
-* Endpoints
-  * [Abstractions](Plugins/Endpoints/Abstractions/README.md)
-  * [RestResourceEntity](Plugins/Endpoints/RestResourceEntity/README.md)
-* Handlers
-  * [Abstractions](Plugins/Handlers/Abstractions/Cqrs/README.md)
-  * [CQRS](Plugins/Handlers/Cqrs/README.md)
 * Jobs
   * [Hangfire](Plugins/Jobs/Hangfire/README.md)
 * Management

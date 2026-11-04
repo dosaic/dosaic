@@ -31,15 +31,13 @@ Hosting/
 Plugins/
   Authorization/   → Keycloak integration
   Caching/         → Redis distributed cache
-  Endpoints/       → REST resource entity abstractions
-  Handlers/        → CQRS abstractions + implementation
   Jobs/            → Hangfire scheduler
   Management/      → Unleash feature flags
   Mapping/         → Mapster auto-mapping
   Messaging/       → MassTransit messaging
   Persistence/     → EF Core, MongoDB, InMemory, S3, VaultSharp
   Storage/         → SMB file storage
-  Validations/     → FluentValidation + attribute-based
+  Validations/     → attribute-based validation
 
 Extensions/
   Abstractions/    → Page, PagedList, CurrencyValue, Quantity
