@@ -8,17 +8,11 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
-    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" />
-    <PackageReference Include="Microsoft.CodeAnalysis.Workspaces.MSBuild" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" />
     <PackageReference Include="NeinLinq.EntityFrameworkCore" />
     <PackageReference Include="OpenTelemetry.Instrumentation.EntityFrameworkCore"/>
     <PackageReference Include="OpenTelemetry.Extensions.Hosting"/>
     <PackageReference Include="GracefulExpandoObject" />
-    <PackageReference Include="Microsoft.Build"/>
-    <PackageReference Include="Microsoft.Build.Tasks.Core"/>
-    <PackageReference Include="Microsoft.Build.Utilities.Core"/>
     <PackageReference Include="Linq.Expression.Optimizer" />
     <PackageReference Include="LinqKit.Microsoft.EntityFrameworkCore" />
 

@@ -31,15 +31,13 @@ Hosting/
 Plugins/
   Authorization/   → Keycloak integration
   Caching/         → Redis distributed cache
-  Endpoints/       → REST resource entity abstractions
-  Handlers/        → CQRS abstractions + implementation
   Jobs/            → Hangfire scheduler
   Management/      → Unleash feature flags
   Mapping/         → Mapster auto-mapping
   Messaging/       → MassTransit messaging
   Persistence/     → EF Core, MongoDB, InMemory, S3, VaultSharp
   Storage/         → SMB file storage
-  Validations/     → FluentValidation + attribute-based
+  Validations/     → attribute-based validation
 
 Extensions/
   Abstractions/    → Page, PagedList, CurrencyValue, Quantity
@@ -192,7 +190,7 @@ Defined in `PluginActivateableExtensions.GetSortOrderForPlugin`:
 | Package | Version | Purpose |
 |---|---|---|
 | NUnit | 5.0.0 | Test framework |
-| NUnit3TestAdapter | 5.2.0 | **DO NOT upgrade to v6!** |
+| NUnit3TestAdapter | 6.3.1 | VSTest adapter |
 | AwesomeAssertions | 9.6.0 | Fluent assertions (`.Should()`) — **not** FluentAssertions |
 | NSubstitute | 6.2.0 | Mocking — **not** Moq |
 | Bogus | 35.6.5 | Fake data generation |

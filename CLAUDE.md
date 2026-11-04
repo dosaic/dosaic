@@ -28,7 +28,7 @@ Enable via `/mcp` if not auto-loaded.
 - `var` everywhere; block-scoped namespaces; braces only for multi-line
 - `Nullable` disabled repo-wide
 - NUnit 5 + **AwesomeAssertions** (not FluentAssertions) + **NSubstitute** (not Moq)
-- `NUnit3TestAdapter` pinned to v5 — do not bump
+- `MassTransit` / `MassTransit.RabbitMQ` stay on v8 — v9+ is commercially licensed
 - Central package versions via `Directory.Packages.props` — no inline `Version=` on `PackageReference`
 - Coverage gate ≥80% line, enforced in CI
 - `dotnet format --verify-no-changes --no-restore` must pass before merge
