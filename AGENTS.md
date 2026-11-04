@@ -192,7 +192,7 @@ Defined in `PluginActivateableExtensions.GetSortOrderForPlugin`:
 | Package | Version | Purpose |
 |---|---|---|
 | NUnit | 5.0.0 | Test framework |
-| NUnit3TestAdapter | 5.2.0 | **DO NOT upgrade to v6!** |
+| NUnit3TestAdapter | 6.3.1 | VSTest adapter |
 | AwesomeAssertions | 9.6.0 | Fluent assertions (`.Should()`) — **not** FluentAssertions |
 | NSubstitute | 6.2.0 | Mocking — **not** Moq |
 | Bogus | 35.6.5 | Fake data generation |

@@ -2,7 +2,7 @@
 
 ## Framework
 - **NUnit** 4.5.0 as test runner
-- **NUnit3TestAdapter** 5.2.0 (DO NOT upgrade to v6!)
+- **NUnit3TestAdapter** 6.x
 - **AwesomeAssertions** 9.4.0 for fluent assertions (`.Should()`)
 - **NSubstitute** 5.3.0 for mocking
 - **Bogus** / **AutoBogus** for fake data generation

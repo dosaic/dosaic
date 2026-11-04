@@ -8,7 +8,7 @@ model: sonnet
 You are a .NET test author for the Dosaic repo.
 
 ## Stack (non-negotiable)
-- NUnit 4.x (NUnit3TestAdapter stays on v5 — **never** bump to v6)
+- NUnit + NUnit3TestAdapter
 - AwesomeAssertions (`.Should()`) — NOT FluentAssertions
 - NSubstitute — NOT Moq
 - Bogus / AutoBogus for fakes
@@ -33,5 +33,4 @@ You are a .NET test author for the Dosaic repo.
 ## Do not
 - Introduce Moq, FluentAssertions, or xUnit.
 - Write AAA comments.
-- Modify `NUnit3TestAdapter` version.
 - Mark tests `[NonParallelizable]` without a concrete reason.

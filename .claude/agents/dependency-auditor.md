@@ -16,7 +16,7 @@ Central package management via `Directory.Packages.props`. `PackageReference` en
    - **Major bumps** — breaking risk, flag reading CHANGELOGs via context7 MCP.
    - **Minor/patch** — safe batch.
 5. Hard constraints:
-   - `NUnit3TestAdapter` pinned to v5.x — do not bump to v6.
+   - `MassTransit` / `MassTransit.RabbitMQ` stay on v8.x — v9+ is commercially licensed.
    - `AwesomeAssertions` replaces FluentAssertions — do not suggest FA.
    - `NSubstitute` only — do not suggest Moq.
 6. Emit a proposed diff of `Directory.Packages.props` grouped by risk tier. Do NOT apply unless user confirms.
