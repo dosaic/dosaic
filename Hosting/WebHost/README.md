@@ -180,6 +180,23 @@ values, defaults and descriptions, so it always matches the installed packages.
   works unchanged — the process ends before that code runs.
 - From code: `PluginWebHostBuilder.WriteConfigurationSchema(DosaicPluginTypes.All, path)`.
 
+To write the schema **and carry on** in the same process, set the environment variable
+`DOSAIC_WRITE_CONFIG_SCHEMA` to the path (`true` or `1` for the default file name) instead of passing the
+argument. The process then does whatever its arguments ask for, which is how two exports run in one go:
+
+```shell
+DOSAIC_WRITE_CONFIG_SCHEMA=appsettings.schema.json dotnet run -- schema export --output schema.graphql
+```
+
+| | Writes the schema | Then |
+|---|---|---|
+| `--write-config-schema [path]` | yes | exits with code 0 |
+| `DOSAIC_WRITE_CONFIG_SCHEMA=<path>` | yes | continues with the given arguments, or starts the service when there are none |
+
+This has to be an environment variable: an extra argument would reach the command line parser of the next
+tool, which rejects what it does not know. It is meant for development and CI — do not set it in a
+deployment, the service would write the file on every start.
+
 Reference the schema from the files that should get completion:
 
 ```yaml

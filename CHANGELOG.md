@@ -85,7 +85,8 @@ string is unchanged while the keys are left on their defaults.
 
 - `--write-config-schema [path]` (or `PluginWebHostBuilder.WriteConfigurationSchema`) writes a JSON schema
   of the configuration of the installed plugins, for completion and validation of `appsettings.*` files in
-  editors. See the WebHost README.
+  editors, and exits. The environment variable `DOSAIC_WRITE_CONFIG_SCHEMA=<path>` writes it and carries
+  on, so another export can run in the same process. See the WebHost README.
 - All packages now ship their XML documentation, which is where the schema takes its descriptions from.
 - `Dosaic.Hosting.Abstractions.Configuration.HostConfiguration` types the whole `host` section (`urls`,
   `maxRequestSize`, `additionalConfigPaths`, `healthChecks:memory:maximumMegabytes`). The host reads it once,

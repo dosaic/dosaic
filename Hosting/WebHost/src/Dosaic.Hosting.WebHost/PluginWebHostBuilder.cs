@@ -35,6 +35,10 @@ namespace Dosaic.Hosting.WebHost
             if (ConfigurationSchemaCommand.TryRun(types, [.. args ?? [], .. Environment.GetCommandLineArgs().Skip(1)],
                     Console.Out))
                 Environment.Exit(0);
+            // the environment variable writes the schema and carries on, so that a second export selected by the
+            // arguments can run in the same process. Standard output stays untouched for that export.
+            ConfigurationSchemaCommand.TryRunFromEnvironment(types,
+                Environment.GetEnvironmentVariable(ConfigurationSchemaCommand.EnvironmentVariable), Console.Error);
             SystemExtensions.SetDefaultCultureInfo();
             _webApplicationBuilder = WebApplication.CreateBuilder(args);
             HostConfigurator.ConfigureAppConfiguration(_webApplicationBuilder.Configuration, args);

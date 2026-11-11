@@ -92,6 +92,24 @@ namespace Dosaic.Hosting.WebHost.Tests
         }
 
         [Test]
+        public void TheSchemaEnvironmentVariableWritesTheSchemaAndStillBuildsTheHost()
+        {
+            var path = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.schema.json");
+            Set("DOSAIC_WRITE_CONFIG_SCHEMA", path);
+            try
+            {
+                using var host = BuildHost();
+
+                host.Services.GetRequiredService<HostConfiguration>().Should().NotBeNull();
+                File.ReadAllText(path).Should().Contain("\"host\"");
+            }
+            finally
+            {
+                File.Delete(path);
+            }
+        }
+
+        [Test]
         public void AScalarHostVariableDoesNotBreakTheHost()
         {
             Set("HOST", "some-machine");

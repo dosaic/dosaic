@@ -417,6 +417,53 @@ namespace Dosaic.Hosting.WebHost.Tests
             }
         }
 
+        [TestCase("true", "appsettings.schema.json")]
+        [TestCase("TRUE", "appsettings.schema.json")]
+        [TestCase("1", "appsettings.schema.json")]
+        [TestCase(" ./out/schema.json ", "./out/schema.json")]
+        [TestCase("config.schema.json", "config.schema.json")]
+        public void TheEnvironmentVariableGivesThePathOrAsksForTheDefaultOne(string value, string expectedPath)
+        {
+            ConfigurationSchemaCommand.TryGetPathFromEnvironment(value, out var path).Should().BeTrue();
+
+            path.Should().Be(expectedPath);
+        }
+
+        [TestCase(null)]
+        [TestCase("")]
+        [TestCase("   ")]
+        [TestCase("false")]
+        [TestCase("False")]
+        [TestCase("0")]
+        public void AnUnsetOrSwitchedOffEnvironmentVariableWritesNothing(string value)
+        {
+            using var output = new StringWriter();
+
+            ConfigurationSchemaCommand.TryRunFromEnvironment([typeof(HostConfiguration)], value, output)
+                .Should().BeFalse();
+
+            output.ToString().Should().BeEmpty();
+        }
+
+        [Test]
+        public void TheEnvironmentVariableWritesTheSchemaAndReportsWhereItWent()
+        {
+            var path = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"), "appsettings.schema.json");
+            using var output = new StringWriter();
+            try
+            {
+                ConfigurationSchemaCommand.TryRunFromEnvironment([typeof(HostConfiguration)], path, output)
+                    .Should().BeTrue();
+
+                output.ToString().Should().Contain(path);
+                Section(JsonNode.Parse(File.ReadAllText(path))!.AsObject(), "host").Should().NotBeNull();
+            }
+            finally
+            {
+                Directory.Delete(Path.GetDirectoryName(path)!, true);
+            }
+        }
+
         [Test]
         public void TheCommandDoesNothingWithoutItsArgument()
         {

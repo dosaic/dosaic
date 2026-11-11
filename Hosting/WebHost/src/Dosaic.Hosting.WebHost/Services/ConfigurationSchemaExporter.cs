@@ -412,24 +412,62 @@ namespace Dosaic.Hosting.WebHost.Services
     }
 
     /// <summary>
-    ///     <c>--write-config-schema [path]</c>: writes the configuration schema and lets the caller end the
-    ///     process, instead of starting the service.
+    ///     Writes the configuration schema on request, in one of two ways:
+    ///     <list type="bullet">
+    ///         <item>
+    ///             <c>--write-config-schema [path]</c> - the caller ends the process afterwards, instead of
+    ///             starting the service.
+    ///         </item>
+    ///         <item>
+    ///             <c>DOSAIC_WRITE_CONFIG_SCHEMA=path</c> - the process carries on, so that whatever the
+    ///             arguments ask for (for example another export) runs in the same process. An argument
+    ///             cannot do this: a command line parser further down would reject it as unknown.
+    ///         </item>
+    ///     </list>
     /// </summary>
     internal static class ConfigurationSchemaCommand
     {
         public const string Argument = "--write-config-schema";
+        public const string EnvironmentVariable = "DOSAIC_WRITE_CONFIG_SCHEMA";
         public const string DefaultFileName = "appsettings.schema.json";
 
         /// <summary>Returns true when the arguments asked for the schema and it was written.</summary>
         public static bool TryRun(Type[] types, IEnumerable<string> args, TextWriter output)
         {
             if (!TryGetPath(args, out var path)) return false;
+            Write(types, path, output);
+            return true;
+        }
+
+        /// <summary>
+        ///     Returns true when the value of <see cref="EnvironmentVariable" /> asked for the schema and it
+        ///     was written. <c>true</c> or <c>1</c> mean the default file name, anything else is the path.
+        /// </summary>
+        public static bool TryRunFromEnvironment(Type[] types, string value, TextWriter output)
+        {
+            if (!TryGetPathFromEnvironment(value, out var path)) return false;
+            Write(types, path, output);
+            return true;
+        }
+
+        internal static bool TryGetPathFromEnvironment(string value, out string path)
+        {
+            path = value?.Trim();
+            if (string.IsNullOrEmpty(path) || path is "0" ||
+                path.Equals(bool.FalseString, StringComparison.OrdinalIgnoreCase))
+                return false;
+            if (path is "1" || path.Equals(bool.TrueString, StringComparison.OrdinalIgnoreCase))
+                path = DefaultFileName;
+            return true;
+        }
+
+        private static void Write(Type[] types, string path, TextWriter output)
+        {
             var fullPath = Path.GetFullPath(path);
             var directory = Path.GetDirectoryName(fullPath);
             if (!string.IsNullOrEmpty(directory)) Directory.CreateDirectory(directory);
             File.WriteAllText(fullPath, ConfigurationSchemaExporter.ExportJson(types) + Environment.NewLine);
             output.WriteLine($"Wrote the configuration schema to {fullPath}");
-            return true;
         }
 
         internal static bool TryGetPath(IEnumerable<string> args, out string path)
