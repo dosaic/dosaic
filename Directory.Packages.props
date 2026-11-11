@@ -39,7 +39,7 @@
     Stay on the last v8 release. -->
     <PackageVersion Include="MassTransit" Version="8.5.12" />
     <PackageVersion Include="MassTransit.RabbitMQ" Version="8.5.12" />
-    <PackageVersion Include="Metalama.Framework" Version="2026.1.31" />
+    <PackageVersion Include="Metalama.Framework" Version="2026.1.32" />
     <!-- Transitive pin: otherwise resolves to 8.0.x -->
     <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="$(MicrosoftAspNetCoreVersion)" />
     <PackageVersion Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="$(MicrosoftAspNetCoreVersion)" />
