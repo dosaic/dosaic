@@ -3,6 +3,7 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text.Json;
 using System.Threading.RateLimiting;
+using Dosaic.Extensions.Abstractions.RateLimiting;
 using Dosaic.Extensions.RestEase.Authentication;
 using Dosaic.Extensions.RestEase.Caching;
 using Dosaic.Extensions.RestEase.RateLimiting;
@@ -139,11 +140,11 @@ namespace Dosaic.Extensions.RestEase.DependencyInjection
             HttpClientBuilder.AddResilienceHandler($"{Name}-pipeline", (pipeline, ctx) =>
             {
                 var opts = ctx.ServiceProvider.GetRequiredService<IOptionsMonitor<RestEaseClientOptions>>().Get(Name);
-                BuildPipeline(pipeline, opts, ctx.ServiceProvider);
+                BuildPipeline(pipeline, opts, ctx.ServiceProvider, Name);
             });
         }
 
-        internal static void BuildPipeline(ResiliencePipelineBuilder<HttpResponseMessage> pipeline, RestEaseClientOptions opts, IServiceProvider sp)
+        internal static void BuildPipeline(ResiliencePipelineBuilder<HttpResponseMessage> pipeline, RestEaseClientOptions opts, IServiceProvider sp, string clientName = null)
         {
             if (opts.Caching?.Enabled == true)
             {
@@ -154,6 +155,12 @@ namespace Dosaic.Extensions.RestEase.DependencyInjection
 
             if (opts.RateLimits is { Enabled: true } rl)
             {
+                var factory = rl.Distributed ? GetDistributedFactory(sp, clientName) : null;
+                var key = string.IsNullOrWhiteSpace(rl.DistributedKey) ? clientName : rl.DistributedKey;
+                if (factory is not null && string.IsNullOrWhiteSpace(key))
+                    throw new InvalidOperationException(
+                        "Distributed rate limits need a key: set 'rateLimits:distributedKey' or use a named client.");
+
                 if (!rl.ThrowOnRejection)
                 {
                     pipeline.AddFallback(new FallbackStrategyOptions<HttpResponseMessage>
@@ -170,13 +177,13 @@ namespace Dosaic.Extensions.RestEase.DependencyInjection
                 }
 
                 if (rl.SlidingWindow?.Enabled == true)
-                    pipeline.AddRateLimiter(RateLimiterBuilders.Sliding(rl.SlidingWindow));
+                    pipeline.AddRateLimiter(RateLimiterBuilders.Sliding(rl.SlidingWindow, factory, key));
                 if (rl.FixedWindow?.Enabled == true)
-                    pipeline.AddRateLimiter(RateLimiterBuilders.Fixed(rl.FixedWindow));
+                    pipeline.AddRateLimiter(RateLimiterBuilders.Fixed(rl.FixedWindow, factory, key));
                 if (rl.TokenBucket?.Enabled == true)
-                    pipeline.AddRateLimiter(RateLimiterBuilders.TokenBucket(rl.TokenBucket));
+                    pipeline.AddRateLimiter(RateLimiterBuilders.TokenBucket(rl.TokenBucket, factory, key));
                 if (rl.Concurrency?.Enabled == true)
-                    pipeline.AddRateLimiter(RateLimiterBuilders.Concurrency(rl.Concurrency));
+                    pipeline.AddRateLimiter(RateLimiterBuilders.Concurrency(rl.Concurrency, factory, key));
             }
 
             if (opts.Resilience is { Enabled: true } r)
@@ -208,22 +215,35 @@ namespace Dosaic.Extensions.RestEase.DependencyInjection
             }
         }
 
+        private static IDistributedRateLimiterFactory GetDistributedFactory(IServiceProvider sp, string clientName)
+        {
+            var factory = sp.GetService<IDistributedRateLimiterFactory>();
+            if (factory is null)
+                throw new InvalidOperationException(
+                    $"RestEase client '{clientName}' sets 'rateLimits:distributed' but no {nameof(IDistributedRateLimiterFactory)} is registered. " +
+                    "Reference Dosaic.Plugins.Caching.Redis or register an implementation yourself.");
+            return factory;
+        }
+
         private static class RateLimiterBuilders
         {
-            public static RateLimiterStrategyOptions Concurrency(ConcurrencyLimiterConfig c)
+            public static RateLimiterStrategyOptions Concurrency(ConcurrencyLimiterConfig c,
+                IDistributedRateLimiterFactory factory, string key)
             {
-                var limiter = new ConcurrencyLimiter(new ConcurrencyLimiterOptions
+                var options = new ConcurrencyLimiterOptions
                 {
                     PermitLimit = c.PermitLimit,
                     QueueLimit = c.QueueLimit,
                     QueueProcessingOrder = c.QueueProcessingOrder
-                });
+                };
+                var limiter = factory?.CreateConcurrency(key, options) ?? new ConcurrencyLimiter(options);
                 return new RateLimiterStrategyOptions { Name = "Concurrency", RateLimiter = args => limiter.AcquireAsync(1, args.Context.CancellationToken) };
             }
 
-            public static RateLimiterStrategyOptions Sliding(SlidingWindowLimiterConfig c)
+            public static RateLimiterStrategyOptions Sliding(SlidingWindowLimiterConfig c,
+                IDistributedRateLimiterFactory factory, string key)
             {
-                var limiter = new SlidingWindowRateLimiter(new SlidingWindowRateLimiterOptions
+                var options = new SlidingWindowRateLimiterOptions
                 {
                     PermitLimit = c.PermitLimit,
                     QueueLimit = c.QueueLimit,
@@ -231,26 +251,30 @@ namespace Dosaic.Extensions.RestEase.DependencyInjection
                     Window = c.Window,
                     SegmentsPerWindow = c.SegmentsPerWindow,
                     AutoReplenishment = c.AutoReplenishment
-                });
+                };
+                var limiter = factory?.CreateSlidingWindow(key, options) ?? new SlidingWindowRateLimiter(options);
                 return new RateLimiterStrategyOptions { Name = "SlidingWindow", RateLimiter = args => limiter.AcquireAsync(1, args.Context.CancellationToken) };
             }
 
-            public static RateLimiterStrategyOptions Fixed(FixedWindowLimiterConfig c)
+            public static RateLimiterStrategyOptions Fixed(FixedWindowLimiterConfig c,
+                IDistributedRateLimiterFactory factory, string key)
             {
-                var limiter = new FixedWindowRateLimiter(new FixedWindowRateLimiterOptions
+                var options = new FixedWindowRateLimiterOptions
                 {
                     PermitLimit = c.PermitLimit,
                     QueueLimit = c.QueueLimit,
                     QueueProcessingOrder = c.QueueProcessingOrder,
                     Window = c.Window,
                     AutoReplenishment = c.AutoReplenishment
-                });
+                };
+                var limiter = factory?.CreateFixedWindow(key, options) ?? new FixedWindowRateLimiter(options);
                 return new RateLimiterStrategyOptions { Name = "FixedWindow", RateLimiter = args => limiter.AcquireAsync(1, args.Context.CancellationToken) };
             }
 
-            public static RateLimiterStrategyOptions TokenBucket(TokenBucketLimiterConfig c)
+            public static RateLimiterStrategyOptions TokenBucket(TokenBucketLimiterConfig c,
+                IDistributedRateLimiterFactory factory, string key)
             {
-                var limiter = new TokenBucketRateLimiter(new TokenBucketRateLimiterOptions
+                var options = new TokenBucketRateLimiterOptions
                 {
                     TokenLimit = c.PermitLimit,
                     QueueLimit = c.QueueLimit,
@@ -258,7 +282,8 @@ namespace Dosaic.Extensions.RestEase.DependencyInjection
                     TokensPerPeriod = c.TokensPerPeriod,
                     ReplenishmentPeriod = c.ReplenishmentPeriod,
                     AutoReplenishment = c.AutoReplenishment
-                });
+                };
+                var limiter = factory?.CreateTokenBucket(key, options) ?? new TokenBucketRateLimiter(options);
                 return new RateLimiterStrategyOptions { Name = "TokenBucket", RateLimiter = args => limiter.AcquireAsync(1, args.Context.CancellationToken) };
             }
         }

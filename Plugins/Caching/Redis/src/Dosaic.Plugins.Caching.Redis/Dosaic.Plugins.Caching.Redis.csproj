@@ -2,6 +2,7 @@
 
     <ItemGroup>
       <ProjectReference Include="..\..\..\..\..\Hosting\Abstractions\src\Dosaic.Hosting.Abstractions\Dosaic.Hosting.Abstractions.csproj" />
+      <ProjectReference Include="..\..\..\..\..\Extensions\Abstractions\src\Dosaic.Extensions.Abstractions\Dosaic.Extensions.Abstractions.csproj" />
     </ItemGroup>
 
     <ItemGroup>

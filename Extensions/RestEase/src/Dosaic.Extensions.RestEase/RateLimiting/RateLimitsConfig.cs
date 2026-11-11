@@ -6,6 +6,19 @@ namespace Dosaic.Extensions.RestEase.RateLimiting
     {
         public bool Enabled { get; set; } = true;
         public bool ThrowOnRejection { get; set; }
+
+        /// <summary>
+        ///     When true the limiters are created through the registered
+        ///     <c>IDistributedRateLimiterFactory</c>, so every process using the same
+        ///     <see cref="DistributedKey" /> draws from one budget. False (default) keeps one budget per process.
+        /// </summary>
+        public bool Distributed { get; set; }
+
+        /// <summary>
+        ///     Identifies the shared budget when <see cref="Distributed" /> is true. Defaults to the client name.
+        /// </summary>
+        public string DistributedKey { get; set; }
+
         public SlidingWindowLimiterConfig SlidingWindow { get; set; }
         public FixedWindowLimiterConfig FixedWindow { get; set; }
         public TokenBucketLimiterConfig TokenBucket { get; set; }
