@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Threading.RateLimiting;
 using Microsoft.Extensions.Logging;
 using StackExchange.Redis;
@@ -17,6 +18,12 @@ namespace Dosaic.Plugins.Caching.Redis.RateLimiting
 
         /// <summary>True when permits are handed back by disposing the lease instead of by time passing.</summary>
         public bool Releasable { get; init; }
+
+        /// <summary>
+        ///     How long a <see cref="Releasable" /> permit stays taken in Redis without being renewed. Held
+        ///     leases are renewed three times per TTL. Null means leases are never renewed.
+        /// </summary>
+        public TimeSpan? LeaseTtl { get; init; }
 
         /// <summary>The in-process limiter with the same options, used while Redis cannot be reached.</summary>
         public Func<RateLimiter> CreateFallback { get; init; }
@@ -39,6 +46,10 @@ namespace Dosaic.Plugins.Caching.Redis.RateLimiting
         private readonly Lazy<RateLimiter> _fallback;
         private readonly ILogger _logger;
         private readonly long _redisRetryIntervalInMs;
+        private readonly ConcurrentDictionary<string, int> _heldLeases = new();
+        private readonly object _renewalLock = new();
+        private Timer _renewal;
+        private bool _disposed;
         private long _skipRedisUntil;
         private int _queued;
 
@@ -152,13 +163,65 @@ namespace Dosaic.Plugins.Caching.Redis.RateLimiting
                 return RedisRateLimitLease.Rejected(retryAfter);
             }
 
-            return _definition.Releasable && permitCount > 0
-                ? RedisRateLimitLease.Acquired(() => Release(attempt.LeaseId, permitCount))
-                : RedisRateLimitLease.Acquired();
+            if (!_definition.Releasable || permitCount == 0) return RedisRateLimitLease.Acquired();
+            Hold(attempt.LeaseId, permitCount);
+            return RedisRateLimitLease.Acquired(disposed => Release(attempt.LeaseId, permitCount, disposed));
         }
 
-        private void Release(string leaseId, int permitCount)
+        /// <summary>Remembers a lease so that it is renewed for as long as its holder keeps it.</summary>
+        private void Hold(string leaseId, int permitCount)
         {
+            if (_definition.LeaseTtl is not { } leaseTtl) return;
+            _heldLeases[leaseId] = permitCount;
+            lock (_renewalLock)
+            {
+                if (_disposed || _renewal is not null) return;
+                var interval = TimeSpan.FromMilliseconds(Math.Max(1, leaseTtl.TotalMilliseconds / 3));
+                _renewal = new Timer(_ => _ = RenewHeldLeasesAsync(), null, interval, interval);
+            }
+        }
+
+        /// <summary>
+        ///     Extends every lease this instance still holds. Runs on a timer that only exists while there is
+        ///     something to renew, so an idle limiter keeps nothing alive.
+        /// </summary>
+        internal async Task RenewHeldLeasesAsync()
+        {
+            lock (_renewalLock)
+            {
+                if (_heldLeases.IsEmpty)
+                {
+                    _renewal?.Dispose();
+                    _renewal = null;
+                    return;
+                }
+            }
+
+            try
+            {
+                var members = _heldLeases.ToArray()
+                    .SelectMany(x => Enumerable.Range(1, x.Value).Select(i => (RedisValue)$"{x.Key}:{i}"));
+                RedisValue[] arguments = [(long)_definition.LeaseTtl.Value.TotalMilliseconds, .. members];
+                await _database().ScriptEvaluateAsync(RedisRateLimitScripts.RenewConcurrency, _keys, arguments);
+            }
+            catch (Exception e)
+            {
+                // runs on a timer thread: nothing may escape, and a missed renewal is retried on the next tick
+                _logger.LogDebug(e, "Could not renew rate limit leases on {RateLimitKey}",
+                    _definition.Key.ToString());
+            }
+        }
+
+        /// <param name="leaseId">The lease to give back.</param>
+        /// <param name="permitCount">Number of permits the lease holds.</param>
+        /// <param name="disposed">
+        ///     False when the lease was garbage collected without being disposed. It then only stops being
+        ///     renewed and expires on its own - a finalizer must not talk to Redis.
+        /// </param>
+        private void Release(string leaseId, int permitCount, bool disposed)
+        {
+            _heldLeases.TryRemove(leaseId, out _);
+            if (!disposed) return;
             try
             {
                 var members = Enumerable.Range(1, permitCount).Select(i => (RedisValue)$"{leaseId}:{i}").ToArray();
@@ -195,9 +258,24 @@ namespace Dosaic.Plugins.Caching.Redis.RateLimiting
                 _definition.Key.ToString(), _redisRetryIntervalInMs);
         }
 
+        /// <summary>
+        ///     Stops renewing. Leases that are still held are not taken away from their holders, they simply
+        ///     expire after the lease TTL unless they are disposed before.
+        /// </summary>
         protected override void Dispose(bool disposing)
         {
-            if (disposing && _fallback.IsValueCreated) _fallback.Value.Dispose();
+            if (disposing)
+            {
+                lock (_renewalLock)
+                {
+                    _disposed = true;
+                    _renewal?.Dispose();
+                    _renewal = null;
+                }
+
+                if (_fallback.IsValueCreated) _fallback.Value.Dispose();
+            }
+
             base.Dispose(disposing);
         }
 

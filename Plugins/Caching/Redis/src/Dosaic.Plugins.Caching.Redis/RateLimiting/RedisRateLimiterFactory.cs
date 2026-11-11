@@ -96,6 +96,7 @@ namespace Dosaic.Plugins.Caching.Redis.RateLimiting
                 PermitLimit = options.PermitLimit,
                 QueueLimit = options.QueueLimit,
                 Releasable = true,
+                LeaseTtl = TimeSpan.FromMilliseconds(leaseTtl),
                 Arguments = (permits, leaseId) => [options.PermitLimit, leaseTtl, permits, leaseId],
                 CreateFallback = () => new ConcurrencyLimiter(options)
             });

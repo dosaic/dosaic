@@ -154,5 +154,22 @@ namespace Dosaic.Plugins.Caching.Redis.RateLimiting
             if first[2] then retry = tonumber(first[2]) - now end
             return {0, math.max(1, retry)}
             """;
+
+        /// <summary>
+        ///     ARGV: leaseTtlInMs, leaseMember... Pushes the expiry of leases that are still held further out,
+        ///     so a call may run longer than the lease TTL without losing its permit. <c>XX</c> only touches
+        ///     members that still exist: a lease that was released, or that expired and whose permit was
+        ///     handed to somebody else, is never brought back. Returns the number of renewed members.
+        /// </summary>
+        public const string RenewConcurrency = Now + """
+            local ttl = tonumber(ARGV[1])
+            local expiry = string.format('%.0f', now + ttl)
+            local renewed = 0
+            for i = 2, #ARGV do
+              renewed = renewed + redis.call('ZADD', KEYS[1], 'XX', 'CH', expiry, ARGV[i])
+            end
+            if renewed > 0 then redis.call('PEXPIRE', KEYS[1], ttl) end
+            return renewed
+            """;
     }
 }

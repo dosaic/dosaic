@@ -17,7 +17,9 @@ namespace Dosaic.Plugins.Caching.Redis.Tests.Integration
     [Explicit("Requires Docker. Run with: dotnet test --filter TestCategory=Integration")]
     [Category("Integration")]
     [NonParallelizable]
-    public class RedisRateLimiterIntegrationTests
+    [TestFixture("redis:7-alpine")]
+    [TestFixture("valkey/valkey:8-alpine")]
+    public class RedisRateLimiterIntegrationTests(string image)
     {
         private RedisContainer _redis;
         private readonly List<ConnectionMultiplexer> _connections = [];
@@ -26,7 +28,7 @@ namespace Dosaic.Plugins.Caching.Redis.Tests.Integration
         [OneTimeSetUp]
         public async Task StartRedisAsync()
         {
-            _redis = new RedisBuilder("redis:7-alpine").Build();
+            _redis = new RedisBuilder(image).Build();
             await _redis.StartAsync();
         }
 
@@ -223,11 +225,35 @@ namespace Dosaic.Plugins.Caching.Redis.Tests.Integration
             var crashed = NewInstance(leaseTtlInSeconds: 1).CreateConcurrency(_key, options);
             var survivor = NewInstance(leaseTtlInSeconds: 1).CreateConcurrency(_key, options);
 
-            (await crashed.AcquireAsync()).IsAcquired.Should().BeTrue();
+            var lost = await crashed.AcquireAsync();
+            lost.IsAcquired.Should().BeTrue();
             (await survivor.AcquireAsync()).IsAcquired.Should().BeFalse();
-            await Task.Delay(1200);
+            // a dead process neither releases nor renews - disposing the limiter stops the renewal the same way
+            crashed.Dispose();
+            await Task.Delay(1500);
 
             (await survivor.AcquireAsync()).IsAcquired.Should().BeTrue("the lease was never released but expired");
+            GC.KeepAlive(lost);
+        }
+
+        [Test]
+        public async Task AHeldConcurrencyPermitOutlivesTheLeaseTtl()
+        {
+            var options = new ConcurrencyLimiterOptions { PermitLimit = 1 };
+            var holder = NewInstance(leaseTtlInSeconds: 1).CreateConcurrency(_key, options);
+            var other = NewInstance(leaseTtlInSeconds: 1).CreateConcurrency(_key, options);
+
+            var held = await holder.AcquireAsync();
+            held.IsAcquired.Should().BeTrue();
+            for (var i = 0; i < 6; i++)
+            {
+                await Task.Delay(500);
+                (await other.AcquireAsync()).IsAcquired.Should()
+                    .BeFalse($"the permit is still held after {(i + 1) * 500} ms, three times the lease TTL in total");
+            }
+
+            held.Dispose();
+            await WaitUntilAsync(async () => (await other.AcquireAsync(0)).IsAcquired, "the released permit is free");
         }
 
         [Test]

@@ -16,9 +16,9 @@ namespace Dosaic.Plugins.Caching.Redis
         public string InstanceName { get; set; }
 
         /// <summary>
-        ///     How long a permit of a distributed concurrency limiter stays taken when it is never released,
-        ///     for example because the process holding it crashed. Must be longer than the longest call the
-        ///     limiter guards, a permit held longer than this is handed out a second time.
+        ///     How long a permit of a distributed concurrency limiter stays taken once its holder stops
+        ///     renewing it, for example because the process crashed. Held permits are renewed three times
+        ///     per TTL, so a call may run longer than this without losing its permit.
         /// </summary>
         public int RateLimitLeaseTtlInSeconds { get; set; } = 120;
     }

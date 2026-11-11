@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using System.Threading.RateLimiting;
 using AwesomeAssertions;
 using Dosaic.Plugins.Caching.Redis.RateLimiting;
@@ -25,7 +26,7 @@ namespace Dosaic.Plugins.Caching.Redis.Tests.RateLimiting
         }
 
         private RedisRateLimiter CreateLimiter(int permitLimit = 5, int queueLimit = 0, bool releasable = false,
-            TimeSpan? redisRetryInterval = null) =>
+            TimeSpan? redisRetryInterval = null, TimeSpan? leaseTtl = null) =>
             new(() => _database, new RedisRateLimiterDefinition
             {
                 Script = Script,
@@ -33,6 +34,7 @@ namespace Dosaic.Plugins.Caching.Redis.Tests.RateLimiting
                 PermitLimit = permitLimit,
                 QueueLimit = queueLimit,
                 Releasable = releasable,
+                LeaseTtl = leaseTtl,
                 Arguments = (permits, leaseId) => releasable ? [permits, leaseId] : [permits],
                 CreateFallback = () => new ConcurrencyLimiter(new ConcurrencyLimiterOptions
                 {
@@ -338,6 +340,144 @@ namespace Dosaic.Plugins.Caching.Redis.Tests.RateLimiting
             lease.Invoking(x => x.Dispose()).Should().NotThrow();
 
             _logger.Entries.Should().ContainSingle(x => x.Level == LogLevel.Debug);
+        }
+
+        private List<RedisValue[]> RenewalCalls() => _database.ReceivedCalls()
+            .Where(x => x.GetMethodInfo().Name == nameof(IDatabase.ScriptEvaluateAsync) &&
+                        (string)x.GetArguments()[0] == RedisRateLimitScripts.RenewConcurrency)
+            .Select(x => (RedisValue[])x.GetArguments()[2]).ToList();
+
+        private static async Task WaitUntilAsync(Func<bool> condition, string because)
+        {
+            var deadline = DateTime.UtcNow + TimeSpan.FromSeconds(10);
+            while (DateTime.UtcNow < deadline)
+            {
+                if (condition()) return;
+                await Task.Delay(10);
+            }
+
+            Assert.Fail($"Timed out waiting until {because}.");
+        }
+
+        [Test]
+        public async Task HeldReleasableLeasesAreRenewedWithTheLeaseTtl()
+        {
+            RedisAnswers(Granted());
+            var leaseIds = new List<string>();
+            await _database.ScriptEvaluateAsync(Script, Arg.Any<RedisKey[]>(),
+                Arg.Do<RedisValue[]>(x => leaseIds.Add(x[1])), Arg.Any<CommandFlags>());
+            using var limiter = CreateLimiter(releasable: true, leaseTtl: TimeSpan.FromMinutes(2));
+            using var two = await limiter.AcquireAsync(2);
+            using var one = await limiter.AcquireAsync();
+
+            await limiter.RenewHeldLeasesAsync();
+
+            var renewal = RenewalCalls().Should().ContainSingle().Which;
+            renewal[0].Should().Be(120_000);
+            renewal.Skip(1).Select(x => x.ToString()).Should()
+                .BeEquivalentTo($"{leaseIds[0]}:1", $"{leaseIds[0]}:2", $"{leaseIds[1]}:1");
+        }
+
+        [Test]
+        public async Task ReleasedLeasesAreNotRenewed()
+        {
+            RedisAnswers(Granted());
+            using var limiter = CreateLimiter(releasable: true, leaseTtl: TimeSpan.FromMinutes(2));
+            (await limiter.AcquireAsync()).Dispose();
+
+            await limiter.RenewHeldLeasesAsync();
+
+            RenewalCalls().Should().BeEmpty();
+        }
+
+        [Test]
+        public async Task HeldLeasesAreRenewedOnATimerSeveralTimesPerLeaseTtl()
+        {
+            RedisAnswers(Granted());
+            using var limiter = CreateLimiter(releasable: true, leaseTtl: TimeSpan.FromMilliseconds(90));
+            using var lease = await limiter.AcquireAsync();
+
+            await WaitUntilAsync(() => RenewalCalls().Count >= 3, "the held lease was renewed three times");
+        }
+
+        [Test]
+        public async Task TheRenewalTimerStopsWhenNothingIsHeldAndStartsAgainWithTheNextLease()
+        {
+            RedisAnswers(Granted());
+            using var limiter = CreateLimiter(releasable: true, leaseTtl: TimeSpan.FromMilliseconds(60));
+            (await limiter.AcquireAsync()).Dispose();
+            await Task.Delay(200);
+            RenewalCalls().Should().BeEmpty();
+
+            using var lease = await limiter.AcquireAsync();
+
+            await WaitUntilAsync(() => RenewalCalls().Count >= 1, "the new lease is renewed by a new timer");
+        }
+
+        [Test]
+        public async Task ADisposedLimiterStopsRenewing()
+        {
+            RedisAnswers(Granted());
+            var limiter = CreateLimiter(releasable: true, leaseTtl: TimeSpan.FromMilliseconds(60));
+            using var lease = await limiter.AcquireAsync();
+
+            limiter.Dispose();
+            _database.ClearReceivedCalls();
+            await Task.Delay(250);
+
+            RenewalCalls().Should().BeEmpty("a stopped instance must let its leases expire");
+        }
+
+        [Test]
+        public async Task LeasesWithoutALeaseTtlAreNeverRenewed()
+        {
+            RedisAnswers(Granted());
+            using var limiter = CreateLimiter(releasable: true);
+            using var lease = await limiter.AcquireAsync();
+
+            await limiter.RenewHeldLeasesAsync();
+
+            RenewalCalls().Should().BeEmpty();
+        }
+
+        [Test]
+        public async Task AFailingRenewalIsLoggedAndRetriedOnTheNextTick()
+        {
+            RedisAnswers(Granted());
+            using var limiter = CreateLimiter(releasable: true, leaseTtl: TimeSpan.FromMinutes(2));
+            using var lease = await limiter.AcquireAsync();
+            _database.ScriptEvaluateAsync(RedisRateLimitScripts.RenewConcurrency, Arg.Any<RedisKey[]>(),
+                    Arg.Any<RedisValue[]>(), Arg.Any<CommandFlags>())
+                .ThrowsAsync(new InvalidOperationException("boom"));
+
+            await limiter.Invoking(x => x.RenewHeldLeasesAsync()).Should().NotThrowAsync();
+            await limiter.RenewHeldLeasesAsync();
+
+            RenewalCalls().Should().HaveCount(2);
+            _logger.Entries.Should().HaveCount(2).And.OnlyContain(x => x.Level == LogLevel.Debug);
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static async Task AcquireAndDropAsync(RedisRateLimiter limiter) =>
+            (await limiter.AcquireAsync()).IsAcquired.Should().BeTrue();
+
+        [Test]
+        public async Task ALeaseThatWasDroppedWithoutDisposeStopsBeingRenewedButIsNotReleased()
+        {
+            RedisAnswers(Granted());
+            using var limiter = CreateLimiter(releasable: true, leaseTtl: TimeSpan.FromMinutes(2));
+            await AcquireAndDropAsync(limiter);
+
+            for (var i = 0; i < 3; i++)
+            {
+                GC.Collect();
+                GC.WaitForPendingFinalizers();
+            }
+
+            await limiter.RenewHeldLeasesAsync();
+
+            RenewalCalls().Should().BeEmpty("nobody holds the lease any more, so it has to expire");
+            _database.DidNotReceiveWithAnyArgs().SortedSetRemove(default, Array.Empty<RedisValue>());
         }
 
         [Test]

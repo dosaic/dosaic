@@ -36,7 +36,7 @@ The plugin binds to the `redisCache` section via the `[Configuration("redisCache
 | `UseInMemory` | `bool` | `false` | When `true`, uses an in-memory cache instead of Redis. Useful for local development. |
 | `ConnectionString` | `string` | *(required)* | StackExchange.Redis connection string (e.g. `localhost:6379`). Required unless `UseInMemory` is `true`. |
 | `InstanceName` | `string` | `null` | Prefix for every key the plugin writes (`RedisCacheOptions.InstanceName` and the rate limiter keys). `null` = no prefix. Ignored in in-memory mode. |
-| `RateLimitLeaseTtlInSeconds` | `int` | `120` | How long a permit of a distributed concurrency limiter stays taken when it is never released (crashed process). Must exceed the longest call the limiter guards. |
+| `RateLimitLeaseTtlInSeconds` | `int` | `120` | How long a permit of a distributed concurrency limiter stays taken once its holder stops renewing it (crashed process). Held permits are renewed three times per TTL, so calls may run longer than this. |
 
 ### appsettings.yml — Redis (production)
 
@@ -193,7 +193,7 @@ How the Redis limiters behave:
 - **Atomic and clock independent.** Every decision is one Lua script. Time is read from the Redis server (`TIME`), so clock skew between pods does not matter.
 - **Keys.** State is stored under `{instanceName}ratelimit:{key}:{algorithm}` with `algorithm` being `sliding`, `fixed`, `token` or `concurrency` — the suffix lets one key be used for several algorithms. Every key carries a TTL and disappears when the limiter is idle.
 - **Algorithms.** Sliding window (permits return when their segment leaves the window), fixed window (starts with the first request), token bucket (`TokensPerPeriod` every `ReplenishmentPeriod`) and concurrency follow their BCL counterparts. `AutoReplenishment` is ignored: replenishment is always driven by the server clock.
-- **Concurrency leases expire.** A permit is returned when its lease is disposed. If that never happens, it is returned after `rateLimitLeaseTtlInSeconds`, so a crashed pod does not leak permits. Leases are not renewed: a call that runs longer than the TTL loses its permit to somebody else.
+- **Concurrency leases are renewed while held, and expire otherwise.** A permit is returned when its lease is disposed. While it is held, the limiter extends it three times per `rateLimitLeaseTtlInSeconds`, so a call may run longer than the TTL. Once the holder is gone — the pod crashed, the limiter was disposed, or the lease was dropped without `Dispose` — nothing renews it and the permit comes back after the TTL. A renewal never brings back a permit that already expired and was handed to somebody else.
 - **Waiting.** With `QueueLimit > 0`, `AcquireAsync` waits by polling with a jittered delay until it gets its permits or the token is cancelled — time based limiters wait for the `RetryAfter` the script reports, the concurrency limiter polls every 25–500 ms. `QueueLimit` bounds the waiting permits of one limiter instance, not of the whole installation, and `QueueProcessingOrder` is not honoured. When the queue is full, or `QueueLimit` is 0, a failed lease with `RetryAfter` metadata is returned. `AttemptAcquire` never waits.
 - **Redis errors.** If Redis cannot be reached or times out, a warning is logged and an in-process limiter with the same options takes over. Redis is tried again after 5 seconds. During that time every process enforces the limit on its own.
 - **Statistics.** `GetStatistics()` returns `null`, a local snapshot would not describe the shared budget.
