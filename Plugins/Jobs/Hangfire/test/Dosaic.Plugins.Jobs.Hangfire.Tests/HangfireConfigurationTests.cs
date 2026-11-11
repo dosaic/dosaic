@@ -18,7 +18,7 @@ namespace Dosaic.Plugins.Jobs.Hangfire.Tests
             var config = HangfirePluginTests.GetConfiguration();
 
             config.ConnectionString.Should()
-                .Be("Host=testHost;Port=9999;Database=testDatabase;Username=testUser;Password=testPassword");
+                .Be("Host=testHost;Port=9999;Database=testDatabase;Username=testUser;Password=testPassword;");
             config.Host.Should().Be("testHost");
             config.Port.Should().Be(9999);
             config.Database.Should().Be("testDatabase");
@@ -31,6 +31,21 @@ namespace Dosaic.Plugins.Jobs.Hangfire.Tests
             config.Password.Should().Be("testPassword");
             config.MaxJobArgumentsSizeToRenderInBytes.Should().Be(4096);
             config.InvisibilityTimeoutInMinutes.Should().Be(30);
+        }
+
+        [Test]
+        public void UnchangedConfigurationGivesTheByteIdenticalConnectionStringAsBefore()
+        {
+            var config = HangfirePluginTests.GetConfiguration();
+
+            config.ConnectionString.Should().Be(
+                $"Host={config.Host};Port={config.Port};Database={config.Database};Username={config.User};Password={config.Password};");
+        }
+
+        [Test]
+        public void ConfigurationWithoutAnyConnectionValueGivesAnEmptyConnectionString()
+        {
+            new HangfireConfiguration().ConnectionString.Should().BeEmpty();
         }
 
         [Test]

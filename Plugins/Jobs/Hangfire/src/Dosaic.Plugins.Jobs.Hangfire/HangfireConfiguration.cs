@@ -130,7 +130,10 @@ namespace Dosaic.Plugins.Jobs.Hangfire
             if (!string.IsNullOrWhiteSpace(RootCertificate)) builder.RootCertificate = RootCertificate;
             if (MaxPoolSize.HasValue) builder.MaxPoolSize = MaxPoolSize.Value;
             if (NoResetOnClose) builder.NoResetOnClose = true;
-            return builder.ConnectionString;
+            // the interpolated string this replaced ended with a separator; keeping it means a configuration
+            // without special characters or new keys yields the exact same string (and Npgsql pool) as before
+            var connectionString = builder.ConnectionString;
+            return connectionString.Length == 0 ? connectionString : connectionString + ";";
         }
 
         private static Npgsql.SslMode ParseSslMode(string value)
