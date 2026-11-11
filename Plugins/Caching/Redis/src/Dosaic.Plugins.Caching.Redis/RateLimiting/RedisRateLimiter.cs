@@ -34,11 +34,27 @@ namespace Dosaic.Plugins.Caching.Redis.RateLimiting
     ///     Waiting (<c>QueueLimit &gt; 0</c>) is done by polling: there is no cross-process queue, so
     ///     <see cref="QueueProcessingOrder" /> is not honoured and <c>QueueLimit</c> bounds the waiters of
     ///     this instance only.
+    ///     <para>
+    ///         Redis errors are handled in three ways. A single failure (timeout, dropped connection) rejects
+    ///         the call it happened in: the script may still have taken the permits, so granting the call
+    ///         locally could exceed the limit. Only after <see cref="FailuresBeforeFallback" /> failures in a
+    ///         row is Redis considered down, and the in-process limiter takes over for the retry interval. An
+    ///         error the server answers with (wrong key type, read-only replica, out of memory, script error)
+    ///         is a configuration problem, not an outage, and is thrown to the caller.
+    ///     </para>
     /// </summary>
     internal sealed class RedisRateLimiter : RateLimiter
     {
         internal static readonly TimeSpan DefaultRedisRetryInterval = TimeSpan.FromSeconds(5);
+        internal const int FailuresBeforeFallback = 3;
+        internal static readonly TimeSpan FailureRetryAfter = TimeSpan.FromMilliseconds(100);
+        internal static readonly TimeSpan MaxPollDelay = TimeSpan.FromSeconds(30);
         private static readonly TimeSpan _releasableRetryAfterCap = TimeSpan.FromSeconds(1);
+        private const double MaxPollJitterInMs = 250;
+
+        /// <summary>Server errors that say "try again later" instead of "this cannot work".</summary>
+        private static readonly string[] _transientServerErrors =
+            ["LOADING", "BUSY", "MASTERDOWN", "TRYAGAIN", "CLUSTERDOWN"];
 
         private readonly Func<IDatabase> _database;
         private readonly RedisRateLimiterDefinition _definition;
@@ -47,10 +63,14 @@ namespace Dosaic.Plugins.Caching.Redis.RateLimiting
         private readonly ILogger _logger;
         private readonly long _redisRetryIntervalInMs;
         private readonly ConcurrentDictionary<string, int> _heldLeases = new();
+        private readonly ConcurrentDictionary<string, PendingRelease> _pendingReleases = new();
         private readonly object _renewalLock = new();
         private Timer _renewal;
         private bool _disposed;
+        private int _renewing;
         private long _skipRedisUntil;
+        private long _lastFailureWarning = long.MinValue;
+        private int _consecutiveFailures;
         private int _queued;
 
         public RedisRateLimiter(Func<IDatabase> database, RedisRateLimiterDefinition definition, ILogger logger,
@@ -71,25 +91,31 @@ namespace Dosaic.Plugins.Caching.Redis.RateLimiting
 
         protected override RateLimitLease AttemptAcquireCore(int permitCount)
         {
+            ThrowIfDisposed();
             EnsurePermitCount(permitCount);
             if (IsRedisSkipped()) return _fallback.Value.AttemptAcquire(permitCount);
+            var leaseId = NewLeaseId();
+            Attempt? attempt;
             try
             {
-                var leaseId = NewLeaseId();
                 var result = _database().ScriptEvaluate(_definition.Script, _keys,
                     _definition.Arguments(permitCount, leaseId));
-                return ToLease(Parse(result, leaseId), permitCount);
+                attempt = Succeeded(Parse(result, leaseId));
             }
-            catch (Exception e) when (IsRedisFailure(e))
+            catch (Exception e) when (IsRedisUnavailable(e))
             {
-                SkipRedis(e);
-                return _fallback.Value.AttemptAcquire(permitCount);
+                attempt = Failed(e, leaseId, permitCount);
             }
+
+            return attempt is null
+                ? _fallback.Value.AttemptAcquire(permitCount)
+                : ToLease(attempt.Value, permitCount);
         }
 
         protected override async ValueTask<RateLimitLease> AcquireAsyncCore(int permitCount,
             CancellationToken cancellationToken)
         {
+            ThrowIfDisposed();
             EnsurePermitCount(permitCount);
             cancellationToken.ThrowIfCancellationRequested();
             var attempt = await TryAcquireAsync(permitCount);
@@ -107,6 +133,7 @@ namespace Dosaic.Plugins.Caching.Redis.RateLimiting
                 for (var round = 0; ; round++)
                 {
                     await Task.Delay(GetPollDelay(attempt.Value.RetryAfter, round), cancellationToken);
+                    ThrowIfDisposed();
                     attempt = await TryAcquireAsync(permitCount);
                     if (attempt is null)
                         return await _fallback.Value.AcquireAsync(permitCount, cancellationToken);
@@ -119,22 +146,50 @@ namespace Dosaic.Plugins.Caching.Redis.RateLimiting
             }
         }
 
-        /// <summary>Returns null when Redis could not answer and the in-process limiter has to decide.</summary>
+        /// <summary>Returns null when Redis is down and the in-process limiter has to decide.</summary>
         private async Task<Attempt?> TryAcquireAsync(int permitCount)
         {
             if (IsRedisSkipped()) return null;
+            var leaseId = NewLeaseId();
             try
             {
-                var leaseId = NewLeaseId();
                 var result = await _database().ScriptEvaluateAsync(_definition.Script, _keys,
                     _definition.Arguments(permitCount, leaseId));
-                return Parse(result, leaseId);
+                return Succeeded(Parse(result, leaseId));
             }
-            catch (Exception e) when (IsRedisFailure(e))
+            catch (Exception e) when (IsRedisUnavailable(e))
+            {
+                return Failed(e, leaseId, permitCount);
+            }
+        }
+
+        private Attempt Succeeded(Attempt attempt)
+        {
+            Volatile.Write(ref _consecutiveFailures, 0);
+            return attempt;
+        }
+
+        /// <summary>
+        ///     The script may have run although no answer arrived, so its permits are handed back (releasable
+        ///     limiters) and the call is not granted. Returns null once Redis has failed often enough in a row
+        ///     to be considered down.
+        /// </summary>
+        private Attempt? Failed(Exception e, string leaseId, int permitCount)
+        {
+            if (leaseId is not null && permitCount > 0) _ = ReleaseAsync(leaseId, permitCount);
+            if (Interlocked.Increment(ref _consecutiveFailures) >= FailuresBeforeFallback)
             {
                 SkipRedis(e);
                 return null;
             }
+
+            var now = Environment.TickCount64;
+            var last = Interlocked.Read(ref _lastFailureWarning);
+            if ((last == long.MinValue || now - last >= _redisRetryIntervalInMs) &&
+                Interlocked.CompareExchange(ref _lastFailureWarning, now, last) == last)
+                _logger.LogWarning(e, "Redis rate limiter {RateLimitKey} did not answer, the call is rejected",
+                    _definition.Key.ToString());
+            return new Attempt(false, FailureRetryAfter, null);
         }
 
         private void EnsurePermitCount(int permitCount)
@@ -143,6 +198,8 @@ namespace Dosaic.Plugins.Caching.Redis.RateLimiting
                 throw new ArgumentOutOfRangeException(nameof(permitCount), permitCount,
                     $"{permitCount} permits exceeds the permit limit of {_definition.PermitLimit}.");
         }
+
+        private void ThrowIfDisposed() => ObjectDisposedException.ThrowIf(Volatile.Read(ref _disposed), this);
 
         private string NewLeaseId() => _definition.Releasable ? Guid.NewGuid().ToString("N") : null;
 
@@ -164,6 +221,13 @@ namespace Dosaic.Plugins.Caching.Redis.RateLimiting
             }
 
             if (!_definition.Releasable || permitCount == 0) return RedisRateLimitLease.Acquired();
+            if (Volatile.Read(ref _disposed))
+            {
+                // disposed while Redis answered: nobody would renew the lease, so it is not handed out
+                _ = ReleaseAsync(attempt.LeaseId, permitCount);
+                ThrowIfDisposed();
+            }
+
             Hold(attempt.LeaseId, permitCount);
             return RedisRateLimitLease.Acquired(disposed => Release(attempt.LeaseId, permitCount, disposed));
         }
@@ -171,8 +235,14 @@ namespace Dosaic.Plugins.Caching.Redis.RateLimiting
         /// <summary>Remembers a lease so that it is renewed for as long as its holder keeps it.</summary>
         private void Hold(string leaseId, int permitCount)
         {
-            if (_definition.LeaseTtl is not { } leaseTtl) return;
+            if (_definition.LeaseTtl is null) return;
             _heldLeases[leaseId] = permitCount;
+            EnsureTimer();
+        }
+
+        private void EnsureTimer()
+        {
+            if (_definition.LeaseTtl is not { } leaseTtl) return;
             lock (_renewalLock)
             {
                 if (_disposed || _renewal is not null) return;
@@ -182,27 +252,44 @@ namespace Dosaic.Plugins.Caching.Redis.RateLimiting
         }
 
         /// <summary>
-        ///     Extends every lease this instance still holds. Runs on a timer that only exists while there is
-        ///     something to renew, so an idle limiter keeps nothing alive.
+        ///     Extends every lease this instance still holds and retries releases that did not reach Redis.
+        ///     Runs on a timer that only exists while there is something to do, so an idle limiter keeps
+        ///     nothing alive. A tick that finds the previous one still running is skipped.
         /// </summary>
         internal async Task RenewHeldLeasesAsync()
         {
-            lock (_renewalLock)
-            {
-                if (_heldLeases.IsEmpty)
-                {
-                    _renewal?.Dispose();
-                    _renewal = null;
-                    return;
-                }
-            }
-
+            if (Interlocked.Exchange(ref _renewing, 1) == 1) return;
             try
             {
-                var members = _heldLeases.ToArray()
-                    .SelectMany(x => Enumerable.Range(1, x.Value).Select(i => (RedisValue)$"{x.Key}:{i}"));
-                RedisValue[] arguments = [(long)_definition.LeaseTtl.Value.TotalMilliseconds, .. members];
-                await _database().ScriptEvaluateAsync(RedisRateLimitScripts.RenewConcurrency, _keys, arguments);
+                lock (_renewalLock)
+                {
+                    if (_heldLeases.IsEmpty && _pendingReleases.IsEmpty)
+                    {
+                        _renewal?.Dispose();
+                        _renewal = null;
+                        return;
+                    }
+                }
+
+                await RetryPendingReleasesAsync();
+                await RenewAsync();
+            }
+            finally
+            {
+                Volatile.Write(ref _renewing, 0);
+            }
+        }
+
+        private async Task RenewAsync()
+        {
+            if (_heldLeases.IsEmpty) return;
+            try
+            {
+                var members = _heldLeases.ToArray().SelectMany(x => Members(x.Key, x.Value));
+                RedisValue[] arguments = [(long)_definition.LeaseTtl!.Value.TotalMilliseconds, .. members];
+                var lost = await _database().ScriptEvaluateAsync(RedisRateLimitScripts.RenewConcurrency, _keys,
+                    arguments);
+                ForgetLostLeases(lost);
             }
             catch (Exception e)
             {
@@ -210,6 +297,26 @@ namespace Dosaic.Plugins.Caching.Redis.RateLimiting
                 _logger.LogDebug(e, "Could not renew rate limit leases on {RateLimitKey}",
                     _definition.Key.ToString());
             }
+        }
+
+        /// <summary>
+        ///     A held lease that is gone from Redis expired before it was renewed: Redis was unreachable or the
+        ///     process paused for longer than the lease TTL. Its permits may already belong to somebody else,
+        ///     and its holder keeps running, so the limit can be exceeded until the holder finishes.
+        /// </summary>
+        private void ForgetLostLeases(RedisResult lost)
+        {
+            if (lost is null || lost.IsNull || lost.Resp2Type != ResultType.Array) return;
+            var leaseIds = ((RedisResult[])lost!).Select(x => (string)x)
+                .Where(x => x?.Contains(':') == true)
+                .Select(x => x[..x.LastIndexOf(':')])
+                .Distinct();
+            foreach (var leaseId in leaseIds)
+                if (_heldLeases.TryRemove(leaseId, out _))
+                    _logger.LogWarning(
+                        "Rate limit lease {LeaseId} on {RateLimitKey} expired before it could be renewed. Its " +
+                        "permits may have been handed out again, so the concurrency limit can be exceeded until " +
+                        "the call that holds it finishes", leaseId, _definition.Key.ToString());
         }
 
         /// <param name="leaseId">The lease to give back.</param>
@@ -221,32 +328,75 @@ namespace Dosaic.Plugins.Caching.Redis.RateLimiting
         private void Release(string leaseId, int permitCount, bool disposed)
         {
             _heldLeases.TryRemove(leaseId, out _);
-            if (!disposed) return;
-            try
-            {
-                var members = Enumerable.Range(1, permitCount).Select(i => (RedisValue)$"{leaseId}:{i}").ToArray();
-                _database().SortedSetRemove(_definition.Key, members, CommandFlags.FireAndForget);
-            }
-            catch (Exception e) when (IsRedisFailure(e))
-            {
-                _logger.LogDebug(e, "Could not release rate limit lease on {RateLimitKey}, it expires on its own",
-                    _definition.Key.ToString());
-            }
+            if (disposed) _ = ReleaseAsync(leaseId, permitCount);
         }
 
         /// <summary>
-        ///     Time based limiters free permits exactly when the script says so. Releasable permits can come
-        ///     back at any moment, so those are polled with a short, growing interval instead.
+        ///     Removes the members of a lease. A release that fails would keep the permits taken for the whole
+        ///     lease TTL, for every process, so it is retried with the renewals until the TTL has passed.
         /// </summary>
-        private TimeSpan GetPollDelay(TimeSpan retryAfter, int round)
+        private async Task ReleaseAsync(string leaseId, int permitCount)
         {
-            var delay = retryAfter.TotalMilliseconds;
-            if (_definition.Releasable)
-                delay = Math.Min(delay, Math.Min(25d * Math.Pow(2, Math.Min(round, 8)), 500d));
-            return TimeSpan.FromMilliseconds(1 + delay + (delay * 0.2 * Random.Shared.NextDouble()));
+            try
+            {
+                await _database().SortedSetRemoveAsync(_definition.Key, Members(leaseId, permitCount).ToArray());
+                _pendingReleases.TryRemove(leaseId, out _);
+            }
+            catch (Exception e)
+            {
+                _logger.LogDebug(e, "Could not release rate limit lease on {RateLimitKey}, it is retried",
+                    _definition.Key.ToString());
+                if (_definition.LeaseTtl is not { } leaseTtl || Volatile.Read(ref _disposed)) return;
+                _pendingReleases.TryAdd(leaseId,
+                    new PendingRelease(permitCount, Environment.TickCount64 + (long)leaseTtl.TotalMilliseconds));
+                EnsureTimer();
+            }
         }
 
-        private static bool IsRedisFailure(Exception e) => e is RedisException or TimeoutException;
+        private async Task RetryPendingReleasesAsync()
+        {
+            foreach (var (leaseId, pending) in _pendingReleases.ToArray())
+            {
+                // past the lease TTL the members have expired in Redis anyway
+                if (Environment.TickCount64 >= pending.GiveUpAt)
+                    _pendingReleases.TryRemove(leaseId, out _);
+                else
+                    await ReleaseAsync(leaseId, pending.PermitCount);
+            }
+        }
+
+        private static IEnumerable<RedisValue> Members(string leaseId, int permitCount) =>
+            Enumerable.Range(1, permitCount).Select(i => (RedisValue)$"{leaseId}:{i}");
+
+        /// <summary>
+        ///     Time based limiters free permits exactly when the script says so. Releasable permits can come
+        ///     back at any moment, so those are polled with a short, growing interval instead. The delay is
+        ///     capped, so a long window is polled now and then instead of slept through, and the jitter is
+        ///     bounded, so a waiter does not wake up long after the permits came back.
+        /// </summary>
+        internal TimeSpan GetPollDelay(TimeSpan retryAfter, int round)
+        {
+            var delay = Math.Min(retryAfter.TotalMilliseconds, MaxPollDelay.TotalMilliseconds);
+            if (_definition.Releasable)
+                delay = Math.Min(delay, Math.Min(25d * Math.Pow(2, Math.Min(round, 8)), 500d));
+            var jitter = Math.Min(delay * 0.2, MaxPollJitterInMs) * Random.Shared.NextDouble();
+            return TimeSpan.FromMilliseconds(1 + delay + jitter);
+        }
+
+        /// <summary>
+        ///     True for errors that mean Redis did not answer. An error the server answered with is only
+        ///     counted when it asks to try again later; everything else would never go away on its own.
+        ///     <see cref="RedisCommandException" /> (a command the client refuses to send) is a configuration
+        ///     error as well. A disposed multiplexer means the application is shutting down.
+        /// </summary>
+        internal static bool IsRedisUnavailable(Exception e) => e switch
+        {
+            RedisServerException server => _transientServerErrors.Any(x =>
+                server.Message.StartsWith(x, StringComparison.Ordinal)),
+            RedisConnectionException or RedisTimeoutException or TimeoutException => true,
+            ObjectDisposedException => true,
+            _ => false
+        };
 
         private bool IsRedisSkipped() => Environment.TickCount64 < Volatile.Read(ref _skipRedisUntil);
 
@@ -260,7 +410,7 @@ namespace Dosaic.Plugins.Caching.Redis.RateLimiting
 
         /// <summary>
         ///     Stops renewing. Leases that are still held are not taken away from their holders, they simply
-        ///     expire after the lease TTL unless they are disposed before.
+        ///     expire after the lease TTL unless they are disposed before. Acquiring afterwards throws.
         /// </summary>
         protected override void Dispose(bool disposing)
         {
@@ -268,7 +418,7 @@ namespace Dosaic.Plugins.Caching.Redis.RateLimiting
             {
                 lock (_renewalLock)
                 {
-                    _disposed = true;
+                    Volatile.Write(ref _disposed, true);
                     _renewal?.Dispose();
                     _renewal = null;
                 }
@@ -280,5 +430,7 @@ namespace Dosaic.Plugins.Caching.Redis.RateLimiting
         }
 
         private readonly record struct Attempt(bool Acquired, TimeSpan RetryAfter, string LeaseId);
+
+        private readonly record struct PendingRelease(int PermitCount, long GiveUpAt);
     }
 }

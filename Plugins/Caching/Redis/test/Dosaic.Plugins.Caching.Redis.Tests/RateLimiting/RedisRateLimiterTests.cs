@@ -197,20 +197,57 @@ namespace Dosaic.Plugins.Caching.Redis.Tests.RateLimiting
                 .ThrowAsync<ArgumentOutOfRangeException>();
         }
 
+        private void RedisThrows(Exception exception)
+        {
+            _database.ScriptEvaluateAsync(Arg.Any<string>(), Arg.Any<RedisKey[]>(), Arg.Any<RedisValue[]>(),
+                Arg.Any<CommandFlags>()).ThrowsAsync(exception);
+            _database.ScriptEvaluate(Arg.Any<string>(), Arg.Any<RedisKey[]>(), Arg.Any<RedisValue[]>(),
+                Arg.Any<CommandFlags>()).Throws(exception);
+        }
+
         [Test]
-        public async Task RedisErrorsFallBackToTheInProcessLimiterAndLogAWarning()
+        public async Task SingleRedisErrorsRejectTheCallAndOnlyRepeatedOnesFallBackToTheInProcessLimiter()
         {
             RedisFails();
             var limiter = CreateLimiter();
 
-            using var first = await limiter.AcquireAsync();
-            using var second = await limiter.AcquireAsync();
+            var leases = new List<RateLimitLease>();
+            for (var i = 0; i < RedisRateLimiter.FailuresBeforeFallback + 1; i++)
+                leases.Add(await limiter.AcquireAsync());
 
-            first.IsAcquired.Should().BeTrue("the in-process limiter has one permit");
-            second.IsAcquired.Should().BeFalse("the in-process limiter is exhausted");
-            AsyncScriptCalls().Should().Be(1, "Redis is left alone until the retry interval has passed");
-            _logger.Entries.Should().ContainSingle(x => x.Level == LogLevel.Warning)
-                .Which.Exception.Should().BeOfType<RedisConnectionException>();
+            leases.Take(RedisRateLimiter.FailuresBeforeFallback - 1).Should().OnlyContain(x =>
+                !x.IsAcquired && RetryAfter(x) == RedisRateLimiter.FailureRetryAfter,
+                "the script may have taken the permits, granting locally could exceed the limit");
+            leases[RedisRateLimiter.FailuresBeforeFallback - 1].IsAcquired.Should()
+                .BeTrue("Redis is down now and the in-process limiter has one permit");
+            leases[^1].IsAcquired.Should().BeFalse("the in-process limiter is exhausted");
+            AsyncScriptCalls().Should().Be(RedisRateLimiter.FailuresBeforeFallback,
+                "Redis is left alone until the retry interval has passed");
+            _logger.Entries.Where(x => x.Level == LogLevel.Warning).Should().HaveCount(2)
+                .And.OnlyContain(x => x.Exception is RedisConnectionException);
+            leases.ForEach(x => x.Dispose());
+        }
+
+        [Test]
+        public async Task ASuccessfulCallResetsTheFailureCount()
+        {
+            var failure = new RedisTimeoutException("too slow", CommandStatus.Unknown);
+            _database.ScriptEvaluateAsync(Arg.Any<string>(), Arg.Any<RedisKey[]>(), Arg.Any<RedisValue[]>(),
+                    Arg.Any<CommandFlags>())
+                .Returns(_ => Task.FromException<RedisResult>(failure), _ => Task.FromException<RedisResult>(failure),
+                    _ => Task.FromResult(Granted()), _ => Task.FromException<RedisResult>(failure),
+                    _ => Task.FromException<RedisResult>(failure), _ => Task.FromResult(Granted()));
+            var limiter = CreateLimiter();
+
+            var acquired = new List<bool>();
+            for (var i = 0; i < 6; i++)
+            {
+                using var lease = await limiter.AcquireAsync();
+                acquired.Add(lease.IsAcquired);
+            }
+
+            acquired.Should().Equal(false, false, true, false, false, true);
+            AsyncScriptCalls().Should().Be(6, "two failures in a row never switch to the in-process limiter");
         }
 
         [Test]
@@ -226,26 +263,66 @@ namespace Dosaic.Plugins.Caching.Redis.Tests.RateLimiting
         }
 
         [Test]
-        public async Task RedisTimeoutsFallBackAsWell()
+        public async Task ATimeoutOfAReleasableLimiterHandsBackTheLeaseTheScriptMayHaveTaken()
         {
-            _database.ScriptEvaluateAsync(Arg.Any<string>(), Arg.Any<RedisKey[]>(), Arg.Any<RedisValue[]>(),
-                Arg.Any<CommandFlags>()).ThrowsAsync(new TimeoutException("too slow"));
-            var limiter = CreateLimiter();
+            RedisValue[] arguments = null;
+            _database.ScriptEvaluateAsync(Script, Arg.Any<RedisKey[]>(), Arg.Do<RedisValue[]>(x => arguments = x),
+                    Arg.Any<CommandFlags>())
+                .ThrowsAsync(new RedisTimeoutException("too slow", CommandStatus.Sent));
+            var limiter = CreateLimiter(releasable: true);
 
-            using var lease = await limiter.AcquireAsync();
+            using var lease = await limiter.AcquireAsync(2);
 
-            lease.IsAcquired.Should().BeTrue();
+            lease.IsAcquired.Should().BeFalse();
+            var leaseId = arguments[1].ToString();
+            await _database.Received(1).SortedSetRemoveAsync(Key,
+                Arg.Is<RedisValue[]>(m => m.Length == 2 && m[0] == $"{leaseId}:1" && m[1] == $"{leaseId}:2"),
+                Arg.Any<CommandFlags>());
         }
 
-        [Test]
-        public async Task OtherErrorsAreNotSwallowed()
+        [TestCaseSource(nameof(UnavailableErrors))]
+        public void ErrorsThatMeanRedisDidNotAnswerAreCounted(Exception exception)
         {
-            _database.ScriptEvaluateAsync(Arg.Any<string>(), Arg.Any<RedisKey[]>(), Arg.Any<RedisValue[]>(),
-                Arg.Any<CommandFlags>()).ThrowsAsync(new InvalidOperationException("a bug"));
+            RedisRateLimiter.IsRedisUnavailable(exception).Should().BeTrue();
+        }
+
+        private static IEnumerable<Exception> UnavailableErrors() =>
+        [
+            new RedisConnectionException(ConnectionFailureType.UnableToConnect, "gone"),
+            new RedisTimeoutException("too slow", CommandStatus.Sent),
+            new TimeoutException("too slow"),
+            new ObjectDisposedException("multiplexer"),
+            new RedisServerException("LOADING Redis is loading the dataset in memory"),
+            new RedisServerException("BUSY Redis is busy running a script"),
+            new RedisServerException("MASTERDOWN Link with MASTER is down"),
+            new RedisServerException("TRYAGAIN Multiple keys request during rehashing of slot"),
+            new RedisServerException("CLUSTERDOWN The cluster is down")
+        ];
+
+        [TestCaseSource(nameof(ConfigurationErrors))]
+        public async Task ErrorsRedisAnswersWithAreThrownInsteadOfFallingBack(Exception exception)
+        {
+            RedisThrows(exception);
             var limiter = CreateLimiter();
 
-            await limiter.Invoking(x => x.AcquireAsync().AsTask()).Should().ThrowAsync<InvalidOperationException>();
+            for (var i = 0; i < RedisRateLimiter.FailuresBeforeFallback + 1; i++)
+                await limiter.Invoking(x => x.AcquireAsync().AsTask()).Should().ThrowAsync<Exception>()
+                    .Where(x => x.GetType() == exception.GetType());
+            limiter.Invoking(x => x.AttemptAcquire()).Should().Throw<Exception>()
+                .Where(x => x.GetType() == exception.GetType());
+            AsyncScriptCalls().Should().Be(RedisRateLimiter.FailuresBeforeFallback + 1,
+                "a configuration error never switches to the in-process limiter");
         }
+
+        private static IEnumerable<Exception> ConfigurationErrors() =>
+        [
+            new RedisServerException("WRONGTYPE Operation against a key holding the wrong kind of value"),
+            new RedisServerException("READONLY You can't write against a read only replica."),
+            new RedisServerException("OOM command not allowed when used memory > 'maxmemory'."),
+            new RedisServerException("ERR Error running script"),
+            new RedisCommandException("This operation has been disabled in the command-map"),
+            new InvalidOperationException("a bug")
+        ];
 
         [Test]
         public async Task AWaiterMovesToTheInProcessLimiterWhenRedisFailsWhileWaiting()
@@ -259,7 +336,7 @@ namespace Dosaic.Plugins.Caching.Redis.Tests.RateLimiting
             using var lease = await limiter.AcquireAsync();
 
             lease.IsAcquired.Should().BeTrue();
-            _logger.Entries.Should().ContainSingle(x => x.Level == LogLevel.Warning);
+            _logger.Entries.Should().Contain(x => x.Level == LogLevel.Warning && x.Message.Contains("unavailable"));
         }
 
         [Test]
@@ -278,18 +355,18 @@ namespace Dosaic.Plugins.Caching.Redis.Tests.RateLimiting
         }
 
         [Test]
-        public void TheSynchronousPathFallsBackOnRedisErrors()
+        public void TheSynchronousPathFallsBackOnRepeatedRedisErrors()
         {
             RedisFails();
             var limiter = CreateLimiter();
 
-            using var first = limiter.AttemptAcquire();
-            using var second = limiter.AttemptAcquire();
+            var leases = Enumerable.Range(0, RedisRateLimiter.FailuresBeforeFallback + 1)
+                .Select(_ => limiter.AttemptAcquire()).ToList();
 
-            first.IsAcquired.Should().BeTrue();
-            second.IsAcquired.Should().BeFalse();
-            SyncScriptCalls().Should().Be(1);
-            _logger.Entries.Should().ContainSingle(x => x.Level == LogLevel.Warning);
+            leases.Select(x => x.IsAcquired).Should().Equal(false, false, true, false);
+            SyncScriptCalls().Should().Be(RedisRateLimiter.FailuresBeforeFallback);
+            _logger.Entries.Should().Contain(x => x.Level == LogLevel.Warning && x.Message.Contains("unavailable"));
+            leases.ForEach(x => x.Dispose());
         }
 
         [Test]
@@ -308,9 +385,9 @@ namespace Dosaic.Plugins.Caching.Redis.Tests.RateLimiting
 
             var leaseId = arguments[1].ToString();
             leaseId.Should().NotBeNullOrEmpty();
-            _database.Received(1).SortedSetRemove(Key,
+            await _database.Received(1).SortedSetRemoveAsync(Key,
                 Arg.Is<RedisValue[]>(m => m.Length == 2 && m[0] == $"{leaseId}:1" && m[1] == $"{leaseId}:2"),
-                CommandFlags.FireAndForget);
+                CommandFlags.None);
         }
 
         [Test]
@@ -328,18 +405,41 @@ namespace Dosaic.Plugins.Caching.Redis.Tests.RateLimiting
             leaseIds.Should().HaveCount(2).And.OnlyHaveUniqueItems();
         }
 
+        private int ReleaseCalls() => _database.ReceivedCalls()
+            .Count(x => x.GetMethodInfo().Name == nameof(IDatabase.SortedSetRemoveAsync));
+
         [Test]
-        public async Task AFailingReleaseIsLeftToTheLeaseExpiry()
+        public async Task AFailingReleaseIsRetriedWithTheRenewalsUntilItSucceeds()
         {
             RedisAnswers(Granted());
-            _database.SortedSetRemove(Arg.Any<RedisKey>(), Arg.Any<RedisValue[]>(), Arg.Any<CommandFlags>())
-                .Throws(new RedisConnectionException(ConnectionFailureType.SocketClosed, "gone"));
-            var limiter = CreateLimiter(releasable: true);
+            _database.SortedSetRemoveAsync(Arg.Any<RedisKey>(), Arg.Any<RedisValue[]>(), Arg.Any<CommandFlags>())
+                .Returns(_ => Task.FromException<long>(new RedisConnectionException(ConnectionFailureType.SocketClosed,
+                    "gone")), _ => Task.FromResult(1L));
+            using var limiter = CreateLimiter(releasable: true, leaseTtl: TimeSpan.FromMinutes(2));
             var lease = await limiter.AcquireAsync();
 
             lease.Invoking(x => x.Dispose()).Should().NotThrow();
-
+            ReleaseCalls().Should().Be(1);
             _logger.Entries.Should().ContainSingle(x => x.Level == LogLevel.Debug);
+
+            await limiter.RenewHeldLeasesAsync();
+            ReleaseCalls().Should().Be(2, "the release is retried with the next renewal");
+            await limiter.RenewHeldLeasesAsync();
+            ReleaseCalls().Should().Be(2, "the retried release went through");
+        }
+
+        [Test]
+        public async Task AReleaseWithoutALeaseTtlIsNotRetried()
+        {
+            RedisAnswers(Granted());
+            _database.SortedSetRemoveAsync(Arg.Any<RedisKey>(), Arg.Any<RedisValue[]>(), Arg.Any<CommandFlags>())
+                .ThrowsAsync(new RedisConnectionException(ConnectionFailureType.SocketClosed, "gone"));
+            using var limiter = CreateLimiter(releasable: true);
+
+            (await limiter.AcquireAsync()).Dispose();
+            await limiter.RenewHeldLeasesAsync();
+
+            ReleaseCalls().Should().Be(1);
         }
 
         private List<RedisValue[]> RenewalCalls() => _database.ReceivedCalls()
@@ -477,7 +577,7 @@ namespace Dosaic.Plugins.Caching.Redis.Tests.RateLimiting
             await limiter.RenewHeldLeasesAsync();
 
             RenewalCalls().Should().BeEmpty("nobody holds the lease any more, so it has to expire");
-            _database.DidNotReceiveWithAnyArgs().SortedSetRemove(default, Array.Empty<RedisValue>());
+            ReleaseCalls().Should().Be(0);
         }
 
         [Test]
@@ -488,7 +588,7 @@ namespace Dosaic.Plugins.Caching.Redis.Tests.RateLimiting
 
             (await limiter.AcquireAsync()).Dispose();
 
-            _database.DidNotReceiveWithAnyArgs().SortedSetRemove(default, Array.Empty<RedisValue>());
+            ReleaseCalls().Should().Be(0);
         }
 
         [Test]
@@ -508,13 +608,104 @@ namespace Dosaic.Plugins.Caching.Redis.Tests.RateLimiting
         public async Task HasNoLocalStatisticsAndDisposesItsFallback()
         {
             RedisFails();
-            var limiter = CreateLimiter();
-            using var lease = await limiter.AcquireAsync();
+            var limiter = CreateLimiter(redisRetryInterval: TimeSpan.FromMinutes(1));
+            for (var i = 0; i < RedisRateLimiter.FailuresBeforeFallback; i++)
+                (await limiter.AcquireAsync()).Dispose();
 
             limiter.GetStatistics().Should().BeNull();
             limiter.IdleDuration.Should().BeNull();
             limiter.Invoking(x => x.Dispose()).Should().NotThrow();
             CreateLimiter().Invoking(x => x.Dispose()).Should().NotThrow();
+        }
+
+        [Test]
+        public async Task LostLeasesAreLoggedAndNoLongerRenewed()
+        {
+            var leaseIds = new List<string>();
+            _database.ScriptEvaluateAsync(Script, Arg.Any<RedisKey[]>(), Arg.Do<RedisValue[]>(x => leaseIds.Add(x[1])),
+                Arg.Any<CommandFlags>()).Returns(Granted());
+            using var limiter = CreateLimiter(releasable: true, leaseTtl: TimeSpan.FromMinutes(2));
+            using var lost = await limiter.AcquireAsync(2);
+            using var kept = await limiter.AcquireAsync();
+            _database.ScriptEvaluateAsync(RedisRateLimitScripts.RenewConcurrency, Arg.Any<RedisKey[]>(),
+                    Arg.Any<RedisValue[]>(), Arg.Any<CommandFlags>())
+                .Returns(RedisResult.Create(new RedisValue[] { $"{leaseIds[0]}:1", $"{leaseIds[0]}:2" }));
+
+            await limiter.RenewHeldLeasesAsync();
+            await limiter.RenewHeldLeasesAsync();
+
+            _logger.Entries.Should().ContainSingle(x => x.Level == LogLevel.Warning)
+                .Which.Message.Should().Contain(leaseIds[0]);
+            RenewalCalls()[^1].Skip(1).Select(x => x.ToString()).Should().Equal($"{leaseIds[1]}:1");
+        }
+
+        [Test]
+        public async Task ARenewalTickIsSkippedWhileThePreviousOneIsStillRunning()
+        {
+            RedisAnswers(Granted());
+            using var limiter = CreateLimiter(releasable: true, leaseTtl: TimeSpan.FromMinutes(2));
+            using var lease = await limiter.AcquireAsync();
+            var slowRenewal = new TaskCompletionSource<RedisResult>();
+            _database.ScriptEvaluateAsync(RedisRateLimitScripts.RenewConcurrency, Arg.Any<RedisKey[]>(),
+                Arg.Any<RedisValue[]>(), Arg.Any<CommandFlags>()).Returns(slowRenewal.Task);
+
+            var first = limiter.RenewHeldLeasesAsync();
+            await limiter.RenewHeldLeasesAsync();
+            RenewalCalls().Should().HaveCount(1);
+            slowRenewal.SetResult(RedisResult.Create(Array.Empty<RedisValue>()));
+            await first;
+            await limiter.RenewHeldLeasesAsync();
+
+            RenewalCalls().Should().HaveCount(2);
+        }
+
+        [Test]
+        public async Task ADisposedLimiterRefusesToAcquire()
+        {
+            RedisAnswers(Granted());
+            var limiter = CreateLimiter(releasable: true, leaseTtl: TimeSpan.FromMinutes(2));
+
+            limiter.Dispose();
+
+            limiter.Invoking(x => x.AttemptAcquire()).Should().Throw<ObjectDisposedException>();
+            await limiter.Invoking(x => x.AcquireAsync().AsTask()).Should().ThrowAsync<ObjectDisposedException>();
+            AsyncScriptCalls().Should().Be(0);
+            SyncScriptCalls().Should().Be(0);
+        }
+
+        [Test]
+        public async Task ALimiterDisposedWhileRedisAnswersHandsTheLeaseBack()
+        {
+            var answer = new TaskCompletionSource<RedisResult>();
+            _database.ScriptEvaluateAsync(Script, Arg.Any<RedisKey[]>(), Arg.Any<RedisValue[]>(),
+                Arg.Any<CommandFlags>()).Returns(answer.Task);
+            var limiter = CreateLimiter(releasable: true, leaseTtl: TimeSpan.FromMinutes(2));
+
+            var acquire = limiter.AcquireAsync().AsTask();
+            limiter.Dispose();
+            answer.SetResult(Granted());
+
+            await acquire.Invoking(x => x).Should().ThrowAsync<ObjectDisposedException>();
+            ReleaseCalls().Should().Be(1);
+        }
+
+        [Test]
+        public void ThePollDelayIsCappedAndItsJitterBounded()
+        {
+            using var timeBased = CreateLimiter();
+            using var releasable = CreateLimiter(releasable: true);
+
+            for (var i = 0; i < 50; i++)
+            {
+                timeBased.GetPollDelay(TimeSpan.FromHours(1), 0).Should()
+                    .BeLessThanOrEqualTo(RedisRateLimiter.MaxPollDelay + TimeSpan.FromMilliseconds(251));
+                timeBased.GetPollDelay(TimeSpan.FromDays(60), 0).Should()
+                    .BeLessThanOrEqualTo(RedisRateLimiter.MaxPollDelay + TimeSpan.FromMilliseconds(251));
+                timeBased.GetPollDelay(TimeSpan.FromMilliseconds(100), 0).Should()
+                    .BeLessThanOrEqualTo(TimeSpan.FromMilliseconds(121));
+                releasable.GetPollDelay(TimeSpan.FromMinutes(2), 20).Should()
+                    .BeLessThanOrEqualTo(TimeSpan.FromMilliseconds(601));
+            }
         }
     }
 }
