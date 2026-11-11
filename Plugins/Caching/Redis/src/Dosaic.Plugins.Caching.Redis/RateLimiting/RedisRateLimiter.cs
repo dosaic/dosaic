@@ -35,19 +35,19 @@ namespace Dosaic.Plugins.Caching.Redis.RateLimiting
     ///     <see cref="QueueProcessingOrder" /> is not honoured and <c>QueueLimit</c> bounds the waiters of
     ///     this instance only.
     ///     <para>
-    ///         Redis errors are handled in three ways. A single failure (timeout, dropped connection) rejects
-    ///         the call it happened in: the script may still have taken the permits, so granting the call
-    ///         locally could exceed the limit. Only after <see cref="FailuresBeforeFallback" /> failures in a
-    ///         row is Redis considered down, and the in-process limiter takes over for the retry interval. An
-    ///         error the server answers with (wrong key type, read-only replica, out of memory, script error)
-    ///         is a configuration problem, not an outage, and is thrown to the caller.
+    ///         A Redis problem never fails or rejects a call: the call is decided by the in-process limiter
+    ///         with the same options. A concurrency lease the script may still have taken is handed back.
+    ///         Redis keeps being asked for the next calls, so a single blip does not move the instance to
+    ///         local budgets; only after <see cref="FailuresBeforeFallback" /> failures in a row is Redis left
+    ///         alone for the retry interval. Errors that will not go away on their own (wrong key type,
+    ///         read-only replica, out of memory, script error, a command the client refuses to send) are
+    ///         logged as errors instead of warnings, so a misconfiguration does not hide behind the fallback.
     ///     </para>
     /// </summary>
     internal sealed class RedisRateLimiter : RateLimiter
     {
         internal static readonly TimeSpan DefaultRedisRetryInterval = TimeSpan.FromSeconds(5);
         internal const int FailuresBeforeFallback = 3;
-        internal static readonly TimeSpan FailureRetryAfter = TimeSpan.FromMilliseconds(100);
         internal static readonly TimeSpan MaxPollDelay = TimeSpan.FromSeconds(30);
         private static readonly TimeSpan _releasableRetryAfterCap = TimeSpan.FromSeconds(1);
         private const double MaxPollJitterInMs = 250;
@@ -102,9 +102,10 @@ namespace Dosaic.Plugins.Caching.Redis.RateLimiting
                     _definition.Arguments(permitCount, leaseId));
                 attempt = Succeeded(Parse(result, leaseId));
             }
-            catch (Exception e) when (IsRedisUnavailable(e))
+            catch (Exception e) when (IsRedisFailure(e))
             {
-                attempt = Failed(e, leaseId, permitCount);
+                RecordFailure(e, leaseId, permitCount);
+                attempt = null;
             }
 
             return attempt is null
@@ -146,7 +147,7 @@ namespace Dosaic.Plugins.Caching.Redis.RateLimiting
             }
         }
 
-        /// <summary>Returns null when Redis is down and the in-process limiter has to decide.</summary>
+        /// <summary>Returns null when Redis did not answer and the in-process limiter has to decide.</summary>
         private async Task<Attempt?> TryAcquireAsync(int permitCount)
         {
             if (IsRedisSkipped()) return null;
@@ -157,9 +158,10 @@ namespace Dosaic.Plugins.Caching.Redis.RateLimiting
                     _definition.Arguments(permitCount, leaseId));
                 return Succeeded(Parse(result, leaseId));
             }
-            catch (Exception e) when (IsRedisUnavailable(e))
+            catch (Exception e) when (IsRedisFailure(e))
             {
-                return Failed(e, leaseId, permitCount);
+                RecordFailure(e, leaseId, permitCount);
+                return null;
             }
         }
 
@@ -170,26 +172,26 @@ namespace Dosaic.Plugins.Caching.Redis.RateLimiting
         }
 
         /// <summary>
-        ///     The script may have run although no answer arrived, so its permits are handed back (releasable
-        ///     limiters) and the call is not granted. Returns null once Redis has failed often enough in a row
-        ///     to be considered down.
+        ///     The call that failed is decided by the in-process limiter. The script may have run
+        ///     although no answer arrived, so the permits of a releasable limiter are handed back. Once Redis has
+        ///     failed often enough in a row it is left alone for the retry interval.
         /// </summary>
-        private Attempt? Failed(Exception e, string leaseId, int permitCount)
+        private void RecordFailure(Exception e, string leaseId, int permitCount)
         {
             if (leaseId is not null && permitCount > 0) _ = ReleaseAsync(leaseId, permitCount);
             if (Interlocked.Increment(ref _consecutiveFailures) >= FailuresBeforeFallback)
             {
                 SkipRedis(e);
-                return null;
+                return;
             }
 
             var now = Environment.TickCount64;
             var last = Interlocked.Read(ref _lastFailureWarning);
             if ((last == long.MinValue || now - last >= _redisRetryIntervalInMs) &&
                 Interlocked.CompareExchange(ref _lastFailureWarning, now, last) == last)
-                _logger.LogWarning(e, "Redis rate limiter {RateLimitKey} did not answer, the call is rejected",
+                _logger.Log(GetLogLevel(e), e,
+                    "Redis rate limiter {RateLimitKey} failed, the call is limited in-process",
                     _definition.Key.ToString());
-            return new Attempt(false, FailureRetryAfter, null);
         }
 
         private void EnsurePermitCount(int permitCount)
@@ -384,26 +386,33 @@ namespace Dosaic.Plugins.Caching.Redis.RateLimiting
         }
 
         /// <summary>
-        ///     True for errors that mean Redis did not answer. An error the server answered with is only
-        ///     counted when it asks to try again later; everything else would never go away on its own.
-        ///     <see cref="RedisCommandException" /> (a command the client refuses to send) is a configuration
-        ///     error as well. A disposed multiplexer means the application is shutting down.
+        ///     Every error that comes from Redis or the client: a rate limiter must not fail the calls it guards
+        ///     because Redis is down or misconfigured. Anything else is a bug and is thrown.
         /// </summary>
-        internal static bool IsRedisUnavailable(Exception e) => e switch
+        internal static bool IsRedisFailure(Exception e) =>
+            e is RedisException or RedisCommandException or TimeoutException or ObjectDisposedException;
+
+        /// <summary>
+        ///     True for errors that never go away on their own: an answer from the server other than "try again
+        ///     later", or a command the client refuses to send (command map, cross-slot).
+        /// </summary>
+        internal static bool IsConfigurationError(Exception e) => e switch
         {
-            RedisServerException server => _transientServerErrors.Any(x =>
+            RedisServerException server => !_transientServerErrors.Any(x =>
                 server.Message.StartsWith(x, StringComparison.Ordinal)),
-            RedisConnectionException or RedisTimeoutException or TimeoutException => true,
-            ObjectDisposedException => true,
+            RedisCommandException => true,
             _ => false
         };
+
+        private static LogLevel GetLogLevel(Exception e) =>
+            IsConfigurationError(e) ? LogLevel.Error : LogLevel.Warning;
 
         private bool IsRedisSkipped() => Environment.TickCount64 < Volatile.Read(ref _skipRedisUntil);
 
         private void SkipRedis(Exception e)
         {
             Volatile.Write(ref _skipRedisUntil, Environment.TickCount64 + _redisRetryIntervalInMs);
-            _logger.LogWarning(e,
+            _logger.Log(GetLogLevel(e), e,
                 "Redis rate limiter {RateLimitKey} is unavailable, limiting in-process for the next {RetryInMs} ms",
                 _definition.Key.ToString(), _redisRetryIntervalInMs);
         }

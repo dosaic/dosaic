@@ -100,10 +100,9 @@ string is unchanged while the keys are left on their defaults.
   one (`useInMemory: true`) unless the host registered its own. Redis keys are
   `{instanceName}ratelimit:{key}:{sliding|fixed|token|concurrency}`; the limiters need Redis 5 or newer.
 - `distributed: true` without a registered factory throws when the client pipeline is built.
-- Redis errors of a distributed limiter: a single timeout or dropped connection rejects that call (the
-  script may have taken the permits); only 3 failures in a row switch to the in-process limiter for 5
-  seconds. Errors Redis answers with (`WRONGTYPE`, `READONLY`, `OOM`, script errors) are thrown to the
-  caller. See the Redis README.
+- Redis errors never fail a call of a distributed limiter: the call is decided by the in-process limiter.
+  Only 3 failures in a row stop asking Redis for 5 seconds, and errors that do not go away on their own
+  (`WRONGTYPE`, `READONLY`, `OOM`, script errors) are logged as errors. See the Redis README.
 - `Dosaic.Hosting.Abstractions.Configuration.ConnectionStringSettings` builds a connection string from a raw
   `connectionParameters` value and discrete keys with the rules both PostgreSQL plugins use.
 

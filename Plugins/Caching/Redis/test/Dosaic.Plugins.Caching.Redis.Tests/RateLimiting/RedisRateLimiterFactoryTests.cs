@@ -131,8 +131,6 @@ namespace Dosaic.Plugins.Caching.Redis.Tests.RateLimiting
 
             foreach (var limiter in limiters)
             {
-                for (var i = 1; i < RedisRateLimiter.FailuresBeforeFallback; i++)
-                    limiter.AttemptAcquire().IsAcquired.Should().BeFalse("single failures are not an outage yet");
                 limiter.AttemptAcquire().IsAcquired.Should().BeTrue();
                 limiter.AttemptAcquire().IsAcquired.Should().BeTrue();
                 limiter.AttemptAcquire().IsAcquired.Should().BeFalse("the fallback has the same limit of 2");
