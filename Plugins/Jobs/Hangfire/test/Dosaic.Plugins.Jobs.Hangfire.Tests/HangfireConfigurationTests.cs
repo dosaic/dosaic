@@ -145,10 +145,26 @@ namespace Dosaic.Plugins.Jobs.Hangfire.Tests
             config.ConnectionString.Should().NotContain("Port");
         }
 
+        [TestCase("disable", SslMode.Disable)]
+        [TestCase("allow", SslMode.Allow)]
+        [TestCase("prefer", SslMode.Prefer)]
+        [TestCase("require", SslMode.Require)]
+        [TestCase("verify-ca", SslMode.VerifyCA)]
+        [TestCase("verify-full", SslMode.VerifyFull)]
+        [TestCase("Verify-Full", SslMode.VerifyFull)]
+        [TestCase("VerifyFull", SslMode.VerifyFull)]
+        public void SslModeAcceptsTheNpgsqlAndTheLibpqNames(string sslMode, SslMode expected)
+        {
+            var config = HangfirePluginTests.GetConfiguration();
+            config.SslMode = sslMode;
+
+            new NpgsqlConnectionStringBuilder(config.ConnectionString).SslMode.Should().Be(expected);
+        }
+
         [TestCase("sometimes")]
         [TestCase("3")]
         [TestCase("Require,Prefer")]
-        [TestCase("verify-full")]
+        [TestCase("verify_full")]
         public void InvalidSslModeThrowsAndNamesTheKey(string sslMode)
         {
             var config = HangfirePluginTests.GetConfiguration();
