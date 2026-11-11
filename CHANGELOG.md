@@ -13,8 +13,9 @@ one exception listed under "Behaviour changes".
   `HangfireConfiguration.ConnectionString` is built with `NpgsqlConnectionStringBuilder` instead of string
   interpolation. A password (or any other value) containing `;`, `=` or quotes used to break the string or
   inject connection parameters; it is now passed through verbatim. If you worked around this by
-  pre-escaping a value in your configuration, remove the manual escaping. The returned string no longer
-  ends with `;`, and `port` is only written when it is greater than 0.
+  pre-escaping a value in your configuration, remove the manual escaping. A configuration without such
+  characters and without any of the new keys yields the byte-identical string as before; `port` is only
+  written when it is greater than 0.
 - **`Dosaic.Plugins.Jobs.Hangfire` — a missing schema is reported by the schema guard.** When the Hangfire
   schema does not exist at all, startup now fails with `Hangfire schema '<name>' has no version row - the
   schema was not prepared.` instead of a raw PostgreSQL "relation does not exist" error. This can only
@@ -71,7 +72,7 @@ string is unchanged while the keys are left on their defaults.
 | Key | Default | Effect |
 |---|---|---|
 | `redisCache:instanceName` | `null` | `RedisCacheOptions.InstanceName`, the prefix of every cache key and of the rate limiter keys. Exposed on `RedisCacheConfiguration` for code that uses `IConnectionMultiplexer` directly. Ignored in in-memory mode. |
-| `redisCache:rateLimitLeaseTtlInSeconds` | `120` | How long a permit of a distributed concurrency limiter stays taken when it is never released (crashed process). Has to be longer than the longest call the limiter guards. |
+| `redisCache:rateLimitLeaseTtlInSeconds` | `120` | How long a permit of a distributed concurrency limiter stays taken once its holder stops renewing it (crashed process). Held permits are renewed three times per TTL, so calls may run longer than this. |
 
 #### `Dosaic.Extensions.RestEase` — distributed rate limits
 
