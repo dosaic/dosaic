@@ -1,5 +1,7 @@
 using AwesomeAssertions;
+using Dosaic.Extensions.Abstractions.RateLimiting;
 using Dosaic.Hosting.Abstractions;
+using Dosaic.Plugins.Caching.Redis.RateLimiting;
 using Dosaic.Testing.NUnit;
 using Dosaic.Testing.NUnit.Assertions;
 using HealthChecks.Redis;
@@ -51,6 +53,72 @@ public class RedisCachePluginTests
         opts.ConnectionMultiplexerFactory.Should().NotBeNull();
         var resolved = await opts.ConnectionMultiplexerFactory!();
         resolved.Should().BeSameAs(mux);
+    }
+
+    [Test]
+    public void InstanceNameIsNullByDefault()
+    {
+        new RedisCacheConfiguration().InstanceName.Should().BeNull();
+        var sc = BuildServiceCollectionWithMux(_plugin, out _);
+        var sp = sc.BuildServiceProvider();
+
+        sp.GetRequiredService<IOptions<RedisCacheOptions>>().Value.InstanceName.Should().BeNull();
+    }
+
+    [Test]
+    public void InstanceNameIsPassedToTheRedisCacheOptions()
+    {
+        var configuration = new RedisCacheConfiguration { ConnectionString = "redis-host", InstanceName = "tenant-a:" };
+        var sc = BuildServiceCollectionWithMux(new RedisCachePlugin(configuration), out _);
+        var sp = sc.BuildServiceProvider();
+
+        sp.GetRequiredService<IOptions<RedisCacheOptions>>().Value.InstanceName.Should().Be("tenant-a:");
+        sp.GetRequiredService<RedisCacheConfiguration>().InstanceName.Should().Be("tenant-a:");
+    }
+
+    [Test]
+    public void InMemoryModeIgnoresTheInstanceName()
+    {
+        var sc = TestingDefaults.ServiceCollection();
+        new RedisCachePlugin(new RedisCacheConfiguration { UseInMemory = true, InstanceName = "tenant-a:" })
+            .ConfigureServices(sc);
+        var sp = sc.BuildServiceProvider();
+
+        sp.GetRequiredService<IDistributedCache>().Should().BeAssignableTo<MemoryDistributedCache>();
+        sp.GetRequiredService<IOptions<RedisCacheOptions>>().Value.InstanceName.Should().BeNull();
+    }
+
+    [Test]
+    public void RegistersTheRedisRateLimiterFactory()
+    {
+        var sc = BuildServiceCollectionWithMux(_plugin, out _);
+        var sp = sc.BuildServiceProvider();
+
+        sp.GetRequiredService<IDistributedRateLimiterFactory>().Should().BeOfType<RedisRateLimiterFactory>();
+    }
+
+    [Test]
+    public void RegistersTheInProcessRateLimiterFactoryInMemory()
+    {
+        var sc = TestingDefaults.ServiceCollection();
+        new RedisCachePlugin(new RedisCacheConfiguration { UseInMemory = true }).ConfigureServices(sc);
+        var sp = sc.BuildServiceProvider();
+
+        sp.GetRequiredService<IDistributedRateLimiterFactory>().Should().BeOfType<InProcessRateLimiterFactory>();
+    }
+
+    [TestCase(true)]
+    [TestCase(false)]
+    public void KeepsARateLimiterFactoryThatIsAlreadyRegistered(bool useInMemory)
+    {
+        var custom = Substitute.For<IDistributedRateLimiterFactory>();
+        var sc = TestingDefaults.ServiceCollection();
+        sc.AddSingleton(custom);
+        new RedisCachePlugin(new RedisCacheConfiguration { UseInMemory = useInMemory, ConnectionString = "redis-host" })
+            .ConfigureServices(sc);
+        var sp = sc.BuildServiceProvider();
+
+        sp.GetRequiredService<IDistributedRateLimiterFactory>().Should().BeSameAs(custom);
     }
 
     [Test]

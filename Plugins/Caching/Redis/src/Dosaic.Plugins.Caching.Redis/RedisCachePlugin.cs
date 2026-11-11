@@ -1,8 +1,13 @@
+using Dosaic.Extensions.Abstractions.RateLimiting;
 using Dosaic.Hosting.Abstractions;
 using Dosaic.Hosting.Abstractions.Plugins;
+using Dosaic.Plugins.Caching.Redis.RateLimiting;
 using Microsoft.Extensions.Caching.StackExchangeRedis;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using OpenTelemetry.Trace;
 using StackExchange.Redis;
 
@@ -16,6 +21,7 @@ public class RedisCachePlugin(RedisCacheConfiguration configuration) : IPluginSe
         if (configuration.UseInMemory)
         {
             serviceCollection.AddDistributedMemoryCache();
+            serviceCollection.TryAddSingleton<IDistributedRateLimiterFactory, InProcessRateLimiterFactory>();
             return;
         }
         if (string.IsNullOrWhiteSpace(configuration?.ConnectionString))
@@ -27,10 +33,14 @@ public class RedisCachePlugin(RedisCacheConfiguration configuration) : IPluginSe
         serviceCollection.AddSingleton<IConnectionMultiplexer>(_ =>
             ConnectionMultiplexer.Connect(safeConnectionString));
 
-        serviceCollection.AddStackExchangeRedisCache(_ => { });
+        serviceCollection.AddStackExchangeRedisCache(opts => opts.InstanceName = configuration.InstanceName);
         serviceCollection.AddOptions<RedisCacheOptions>()
             .Configure<IConnectionMultiplexer>((opts, mux) =>
                 opts.ConnectionMultiplexerFactory = () => Task.FromResult(mux));
+
+        serviceCollection.TryAddSingleton<IDistributedRateLimiterFactory>(sp =>
+            new RedisRateLimiterFactory(sp.GetRequiredService<IConnectionMultiplexer>(), configuration,
+                sp.GetService<ILoggerFactory>() ?? NullLoggerFactory.Instance));
 
         serviceCollection.AddOpenTelemetry()
             .WithTracing(t => t

@@ -35,7 +35,19 @@ npgsql:
   includeErrorDetail: false     # include PG error details — may expose sensitive data
   enableDetailedErrors: false   # EF Core detailed errors — may expose sensitive data
   enableSensitiveDataLogging: false  # log parameter values — may expose sensitive data
+  sslMode: ""                   # Disable|Allow|Prefer|Require|VerifyCA|VerifyFull; empty = not set (default)
+  rootCertificate: ""           # CA certificate file; empty = not set (default)
+  noResetOnClose: false         # true behind pgBouncer in transaction mode (default: false)
+  connectionParameters: ""      # raw Npgsql connection string, applied first (default: empty)
 ```
+
+`connectionParameters` is a raw Npgsql connection string (`Timeout=5;Application Name=api`). It is applied
+first, and every discrete setting above that is **configured** overrides it. The defaults of `port`,
+`connectionLifetime`, `keepAlive`, `maxPoolSize` and `includeErrorDetail` only fill in what
+`connectionParameters` leaves unset, so `connectionParameters: "Port=6432;Maximum Pool Size=20"` (pgBouncer)
+works without repeating those keys. `Hangfire` applies the same rules to `hangfire:connectionParameters`.
+All of this happens before the `WithDataSource` hook runs, so the hook still has the last word. An unknown `sslMode` or an unparsable
+`connectionParameters` throws when the context is configured and names the key.
 
 ### Configuration class
 
@@ -57,6 +69,10 @@ public class EfCoreNpgSqlConfiguration
     public bool EnableDetailedErrors { get; set; }
     public bool EnableSensitiveDataLogging { get; set; }
     public bool SplitQuery { get; set; }
+    public string SslMode { get; set; }
+    public string RootCertificate { get; set; }
+    public bool NoResetOnClose { get; set; }
+    public string ConnectionParameters { get; set; }
 }
 ```
 

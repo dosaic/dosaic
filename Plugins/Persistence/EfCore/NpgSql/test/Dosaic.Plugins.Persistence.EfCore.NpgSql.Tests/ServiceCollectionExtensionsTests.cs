@@ -138,6 +138,154 @@ namespace Dosaic.Plugins.Persistence.EfCore.NpgSql.Tests
                 x.Value.Item1 == WarningBehavior.Log && x.Value.Item2 == LogLevel.Debug);
         }
 
+        private Npgsql.NpgsqlConnectionStringBuilder GetDataSourceConnectionString(
+            Action<NpgSqlConfiguration> configure = null)
+        {
+            _builder.ConfigureNpgSqlContext<TestEfCoreDb>(_serviceProvider, _config, configure);
+            var npgsqlOptions = _builder.Options.Extensions
+                .OfType<Npgsql.EntityFrameworkCore.PostgreSQL.Infrastructure.Internal.NpgsqlOptionsExtension>().Single();
+            return new Npgsql.NpgsqlConnectionStringBuilder(npgsqlOptions.DataSource!.ConnectionString);
+        }
+
+        [Test]
+        public void DefaultsDoNotAddAnyOfTheNewConnectionParameters()
+        {
+            var connectionString = ServiceCollectionExtensions.CreateConnectionStringBuilder(_config).ConnectionString;
+
+            connectionString.Should().Be(
+                "Host=localhost;Port=5432;Username=user;Password=pass;Database=testdb;Connection Lifetime=30;Keepalive=60;Maximum Pool Size=100;Array Nullability Mode=PerInstance;Include Error Detail=True");
+        }
+
+        [Test]
+        public void EmptyStringsLeaveTheNewConnectionParametersUnset()
+        {
+            var expected = ServiceCollectionExtensions.CreateConnectionStringBuilder(_config).ConnectionString;
+            _config.SslMode = "";
+            _config.RootCertificate = "";
+            _config.ConnectionParameters = "";
+
+            ServiceCollectionExtensions.CreateConnectionStringBuilder(_config).ConnectionString.Should().Be(expected);
+        }
+
+        [Test]
+        public void TlsAndPoolResetSettingsReachTheDataSource()
+        {
+            _config.SslMode = "verifyfull";
+            _config.RootCertificate = "/etc/ssl/ca.crt";
+            _config.NoResetOnClose = true;
+
+            var connectionString = GetDataSourceConnectionString();
+
+            connectionString.SslMode.Should().Be(Npgsql.SslMode.VerifyFull);
+            connectionString.RootCertificate.Should().Be("/etc/ssl/ca.crt");
+            connectionString.NoResetOnClose.Should().BeTrue();
+        }
+
+        [Test]
+        public void ConnectionParametersAreAppliedFirstAndDiscreteSettingsOverrideThem()
+        {
+            _config.ConnectionParameters =
+                "Host=rawHost;Maximum Pool Size=3;SSL Mode=Disable;Timeout=5;Application Name=api";
+            _config.SslMode = "Require";
+
+            var connectionString = GetDataSourceConnectionString();
+
+            connectionString.Host.Should().Be("localhost");
+            connectionString.MaxPoolSize.Should().Be(100);
+            connectionString.SslMode.Should().Be(Npgsql.SslMode.Require);
+            connectionString.Timeout.Should().Be(5);
+            connectionString.ApplicationName.Should().Be("api");
+        }
+
+        [Test]
+        public void DefaultsOnlyFillInWhatTheConnectionParametersLeaveUnset()
+        {
+            // pgBouncer: nothing but host and credentials configured discretely
+            var config = new EfCoreNpgSqlConfiguration
+            {
+                Host = "pgbouncer",
+                Username = "user",
+                ConnectionParameters = "Port=6432;Maximum Pool Size=20;Keepalive=0;Include Error Detail=true"
+            };
+
+            var connectionString = ServiceCollectionExtensions.CreateConnectionStringBuilder(config);
+
+            connectionString.Port.Should().Be(6432);
+            connectionString.MaxPoolSize.Should().Be(20);
+            connectionString.KeepAlive.Should().Be(0);
+            connectionString.IncludeErrorDetail.Should().BeTrue();
+            connectionString.ConnectionLifetime.Should().Be(60, "the parameters leave it unset");
+            connectionString.Host.Should().Be("pgbouncer");
+        }
+
+        [Test]
+        public void WithoutConnectionParametersTheDefaultsApply()
+        {
+            var connectionString =
+                ServiceCollectionExtensions.CreateConnectionStringBuilder(new EfCoreNpgSqlConfiguration());
+
+            connectionString.Port.Should().Be(5432);
+            connectionString.MaxPoolSize.Should().Be(100);
+            connectionString.KeepAlive.Should().Be(15);
+            connectionString.ConnectionLifetime.Should().Be(60);
+            connectionString.IncludeErrorDetail.Should().BeFalse();
+        }
+
+        [Test]
+        public void ConfiguredValuesOverrideTheConnectionParametersEvenWhenTheyEqualTheDefault()
+        {
+            var config = new EfCoreNpgSqlConfiguration
+            {
+                Port = 5432,
+                MaxPoolSize = 100,
+                ConnectionParameters = "Port=6432;Maximum Pool Size=20;Array Nullability Mode=Always"
+            };
+
+            var connectionString = ServiceCollectionExtensions.CreateConnectionStringBuilder(config);
+
+            connectionString.Port.Should().Be(5432);
+            connectionString.MaxPoolSize.Should().Be(100);
+            connectionString.ArrayNullabilityMode.Should().Be(Npgsql.ArrayNullabilityMode.PerInstance);
+        }
+
+        [Test]
+        public void DataSourceHookOfTheConsumerRunsAfterTheConnectionSettings()
+        {
+            _config.SslMode = "Require";
+            Npgsql.SslMode? seenByHook = null;
+
+            GetDataSourceConnectionString(c => c.WithDataSource(dataSource =>
+            {
+                seenByHook = dataSource.ConnectionStringBuilder.SslMode;
+                dataSource.ConnectionStringBuilder.SslMode = Npgsql.SslMode.VerifyCA;
+            })).SslMode.Should().Be(Npgsql.SslMode.VerifyCA);
+
+            seenByHook.Should().Be(Npgsql.SslMode.Require);
+        }
+
+        [TestCase("sometimes")]
+        [TestCase("3")]
+        [TestCase("verify-full")]
+        public void InvalidSslModeThrowsAndNamesTheKey(string sslMode)
+        {
+            _config.SslMode = sslMode;
+
+            var act = () => _builder.ConfigureNpgSqlContext<TestEfCoreDb>(_serviceProvider, _config);
+
+            act.Should().Throw<InvalidOperationException>().WithMessage($"*npgsql:sslMode '{sslMode}'*");
+        }
+
+        [Test]
+        public void InvalidConnectionParametersThrowWithoutRepeatingTheValue()
+        {
+            _config.ConnectionParameters = "NotAKeyword=secret";
+
+            var act = () => _builder.ConfigureNpgSqlContext<TestEfCoreDb>(_serviceProvider, _config);
+
+            act.Should().Throw<InvalidOperationException>()
+                .Where(x => x.Message.Contains("npgsql:connectionParameters") && !x.Message.Contains("secret"));
+        }
+
         [Test]
         public void ConfigureNpgSqlDatabaseWithCompiledModel()
         {

@@ -7,6 +7,7 @@ using Chronos;
 using Chronos.Abstractions;
 using Dosaic.Hosting.Abstractions;
 using Dosaic.Hosting.Abstractions.Attributes;
+using Dosaic.Hosting.Abstractions.Configuration;
 using Dosaic.Hosting.Abstractions.Extensions;
 using Dosaic.Hosting.Abstractions.Middlewares.Models;
 using Dosaic.Hosting.Abstractions.Plugins;
@@ -43,9 +44,12 @@ namespace Dosaic.Hosting.WebHost.Configurators
         private readonly IImplementationResolver _implementationResolver;
         private readonly IConfiguration _configuration;
         private readonly IServiceCollection _serviceCollection;
+        private readonly HostConfiguration _hostConfiguration;
 
-        public ServiceConfigurator(ILogger logger, IConfiguration configuration, IServiceCollection serviceCollection, IImplementationResolver implementationResolver)
+        public ServiceConfigurator(ILogger logger, IConfiguration configuration, IServiceCollection serviceCollection,
+            IImplementationResolver implementationResolver, HostConfiguration hostConfiguration = null)
         {
+            _hostConfiguration = hostConfiguration ?? HostConfiguration.Load(configuration);
             _logger = logger;
             _configuration = configuration;
             _serviceCollection = serviceCollection;
@@ -73,14 +77,23 @@ namespace Dosaic.Hosting.WebHost.Configurators
                 });
         }
 
-        private void ConfigureHealthChecks()
+        internal const string MemoryHealthCheckMaximumMegabytesKey = "host:healthChecks:memory:maximumMegabytes";
+
+        internal void ConfigureHealthChecks()
         {
             var healthChecksBuilder = _serviceCollection.AddHealthChecks();
 
             // default health checks
             healthChecksBuilder.AddCheck("api", () => HealthCheckResult.Healthy(), tags: new[] { HealthCheckTag.Liveness.Value });
             healthChecksBuilder.AddDiskStorageHealthCheck(o => o.CheckAllDrives = true, "disk_space", tags: new[] { HealthCheckTag.Liveness.Value });
-            healthChecksBuilder.AddProcessAllocatedMemoryHealthCheck(1024 * 2, "memory", tags: new[] { HealthCheckTag.Liveness.Value });
+            // a failing liveness check restarts the pod, so the threshold has to fit the memory limit of the deployment
+            // the getter falls back to the default itself, it never returns null
+            var maximumMegabytes = _hostConfiguration.HealthChecks.Memory.MaximumMegabytes!.Value;
+            if (maximumMegabytes < 0)
+                throw new InvalidOperationException(
+                    $"Configuration: {MemoryHealthCheckMaximumMegabytesKey} must be 0 (no memory health check) or more, but is {maximumMegabytes}.");
+            if (maximumMegabytes > 0)
+                healthChecksBuilder.AddProcessAllocatedMemoryHealthCheck(maximumMegabytes, "memory", tags: new[] { HealthCheckTag.Liveness.Value });
 
             // custom health checks (discovered by attributes)
             var healthChecks = (
@@ -232,6 +245,7 @@ namespace Dosaic.Hosting.WebHost.Configurators
             var logLevel = _configuration.GetValue<LogEventLevel?>("serilog:minimumLevel") ?? LogEventLevel.Information;
             _serviceCollection.WithLogLevelSwitch(logLevel);
 
+            _serviceCollection.AddSingleton(_hostConfiguration);
             _serviceCollection.AddDateTimeProvider();
             _serviceCollection.AddDateTimeOffsetProvider();
 
@@ -249,6 +263,9 @@ namespace Dosaic.Hosting.WebHost.Configurators
 
             foreach (var configuration in _implementationResolver.FindAndResolve(f => f.HasAttribute<ConfigurationAttribute>()))
             {
+                // the host configuration is registered above, normalised by HostConfiguration.Load. A resolver
+                // that binds its own instance must not register a second, unnormalised one after it.
+                if (configuration is HostConfiguration) continue;
                 _serviceCollection.AddSingleton(configuration!.GetType(), configuration!);
             }
         }

@@ -121,7 +121,9 @@
     <PackageVersion Include="Swashbuckle.AspNetCore.Annotations" Version="10.3.1" />
     <PackageVersion Include="Swashbuckle.AspNetCore.SwaggerUI" Version="10.3.1" />
     <PackageVersion Include="System.IdentityModel.Tokens.Jwt" Version="8.23.0" />
+    <PackageVersion Include="System.Threading.RateLimiting" Version="$(MicrosoftExtensionsVersion)" />
     <PackageVersion Include="Testcontainers.PostgreSql" Version="4.16.0" />
+    <PackageVersion Include="Testcontainers.Redis" Version="4.16.0" />
     <PackageVersion Include="TngTech.ArchUnitNET.NUnit" Version="0.13.5" />
     <PackageVersion Include="Unleash.Client" Version="6.2.3" />
     <PackageVersion Include="VaultSharp" Version="1.17.5.1" />

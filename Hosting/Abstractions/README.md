@@ -214,6 +214,10 @@ Nested sections are supported using `:` as the delimiter:
 public class PrimaryDbConfig { ... }
 ```
 
+The host's own `host` section is available the same way as `HostConfiguration`
+(`Dosaic.Hosting.Abstractions.Configuration`): `Urls`, `MaxRequestSize`, `AdditionalConfigPaths` and
+`HealthChecks.Memory.MaximumMegabytes`. Plugins receive the instance the host was built with.
+
 ### `[Middleware]`
 
 Marks an `ApiMiddleware` subclass for automatic registration in the middleware pipeline. The optional `order` parameter controls execution order (default: `int.MaxValue` — runs last). Lower values run earlier.

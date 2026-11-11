@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using Dosaic.Hosting.Abstractions;
 using Dosaic.Hosting.Abstractions.Extensions;
 using Dosaic.Hosting.Abstractions.Plugins;
@@ -39,13 +40,32 @@ namespace Dosaic.Plugins.Jobs.Hangfire
         /// </summary>
         private JobStorage _managedStorage;
 
+        /// <summary>
+        ///     Built once in the constructor, so a broken connection configuration fails at startup instead of on
+        ///     the first connection. Null when this plugin does not build the PostgreSQL storage.
+        /// </summary>
+        private readonly string _connectionString;
+
+        /// <summary>Same character set Hangfire accepts for queue names.</summary>
+        private static readonly Regex _queueName = new("^[a-z0-9_-]+$", RegexOptions.Compiled);
+
+        internal const string ServerQueuesKey = "hangfire:server:queues";
+
         public HangFirePlugin(HangfireConfiguration configuration, IImplementationResolver implementationResolver,
             IHangfireConfigurator[] configurators)
         {
             _implementationResolver = implementationResolver;
             _configurators = configurators;
             _hangfireConfig = configuration;
+            _connectionString = BuildsPostgresStorage ? configuration.ConnectionString : null;
         }
+
+        private HangfireServerConfiguration ServerConfig => _hangfireConfig.Server ?? new HangfireServerConfiguration();
+
+        private HangfireHealthCheckConfiguration HealthCheckConfig =>
+            _hangfireConfig.HealthCheck ?? new HangfireHealthCheckConfiguration();
+
+        private bool BuildsPostgresStorage => !_hangfireConfig.InMemory && _configurators.All(x => !x.IncludesStorage);
 
         public void ConfigureServices(IServiceCollection serviceCollection)
         {
@@ -56,7 +76,7 @@ namespace Dosaic.Plugins.Jobs.Hangfire
                     conf.UseMaxArgumentSizeToRender(_hangfireConfig.MaxJobArgumentsSizeToRenderInBytes);
                     if (_hangfireConfig.InMemory)
                         conf.UseMemoryStorage();
-                    else if (_configurators.All(x => !x.IncludesStorage))
+                    else if (BuildsPostgresStorage)
                         conf.UseStorage(CreatePostgresStorage());
                     conf.UseSimpleAssemblyNameTypeSerializer();
                     _configurators.ForEach(x => x.Configure(conf));
@@ -86,27 +106,31 @@ namespace Dosaic.Plugins.Jobs.Hangfire
                 return new JobManager(hasQueueSupport, jobStorage.GetConnection(), jobStorage.GetMonitoringApi(),
                     recurringJobManager, backgroundJobClient, batchDispatcher);
             });
-            serviceCollection.AddHostedService<HangfireStatisticsMetricsReporter>();
+            if (_hangfireConfig.StatisticsMetrics?.Enabled ?? true)
+                serviceCollection.AddHostedService<HangfireStatisticsMetricsReporter>();
             serviceCollection.AddOpenTelemetry().WithTracing(builder => builder.AddHangfireInstrumentation());
             // Hangfire's PostgreSQL polling generates a large volume of low-value
             // SQL spans. Drop them before the OTLP batch exporter runs.
             HangfireSqlNoiseProcessor.RegisterFirst(serviceCollection);
         }
 
-        private NpgsqlConnection CreateConnection() => new(_hangfireConfig.ConnectionString);
+        private NpgsqlConnection CreateConnection() => new(_connectionString);
+
+        internal PostgreSqlStorageOptions CreateStorageOptions() => new()
+        {
+            InvisibilityTimeout = TimeSpan.FromMinutes(_hangfireConfig.InvisibilityTimeoutInMinutes),
+            SchemaName = _hangfireConfig.SchemaName,
+            QueuePollInterval = TimeSpan.FromMilliseconds(_hangfireConfig.QueuePollIntervalInMs),
+            UseSlidingInvisibilityTimeout = _hangfireConfig.UseSlidingInvisibilityTimeout,
+            PrepareSchemaIfNecessary = _hangfireConfig.PrepareSchemaIfNecessary
+        };
 
         private JobStorage CreatePostgresStorage()
         {
             PostgresSchemaGuard.ValidateName(_hangfireConfig.SchemaName);
-            var storageOptions = new PostgreSqlStorageOptions
-            {
-                InvisibilityTimeout = TimeSpan.FromMinutes(_hangfireConfig.InvisibilityTimeoutInMinutes),
-                SchemaName = _hangfireConfig.SchemaName,
-                QueuePollInterval = TimeSpan.FromMilliseconds(_hangfireConfig.QueuePollIntervalInMs),
-                UseSlidingInvisibilityTimeout = _hangfireConfig.UseSlidingInvisibilityTimeout
-            };
+            var storageOptions = CreateStorageOptions();
             var storage = new PostgreSqlStorage(
-                new NpgsqlConnectionFactory(_hangfireConfig.ConnectionString, storageOptions), storageOptions);
+                new NpgsqlConnectionFactory(_connectionString, storageOptions), storageOptions);
             var prefetchQueues = GetQueueConfigurations().Where(x => x.PrefetchCount > 1).ToArray();
             if (prefetchQueues.Length == 0) return _managedStorage = storage;
             var invisibilityTimeout = TimeSpan.FromMinutes(_hangfireConfig.InvisibilityTimeoutInMinutes);
@@ -141,16 +165,61 @@ namespace Dosaic.Plugins.Jobs.Hangfire
 
         private void ConfigureServers(IServiceCollection serviceCollection)
         {
+            foreach (var server in GetServerLayout())
+                AddServer(serviceCollection, server.Queues, server.WorkerCount, server.ServerNameSuffix);
+        }
+
+        /// <summary>
+        ///     The background job servers this process starts. Empty when the server is switched off, or when
+        ///     every entry of the queue map is 0.
+        /// </summary>
+        internal IReadOnlyList<ServerLayout> GetServerLayout()
+        {
+            if (!ServerConfig.Enabled) return [];
+            var queueMap = GetServerQueueMap();
+            if (queueMap.Count > 0)
+                return queueMap.Where(x => x.Value > 0).OrderBy(x => x.Key, StringComparer.Ordinal)
+                    .Select(x => new ServerLayout([x.Key], x.Value, x.Key)).ToList();
+
+            var servers = new List<ServerLayout>();
             var dedicated = GetQueueConfigurations();
             var dedicatedNames = dedicated.Select(x => x.Name).ToHashSet();
-            var sharedQueues = _hangfireConfig.Queues.Union([EnqueuedState.DefaultQueue])
+            var sharedQueues = (_hangfireConfig.Queues ?? []).Union([EnqueuedState.DefaultQueue])
                 .Distinct().Where(x => !dedicatedNames.Contains(x)).ToArray();
             if (sharedQueues.Length > 0)
-                AddServer(serviceCollection, sharedQueues, _hangfireConfig.WorkerCount, null);
-            foreach (var queue in dedicated)
-                AddServer(serviceCollection, [queue.Name], queue.WorkerCount ?? _hangfireConfig.WorkerCount,
-                    queue.Name);
+                servers.Add(new ServerLayout(sharedQueues, _hangfireConfig.WorkerCount, null));
+            servers.AddRange(dedicated.Select(queue =>
+                new ServerLayout([queue.Name], queue.WorkerCount ?? _hangfireConfig.WorkerCount, queue.Name)));
+            return servers;
         }
+
+        /// <summary>
+        ///     <c>hangfire:server:queues</c> with trimmed, lower-cased names. Keys that come from environment
+        ///     variables arrive upper-case, while Hangfire only accepts lower-case queue names.
+        /// </summary>
+        private Dictionary<string, int> GetServerQueueMap()
+        {
+            var result = new Dictionary<string, int>(StringComparer.Ordinal);
+            foreach (var (key, workerCount) in ServerConfig.Queues ?? [])
+            {
+                var name = (key ?? "").Trim().ToLowerInvariant();
+                if (!_queueName.IsMatch(name))
+                    throw new InvalidOperationException(
+                        $"Configuration: {ServerQueuesKey}:{key} is not a valid Hangfire queue name. " +
+                        "Queue names consist of lower-case letters, digits, underscores and dashes.");
+                if (workerCount < 0)
+                    throw new InvalidOperationException(
+                        $"Configuration: {ServerQueuesKey}:{key} must be a worker count of 0 (not served) or more, " +
+                        $"but is {workerCount}.");
+                if (!result.TryAdd(name, workerCount))
+                    throw new InvalidOperationException(
+                        $"Configuration: {ServerQueuesKey}:{key} names the queue '{name}' a second time.");
+            }
+
+            return result;
+        }
+
+        internal record ServerLayout(string[] Queues, int? WorkerCount, string ServerNameSuffix);
 
         private void AddServer(IServiceCollection serviceCollection, string[] queues, int? workerCount,
             string serverNameSuffix)
@@ -166,14 +235,17 @@ namespace Dosaic.Plugins.Jobs.Hangfire
                         TimeSpan.FromMilliseconds(_hangfireConfig.PollingIntervalInMs.Value);
                 if (workerCount.HasValue)
                     options.WorkerCount = workerCount.Value;
+                if (ServerConfig.ShutdownTimeoutInSeconds.HasValue)
+                    options.ShutdownTimeout = TimeSpan.FromSeconds(ServerConfig.ShutdownTimeoutInSeconds.Value);
                 _configurators.ForEach(x => x.ConfigureServer(options));
             });
         }
 
         public void ConfigureApplication(IApplicationBuilder applicationBuilder)
         {
-            GlobalJobFilters.Filters.Add(
-                new LogJobExecutionFilter(applicationBuilder.ApplicationServices.GetRequiredService<ILoggerFactory>()));
+            var loggerFactory = applicationBuilder.ApplicationServices.GetRequiredService<ILoggerFactory>();
+            GlobalJobFilters.Filters.Add(new LogJobExecutionFilter(loggerFactory));
+            LogServerLayout(loggerFactory.CreateLogger<HangFirePlugin>());
             if (_hangfireConfig.EnableJobsByFeatureManagementConfig)
             {
                 GlobalJobFilters.Filters.Add(new EnabledByFeatureFilter(
@@ -188,6 +260,7 @@ namespace Dosaic.Plugins.Jobs.Hangfire
             {
                 Authorization = new List<IDashboardAuthorizationFilter> { urlAuthFilter }
             });
+            if (!_hangfireConfig.RegisterRecurringJobs) return;
             var jobRegister = applicationBuilder.ApplicationServices.GetRequiredService<IJobManager>();
             var jobOptions = applicationBuilder.ApplicationServices.GetService<JobOptions>();
             jobOptions?.ConfigureJobs.Invoke(jobRegister, applicationBuilder.ApplicationServices);
@@ -201,6 +274,20 @@ namespace Dosaic.Plugins.Jobs.Hangfire
                 var genericMethod = registerJobMethod.MakeGenericMethod(job);
                 genericMethod.Invoke(jobRegister, [recurringJobDetails.CronPattern, recurringJobDetails.Queue, ""]);
             }
+        }
+
+        private void LogServerLayout(ILogger logger)
+        {
+            if (!ServerConfig.Enabled)
+            {
+                logger.LogInformation("Hangfire server is disabled, this process only enqueues jobs");
+                return;
+            }
+
+            if (GetServerLayout().Count == 0)
+                logger.LogWarning(
+                    "Every queue in {ConfigurationKey} has a worker count of 0, no Hangfire server is started",
+                    ServerQueuesKey);
         }
 
         /// <summary>
@@ -220,9 +307,18 @@ namespace Dosaic.Plugins.Jobs.Hangfire
 
         public void ConfigureHealthChecks(IHealthChecksBuilder healthChecksBuilder)
         {
-            healthChecksBuilder.AddHangfire(s => s.MinimumAvailableServers = 1, "hangfire",
+            if (!HealthCheckConfig.Enabled) return;
+            var minimumAvailableServers = GetMinimumAvailableServers();
+            healthChecksBuilder.AddHangfire(s => s.MinimumAvailableServers = minimumAvailableServers, "hangfire",
                 tags: [HealthCheckTag.Readiness.Value]);
         }
+
+        /// <summary>
+        ///     A process that starts no server must not wait for one: it would never get ready while no other
+        ///     process serves, and a fresh installation would deadlock on its own readiness.
+        /// </summary>
+        internal int? GetMinimumAvailableServers() =>
+            HealthCheckConfig.MinimumAvailableServers ?? (GetServerLayout().Count > 0 ? 1 : null);
 
         internal class HostAuthorizationFilter : IDashboardAuthorizationFilter
         {

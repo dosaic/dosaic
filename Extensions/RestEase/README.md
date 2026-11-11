@@ -125,6 +125,8 @@ MyApi:
   RateLimits:
     Enabled: true
     ThrowOnRejection: false       # false = return 429 + Retry-After, true = throw HttpRequestException
+    Distributed: false            # true = one budget for all processes, see "Distributed rate limits"
+    DistributedKey: partner-api   # identifies the shared budget; default = client name
     SlidingWindow:
       Enabled: true
       PermitLimit: 50             # max requests per window
@@ -169,6 +171,40 @@ AddRestEaseApiFromConfiguration<TApi>(IServiceCollection, string name, IConfigur
 AddRestEaseApiFromConfiguration<TApi>(IServiceCollection, IConfigurationSection);
 AddRestEaseApiFromConfiguration<TApi>(IServiceCollection, string name, IConfigurationSection);
 ```
+
+### Distributed rate limits
+
+By default every limiter lives in the process that created it: three replicas with `PermitLimit: 50` send up to 150 requests per window. Set `RateLimits:Distributed: true` to let all replicas draw from one budget.
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `<section>:RateLimits:Distributed` | `bool` | `false` | `false` keeps the in-process `System.Threading.RateLimiting` limiters. `true` creates every enabled limiter through the registered `IDistributedRateLimiterFactory`. |
+| `<section>:RateLimits:DistributedKey` | `string` | client name | Identifies the shared budget. Clients (in any process) with the same key share it. The client name defaults to the full type name of the API interface. |
+
+```yaml
+PartnerApi:
+  BaseAddress: https://partner.example.com
+  RateLimits:
+    Distributed: true
+    DistributedKey: partner-api
+    SlidingWindow:
+      PermitLimit: 50
+      Window: 00:00:10
+      SegmentsPerWindow: 4
+      QueueLimit: 100
+```
+
+`IDistributedRateLimiterFactory` is not implemented by this package. It comes from:
+
+- **`Dosaic.Plugins.Caching.Redis`** — registers a Redis backed factory (`redisCache:useInMemory: false`) or an in-process one (`useInMemory: true`). Nothing else to wire up.
+- **`InProcessRateLimiterFactory`** (`Dosaic.Extensions.Abstractions`) — shares a budget per key inside one process; register it yourself for tests or single instance services: `services.AddSingleton<IDistributedRateLimiterFactory, InProcessRateLimiterFactory>()`.
+- Your own implementation.
+
+If `Distributed` is `true` and no factory is registered, building the pipeline — the first request of the client — throws an `InvalidOperationException`.
+
+Semantics that differ from the in-process limiters are a property of the factory. For the Redis factory (waiting by polling, no queue order across processes, lease TTL of the concurrency limiter, fallback when Redis is down) see the [Redis plugin README](../../Plugins/Caching/Redis/README.md#distributed-rate-limiting).
+
+> **Where the abstraction lives:** `IDistributedRateLimiterFactory` is defined in `Dosaic.Extensions.Abstractions` (namespace `Dosaic.Extensions.Abstractions.RateLimiting`), which this package now references. `Dosaic.Hosting.Abstractions` was the alternative, but it carries the `Microsoft.AspNetCore.App` framework reference plus YamlDotNet, Vogen and Chronos, and `Dosaic.Extensions.RestEase` is meant to stay usable from console apps and workers without the Dosaic host. `Dosaic.Extensions.Abstractions` only adds `System.Threading.RateLimiting`, which RestEase already pulled in through Polly.
 
 ## DI Builder API
 

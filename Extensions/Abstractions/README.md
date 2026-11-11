@@ -17,6 +17,8 @@ dotnet add package Dosaic.Extensions.Abstractions
 | `CurrencyValue` | class | Monetary value with a decimal amount, currency symbol, and ISO currency code |
 | `Quantity<T>` | abstract record | Generic quantity with a typed `Value` and a `Unit` string |
 | `QuantityCount` | abstract record | Specialisation of `Quantity<int>` with the unit fixed to `"Count"` |
+| `IDistributedRateLimiterFactory` | interface | Creates `System.Threading.RateLimiting.RateLimiter` instances whose budget is identified by a key and can be shared across processes. Implemented by `Dosaic.Plugins.Caching.Redis`, consumed by `Dosaic.Extensions.RestEase` |
+| `InProcessRateLimiterFactory` | class | `IDistributedRateLimiterFactory` that shares a budget per key inside one process — for tests, local development and single instance services |
 
 ## Usage
 

@@ -94,6 +94,9 @@ namespace Dosaic.Hosting.WebHost.Services
             var existingInstance = GetInstance(type);
             if (existingInstance is not null)
                 return existingInstance;
+            // an instance the host already built (e.g. its own configuration) is handed out as is
+            if (_defaultArguments.TryGetValue(type, out var knownInstance) && knownInstance is not Func<Type, object>)
+                return knownInstance;
             if (type.HasAttribute<ConfigurationAttribute>())
                 return GetConfiguration(type, type.GetAttribute<ConfigurationAttribute>()!.Section);
             var constructor = type.GetConstructors().FirstOrDefault();

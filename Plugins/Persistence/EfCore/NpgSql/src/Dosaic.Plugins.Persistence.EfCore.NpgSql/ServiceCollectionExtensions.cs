@@ -1,3 +1,4 @@
+using Dosaic.Hosting.Abstractions.Configuration;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.EntityFrameworkCore.Metadata;
@@ -17,6 +18,38 @@ namespace Dosaic.Plugins.Persistence.EfCore.NpgSql
             serviceCollection.AddHostedService<NpgsqlDbMigratorService<TDbContext>>();
         }
 
+        /// <summary>
+        ///     <see cref="EfCoreNpgSqlConfiguration.ConnectionParameters" /> first, then every configured discrete
+        ///     setting on top. Defaults only fill in what the parameters leave unset, the same rules
+        ///     <see cref="ConnectionStringSettings" /> applies for every plugin. The <c>WithDataSource</c> hook of
+        ///     the consumer runs afterwards and therefore still wins.
+        /// </summary>
+        internal static NpgsqlConnectionStringBuilder CreateConnectionStringBuilder(
+            EfCoreNpgSqlConfiguration configuration) =>
+            ConnectionStringSettings.Parse<NpgsqlConnectionStringBuilder>("npgsql:connectionParameters",
+                    configuration.ConnectionParameters)
+                .Override(!string.IsNullOrEmpty(configuration.Host), b => b.Host = configuration.Host)
+                .OverrideOrDefault(configuration.PortConfigured, b => b.Port = configuration.Port)
+                .Override(!string.IsNullOrEmpty(configuration.Username), b => b.Username = configuration.Username)
+                .Override(!string.IsNullOrEmpty(configuration.Password), b => b.Password = configuration.Password)
+                .Override(!string.IsNullOrEmpty(configuration.Database), b => b.Database = configuration.Database)
+                .OverrideOrDefault(configuration.ConnectionLifetimeConfigured,
+                    b => b.ConnectionLifetime = configuration.ConnectionLifetime)
+                .OverrideOrDefault(configuration.KeepAliveConfigured, b => b.KeepAlive = configuration.KeepAlive)
+                .OverrideOrDefault(configuration.MaxPoolSizeConfigured,
+                    b => b.MaxPoolSize = configuration.MaxPoolSize)
+                // the plugin maps arrays with this mode, the parameters must not change it
+                .Override(true, b => b.ArrayNullabilityMode = ArrayNullabilityMode.PerInstance)
+                .OverrideOrDefault(configuration.IncludeErrorDetailConfigured,
+                    b => b.IncludeErrorDetail = configuration.IncludeErrorDetail)
+                .Override(!string.IsNullOrWhiteSpace(configuration.SslMode),
+                    b => b.SslMode = ConnectionStringSettings.ParseEnumName<SslMode>("npgsql:sslMode",
+                        configuration.SslMode))
+                .Override(!string.IsNullOrWhiteSpace(configuration.RootCertificate),
+                    b => b.RootCertificate = configuration.RootCertificate)
+                .Override(configuration.NoResetOnClose, b => b.NoResetOnClose = true)
+                .Builder;
+
         public static void ConfigureNpgSqlContext<TDbContext>(this DbContextOptionsBuilder builder,
             IServiceProvider provider,
             EfCoreNpgSqlConfiguration configuration,
@@ -26,19 +59,7 @@ namespace Dosaic.Plugins.Persistence.EfCore.NpgSql
             configure?.Invoke(npgSqlConfiguration);
 
             var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
-            var connectionStringBuilder = new NpgsqlConnectionStringBuilder
-            {
-                Host = configuration.Host,
-                Port = configuration.Port,
-                Username = configuration.Username,
-                Password = configuration.Password,
-                Database = configuration.Database,
-                ConnectionLifetime = configuration.ConnectionLifetime,
-                KeepAlive = configuration.KeepAlive,
-                MaxPoolSize = configuration.MaxPoolSize,
-                ArrayNullabilityMode = ArrayNullabilityMode.PerInstance,
-                IncludeErrorDetail = configuration.IncludeErrorDetail,
-            };
+            var connectionStringBuilder = CreateConnectionStringBuilder(configuration);
 
             var dataSourceBuilder = new NpgsqlDataSourceBuilder(connectionStringBuilder.ConnectionString)
                 .MapDbEnums<TDbContext>();

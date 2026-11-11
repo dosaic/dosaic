@@ -21,6 +21,8 @@ Or add a package reference manually:
 - Automatic `abortConnect=false` safety flag appended to the connection string when not already present
 - **OpenTelemetry** tracing instrumentation for every Redis command via `OpenTelemetry.Instrumentation.StackExchangeRedis`
 - **Readiness health check** (`/health/readiness`) that verifies Redis connectivity (skipped in in-memory mode)
+- **Key prefix** (`instanceName`) so several installations can share one Redis
+- **Distributed rate limiting** — registers `IDistributedRateLimiterFactory`, used by `Dosaic.Extensions.RestEase` clients with `rateLimits:distributed: true`
 - Configuration-driven — no boilerplate, just add the plugin and configure the section
 
 ## Configuration
@@ -33,6 +35,8 @@ The plugin binds to the `redisCache` section via the `[Configuration("redisCache
 |---|---|---|---|
 | `UseInMemory` | `bool` | `false` | When `true`, uses an in-memory cache instead of Redis. Useful for local development. |
 | `ConnectionString` | `string` | *(required)* | StackExchange.Redis connection string (e.g. `localhost:6379`). Required unless `UseInMemory` is `true`. |
+| `InstanceName` | `string` | `null` | Prefix for every key the plugin writes (`RedisCacheOptions.InstanceName` and the rate limiter keys). `null` = no prefix. Ignored in in-memory mode. |
+| `RateLimitLeaseTtlInSeconds` | `int` | `120` | How long a permit of a distributed concurrency limiter stays taken once its holder stops renewing it (crashed process). Held permits are renewed three times per TTL, so calls may run longer than this. |
 
 ### appsettings.yml — Redis (production)
 
@@ -40,6 +44,8 @@ The plugin binds to the `redisCache` section via the `[Configuration("redisCache
 redisCache:
   useInMemory: false
   connectionString: "redis-host:6379,password=s3cr3t,ssl=false"
+  instanceName: "tenant-a:"          # optional key prefix, default: none
+  rateLimitLeaseTtlInSeconds: 120    # optional, default: 120
 ```
 
 ### appsettings.yml — in-memory (local development)
@@ -144,6 +150,61 @@ internal class RedisInfoService(RedisCacheConfiguration redisCacheConfiguration)
 }
 ```
 
+### Sharing one Redis between installations
+
+Set `redisCache:instanceName` (for example `tenant-a:`) and every cache entry is stored as `tenant-a:<key>`. The value is exposed on the `RedisCacheConfiguration` singleton, so code that talks to `IConnectionMultiplexer` directly can apply the same prefix:
+
+```csharp
+internal class Counters(IConnectionMultiplexer redis, RedisCacheConfiguration configuration)
+{
+    public Task<long> IncrementAsync(string name) =>
+        redis.GetDatabase().StringIncrementAsync($"{configuration.InstanceName}counter:{name}");
+}
+```
+
+## Distributed rate limiting
+
+The plugin registers `IDistributedRateLimiterFactory` (from `Dosaic.Extensions.Abstractions`) as a singleton, unless one is registered already:
+
+| Mode | Implementation | Budget shared by |
+|---|---|---|
+| `useInMemory: false` | Redis | every process using the same Redis, `instanceName` and key |
+| `useInMemory: true` | `InProcessRateLimiterFactory` | limiters with the same key inside this process |
+
+`Dosaic.Extensions.RestEase` uses it for clients with `rateLimits:distributed: true`. You can also use it directly — it returns plain `System.Threading.RateLimiting.RateLimiter` instances:
+
+```csharp
+internal class Importer(IDistributedRateLimiterFactory limiters)
+{
+    private readonly RateLimiter _limiter = limiters.CreateSlidingWindow("partner-api",
+        new SlidingWindowRateLimiterOptions { PermitLimit = 50, Window = TimeSpan.FromSeconds(10), SegmentsPerWindow = 4 });
+
+    public async Task CallAsync(CancellationToken ct)
+    {
+        using var lease = await _limiter.AcquireAsync(1, ct);
+        if (!lease.IsAcquired) return; // lease.TryGetMetadata(MetadataName.RetryAfter, out var retryAfter)
+        // ...
+    }
+}
+```
+
+How the Redis limiters behave:
+
+- **Atomic and clock independent.** Every decision is one Lua script. Time is read from the Redis server (`TIME`), so clock skew between pods does not matter.
+- **Keys.** State is stored under `{instanceName}ratelimit:{key}:{algorithm}` with `algorithm` being `sliding`, `fixed`, `token` or `concurrency` — the suffix lets one key be used for several algorithms. Every key carries a TTL and disappears when the limiter is idle.
+- **Algorithms.** Sliding window (permits return when their segment leaves the window), fixed window (starts with the first request), token bucket (`TokensPerPeriod` every `ReplenishmentPeriod`) and concurrency follow their BCL counterparts. `AutoReplenishment` is ignored: replenishment is always driven by the server clock.
+- **Concurrency leases are renewed while held, and expire otherwise.** A permit is returned when its lease is disposed. While it is held, the limiter extends it three times per `rateLimitLeaseTtlInSeconds`, so a call may run longer than the TTL. Once the holder is gone — the pod crashed, the limiter was disposed, or the lease was dropped without `Dispose` — nothing renews it and the permit comes back after the TTL. A renewal never brings back a permit that already expired and was handed to somebody else.
+- **Waiting.** With `QueueLimit > 0`, `AcquireAsync` waits by polling with a jittered delay until it gets its permits or the token is cancelled — time based limiters wait for the `RetryAfter` the script reports, the concurrency limiter polls every 25–500 ms. A single delay is capped at 30 seconds and its jitter at 250 ms, so a long window is re-checked instead of slept through. `QueueLimit` bounds the waiting permits of one limiter instance, not of the whole installation, and `QueueProcessingOrder` is not honoured. When the queue is full, or `QueueLimit` is 0, a failed lease with `RetryAfter` metadata is returned. `AttemptAcquire` never waits.
+- **Redis errors never fail a call.** Whatever goes wrong with Redis, the call is decided by an in-process limiter with the same options, so the guarded calls keep flowing.
+  - A single failure only sends that call to the in-process limiter; the next calls ask Redis again. A concurrency lease the script may have taken without its answer arriving is handed back.
+  - After 3 failures in a row Redis is left alone for 5 seconds. During that time every process enforces the limit on its own, and Redis does not learn about the permits handed out locally — the price of keeping calls flowing.
+  - Timeouts, dropped connections and `LOADING`, `BUSY`, `MASTERDOWN`, `TRYAGAIN`, `CLUSTERDOWN` are logged as warnings. Errors that do not go away on their own (`WRONGTYPE`, `READONLY`, `OOM`, script errors, a command the client refuses to send) are logged as **errors**, so a misconfiguration does not hide behind the fallback. Logging is throttled to once per 5 seconds.
+- **Lost concurrency leases.** If a held lease could not be renewed in time (Redis unreachable or the process paused for longer than the TTL), its permit may have been handed out again. The next renewal notices and logs a warning; the call that holds it keeps running. A release that does not reach Redis is retried with the renewals until the TTL has passed.
+- **Disposed limiters** throw `ObjectDisposedException` on acquire, like the BCL limiters.
+- **Statistics.** `GetStatistics()` returns `null`, a local snapshot would not describe the shared budget.
+
+Requires Redis 5 or newer (scripts that read `TIME` before writing).
+
 ## Health Checks
 
 When `UseInMemory` is `false`, the plugin registers a Redis health check tagged with the `readiness` tag. This means the `/health/readiness` endpoint (provided by the Dosaic WebHost) will report `Unhealthy` if Redis is unreachable.
@@ -179,4 +240,5 @@ No additional configuration is required — instrumentation is enabled as part o
 | `OpenTelemetry.Instrumentation.StackExchangeRedis` | Distributed tracing for Redis commands |
 | `OpenTelemetry.Extensions.Hosting` | OpenTelemetry hosting integration |
 | `Dosaic.Hosting.Abstractions` | Dosaic plugin interfaces and attributes |
+| `Dosaic.Extensions.Abstractions` | `IDistributedRateLimiterFactory` and the in-process fallback |
 

@@ -38,6 +38,62 @@ namespace Dosaic.Hosting.WebHost.Tests.Configurators
         }
 
         [Test]
+        public void SchemaFileInTheWorkingDirectoryIsNotLoadedAsConfiguration()
+        {
+            var schema = Path.Combine(Environment.CurrentDirectory, "appsettings.schema.json");
+            Services.ConfigurationSchemaCommand.TryRun([typeof(HostConfiguration)],
+                ["--write-config-schema", schema], TextWriter.Null);
+            try
+            {
+                var configuration = BuildConfiguration();
+
+                configuration["$schema"].Should().BeNull();
+                configuration["title"].Should().BeNull();
+                configuration.GetSection("properties").Exists().Should().BeFalse();
+                configuration.As<IConfigurationRoot>().Providers.OfType<JsonConfigurationProvider>()
+                    .Should().NotContain(x => x.Source.Path!.EndsWith(".schema.json"));
+            }
+            finally
+            {
+                File.Delete(schema);
+            }
+        }
+
+        [Test]
+        public void SchemaFileInAnAdditionalConfigPathIsNotLoadedAsConfiguration()
+        {
+            var folder = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(folder);
+            Services.ConfigurationSchemaCommand.TryRun([typeof(HostConfiguration)],
+                ["--write-config-schema", Path.Combine(folder, "appsettings.schema.json")], TextWriter.Null);
+            File.WriteAllText(Path.Combine(folder, "appsettings.extra.json"), """{ "extra": { "value": "loaded" } }""");
+            Environment.SetEnvironmentVariable(HostConfigurator.HostAdditionalconfigpathsEnvVarName, folder);
+            try
+            {
+                var configuration = BuildConfiguration();
+
+                configuration["extra:value"].Should().Be("loaded");
+                configuration["$schema"].Should().BeNull();
+                configuration.GetSection("properties").Exists().Should().BeFalse();
+            }
+            finally
+            {
+                Directory.Delete(folder, true);
+            }
+        }
+
+        [TestCase("appsettings.schema.json", true)]
+        [TestCase("appsettings.Schema.JSON", true)]
+        [TestCase("/config/appsettings.schema.json", true)]
+        [TestCase("appsettings.json", false)]
+        [TestCase("appsettings.schema.yml", false)]
+        [TestCase("appsettings.schemas.json", false)]
+        public void OnlyFilesEndingInSchemaJsonCountAsSchemaFiles(string file, bool expected)
+        {
+            HostConfigurator.IsSchemaFile(file).Should().Be(expected);
+        }
+
+        [Test]
         public void ShouldLoadConfigFromSublFolderViaEnvironmentVariable()
         {
             Environment.SetEnvironmentVariable(HostConfigurator.HostAdditionalconfigpathsEnvVarName, _testConfigFolder);

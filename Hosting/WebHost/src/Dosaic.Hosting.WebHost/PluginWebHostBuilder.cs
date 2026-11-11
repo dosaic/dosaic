@@ -1,3 +1,4 @@
+using Dosaic.Hosting.Abstractions.Configuration;
 using Dosaic.Hosting.Abstractions.Extensions;
 using Dosaic.Hosting.Abstractions.Plugins;
 using Dosaic.Hosting.Abstractions.Services;
@@ -23,10 +24,20 @@ namespace Dosaic.Hosting.WebHost
         private readonly ILogger<PluginWebHostBuilder> _logger;
 
         private readonly Type[] _resolvedTypes;
+        private readonly HostConfiguration _hostConfiguration;
 
         // ReSharper disable once MemberCanBePrivate.Global
         public PluginWebHostBuilder(Type[] types, params string[] args)
         {
+            // has to happen before anything is configured: writing the schema must not need a database, and the
+            // process ends here because whatever runs the host afterwards would not know this argument.
+            // The process arguments are checked as well, so it also works when args are not passed along.
+            if (ConfigurationSchemaCommand.TryRun(types, args, Environment.GetCommandLineArgs().Skip(1), Console.Out))
+                Environment.Exit(0);
+            // the environment variable writes the schema and carries on, so that a second export selected by the
+            // arguments can run in the same process. Standard output stays untouched for that export.
+            ConfigurationSchemaCommand.TryRunFromEnvironment(types,
+                Environment.GetEnvironmentVariable(ConfigurationSchemaCommand.EnvironmentVariable), Console.Error);
             SystemExtensions.SetDefaultCultureInfo();
             _webApplicationBuilder = WebApplication.CreateBuilder(args);
             HostConfigurator.ConfigureAppConfiguration(_webApplicationBuilder.Configuration, args);
@@ -35,10 +46,19 @@ namespace Dosaic.Hosting.WebHost
                 ?? LogEventLevel.Information);
             _logger = GetLoggerFactory().CreateLogger<PluginWebHostBuilder>();
             _resolvedTypes = types;
+            _hostConfiguration = HostConfiguration.Load(_webApplicationBuilder.Configuration);
             _implementationResolver = GetImplementationResolver(_webApplicationBuilder);
         }
 
         public static PluginWebHostBuilder Create(Type[] types, params string[] args) => new(types, args);
+
+        /// <summary>
+        ///     Writes a JSON schema of the configuration of the given plugin types to <paramref name="path" />,
+        ///     for completion and validation of <c>appsettings.*</c> files in editors. The same happens when
+        ///     the service is started with <c>--write-config-schema [path]</c>.
+        /// </summary>
+        public static void WriteConfigurationSchema(Type[] types, string path) =>
+            ConfigurationSchemaCommand.TryRun(types, [ConfigurationSchemaCommand.Argument, path], TextWriter.Null);
 
         public static void RunDefault(Type[] types, params string[] args)
         {
@@ -47,12 +67,12 @@ namespace Dosaic.Hosting.WebHost
 
         public IHost Build()
         {
-            var webApplicationConfigurator = new HostConfigurator(_webApplicationBuilder, _logger);
+            var webApplicationConfigurator = new HostConfigurator(_webApplicationBuilder, _logger, _hostConfiguration);
             webApplicationConfigurator.Configure();
             LogPlugins();
 
             var serviceConfigurator = new ServiceConfigurator(_logger, _webApplicationBuilder.Configuration,
-                _webApplicationBuilder.Services, _implementationResolver);
+                _webApplicationBuilder.Services, _implementationResolver, _hostConfiguration);
             serviceConfigurator.Configure();
             var host = _webApplicationBuilder.Build();
             var appConfigurator = new AppConfigurator(_logger, host, _implementationResolver);
@@ -77,7 +97,8 @@ namespace Dosaic.Hosting.WebHost
                         .MakeGenericMethod(t)
                         .Invoke(null, [loggerFactory])!)
                 },
-                { typeof(ILoggerFactory), loggerFactory }
+                { typeof(ILoggerFactory), loggerFactory },
+                { typeof(HostConfiguration), _hostConfiguration }
             };
 
             // use type resolving from source generator so we can use native AOT compilation

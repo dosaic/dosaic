@@ -121,6 +121,10 @@ host.Run();
 host:
   urls: "http://+:8080"          # default; separate multiple URLs with ","
   maxRequestSize: 8388608        # default 8 MB
+  additionalConfigPaths: ""      # see "Additional Config Paths"
+  healthChecks:
+    memory:
+      maximumMegabytes: 2048     # default; liveness threshold, 0 = no memory check (see "Health Endpoints")
 ```
 
 Environment variables (single `_` maps to `:` hierarchy):
@@ -128,7 +132,111 @@ Environment variables (single `_` maps to `:` hierarchy):
 ```shell
 HOST_URLS=http://+:8080
 HOST_MAXREQUESTSIZE=8388608
+HOST_HEALTHCHECKS_MEMORY_MAXIMUMMEGABYTES=2048
 ```
+
+The whole section is typed as `HostConfiguration` (`Dosaic.Hosting.Abstractions.Configuration`). The host
+reads it once, registers it as a singleton and hands the same instance to plugin constructors:
+
+```csharp
+public class MyPlugin(HostConfiguration hostConfiguration) : IPluginServiceConfiguration
+{
+    public void ConfigureServices(IServiceCollection serviceCollection)
+    {
+        var limit = hostConfiguration.MaxRequestSize;                             // 8388608 unless configured
+        var memory = hostConfiguration.HealthChecks.Memory.MaximumMegabytes;      // 2048 unless configured
+    }
+}
+```
+
+| Key | Property | Default |
+|---|---|---|
+| `host:urls` | `Urls` | `null` → `aspnetcore:urls` → `http://+:8080` |
+| `host:maxRequestSize` | `MaxRequestSize` | `8388608` |
+| `host:additionalConfigPaths` | `AdditionalConfigPaths` | `null` |
+| `host:healthChecks:memory:maximumMegabytes` | `HealthChecks.Memory.MaximumMegabytes` | `2048`, `0` = no check |
+
+A missing `host` section, missing keys and explicit `null` values all keep the defaults.
+
+### Configuration schema (editor completion)
+
+Start the service with `--write-config-schema [path]` and it writes a JSON schema of its configuration
+instead of starting. The default path is `appsettings.schema.json` in the working directory. Files ending in `.schema.json`
+are never loaded as configuration, even though the name starts with `appsettings.`:
+
+```shell
+dotnet run -- --write-config-schema
+dotnet run -- --write-config-schema ./config/appsettings.schema.json
+```
+
+The schema is built from the `[Configuration]` classes of the plugins the service is built with, plus the
+sections the web host reads itself (`host`, `serilog`, `telemetry`, `CorsPolicy`). It carries types, enum
+values, defaults and descriptions, so it always matches the installed packages.
+
+- It runs before anything is configured: no database, no connection strings and no valid configuration are
+  needed.
+- The process arguments are read directly, so `args` do not have to be passed to `PluginWebHostBuilder`.
+  A `Program.cs` that hands them to something else afterwards (`.Build().RunWithGraphQLCommands(args)`)
+  works unchanged — the process ends before that code runs.
+- From code: `PluginWebHostBuilder.WriteConfigurationSchema(DosaicPluginTypes.All, path)`.
+
+To write the schema **and carry on** in the same process, set the environment variable
+`DOSAIC_WRITE_CONFIG_SCHEMA` to the path (`true` or `1` for the default file name) instead of passing the
+argument. The process then does whatever its arguments ask for, which is how two exports run in one go:
+
+```shell
+DOSAIC_WRITE_CONFIG_SCHEMA=appsettings.schema.json dotnet run -- schema export --output schema.graphql
+```
+
+| | Writes the schema | Then |
+|---|---|---|
+| `--write-config-schema [path]` | yes | exits with code 0 |
+| `DOSAIC_WRITE_CONFIG_SCHEMA=<path>` | yes | continues with the given arguments, or starts the service when there are none |
+
+This has to be an environment variable: an extra argument would reach the command line parser of the next
+tool, which rejects what it does not know. It is meant for development and CI. An unchanged schema is not
+written again (no restart loop under `dotnet watch`), and a schema that cannot be written — read-only file
+system, missing permissions — is reported on standard error while the service starts anyway.
+
+The host's `args` and the process arguments are read separately, so `myapp serve --write-config-schema`
+with `args.Skip(1)` handed to the host writes `appsettings.schema.json` and not a file named `serve`.
+
+Reference the schema from the files that should get completion:
+
+```yaml
+# yaml-language-server: $schema=./appsettings.schema.json
+host:
+  maxRequestSize: 8388608
+```
+
+```json
+{
+  "$schema": "./appsettings.schema.json"
+}
+```
+
+YAML completion needs an editor with the YAML language server (VS Code with the Red Hat YAML extension,
+JetBrains Rider). Commit the schema file and regenerate it after package updates.
+
+Descriptions come from the XML documentation of the packages. NuGet does not copy those files to the
+output by default; add this to the service project to get them:
+
+```xml
+<PropertyGroup>
+  <CopyDocumentationFilesFromPackages>true</CopyDocumentationFilesFromPackages>
+</PropertyGroup>
+```
+
+What the schema cannot do:
+
+- Keys are offered in camel case. Configuration keys are not case sensitive, a JSON schema is — a key in
+  another casing is not flagged, it just gets no completion.
+- Nothing is marked as required and unknown keys are allowed. Types are checked, which is stricter than
+  the binder in places (it also accepts `"5432"` for a number). Enum names are completed as declared and
+  accepted in any casing or as their number, like the binder does.
+- Sections with a name of your choice (for example RestEase clients) and third party sections
+  (`ipRateLimiting`) are not described.
+- Environment variables get no completion.
 
 ### Configuration File Loading Order
 
@@ -288,7 +396,23 @@ Built-in liveness checks registered automatically:
 |---|---|
 | `api` | Always healthy — confirms the process is running |
 | `disk_space` | Checks free space on all drives |
-| `memory` | Asserts allocated memory is below 2 GB |
+| `memory` | Asserts allocated memory (`GC.GetTotalMemory`) is below the configured threshold, 2 GB by default |
+
+A failing liveness check makes Kubernetes restart the pod, so the memory threshold should match the
+memory limit of the deployment:
+
+```yaml
+host:
+  healthChecks:
+    memory:
+      maximumMegabytes: 2048     # default; 0 = do not register the memory check
+```
+
+```shell
+HOST_HEALTHCHECKS_MEMORY_MAXIMUMMEGABYTES=6144
+```
+
+`api` and `disk_space` are always registered. A negative value stops the host at startup.
 
 Plugins can contribute additional checks via `IPluginHealthChecksConfiguration.ConfigureHealthChecks()`.
 Custom checks can also be auto-discovered by implementing `IHealthCheck` and annotating the class with `[HealthCheck("name", ...tags)]`.
