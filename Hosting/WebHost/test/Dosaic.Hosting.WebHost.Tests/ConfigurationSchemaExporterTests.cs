@@ -1,4 +1,5 @@
 using System.Text.Json.Nodes;
+using System.Text.RegularExpressions;
 using AwesomeAssertions;
 using Dosaic.Hosting.Abstractions.Attributes;
 using Dosaic.Hosting.Abstractions.Configuration;
@@ -170,17 +171,57 @@ namespace Dosaic.Hosting.WebHost.Tests
             Property(sample, "id")["format"]!.GetValue<string>().Should().Be("uuid");
         }
 
+        private static JsonArray EnumNames(JsonObject schema) => schema["anyOf"]![0]!["enum"]!.AsArray();
+
         [Test]
         public void EnumsListTheirNamesAndNullableEnumsAllowNull()
         {
             var sample = Section(Export(_sample), "sample");
 
             var mode = Property(sample, "mode");
-            mode["enum"]!.AsArray().Select(x => x!.GetValue<string>()).Should().Equal("Fast", "Safe");
+            EnumNames(mode).Select(x => x!.GetValue<string>()).Should().Equal("Fast", "Safe");
             mode["default"]!.GetValue<string>().Should().Be("Safe");
             var optional = Property(sample, "optionalMode");
-            Types(optional).Should().Equal("string", "null");
-            optional["enum"]!.AsArray().Should().HaveCount(3).And.Contain(x => x == null);
+            EnumNames(optional).Should().HaveCount(3).And.Contain(x => x == null);
+        }
+
+        [Test]
+        public void EnumsAcceptEveryCasingAndNumericValueTheBinderAccepts()
+        {
+            var mode = Property(Section(Export(_sample), "sample"), "mode");
+
+            var anyOf = mode["anyOf"]!.AsArray();
+            anyOf.Should().HaveCount(3);
+            var pattern = new Regex(anyOf[1]!["pattern"]!.GetValue<string>());
+            pattern.IsMatch("safe").Should().BeTrue();
+            pattern.IsMatch("SAFE").Should().BeTrue();
+            pattern.IsMatch("Fast").Should().BeTrue();
+            pattern.IsMatch("slow").Should().BeFalse();
+            pattern.IsMatch("safer").Should().BeFalse();
+            anyOf[1]!["type"]!.GetValue<string>().Should().Be("string");
+            anyOf[2]!["type"]!.GetValue<string>().Should().Be("integer");
+        }
+
+        public class UnrepresentableNumbers
+        {
+            public double Infinite { get; set; } = double.PositiveInfinity;
+            public double NotANumber { get; set; } = double.NaN;
+            public double Huge { get; set; } = double.MaxValue;
+            public float Small { get; set; } = 0.1f;
+            public decimal Exact { get; set; } = 1.25m;
+        }
+
+        [Test]
+        public void NumbersOutsideTheDecimalRangeDoNotBreakTheExport()
+        {
+            var numbers = Section(Export(("numbers", typeof(UnrepresentableNumbers))), "numbers");
+
+            Property(numbers, "infinite")["default"].Should().BeNull();
+            Property(numbers, "notANumber")["default"].Should().BeNull();
+            Property(numbers, "huge")["default"]!.GetValue<double>().Should().Be(double.MaxValue);
+            Property(numbers, "small")["default"]!.GetValue<decimal>().Should().Be(0.1m);
+            Property(numbers, "exact")["default"]!.GetValue<decimal>().Should().Be(1.25m);
+            ConfigurationSchemaExporter.ExportJson([]).Should().NotBeNullOrEmpty();
         }
 
         [Test]
@@ -300,7 +341,7 @@ namespace Dosaic.Hosting.WebHost.Tests
             var schema = ConfigurationSchemaExporter.Export(Array.Empty<Type>());
 
             var minimumLevel = Property(Section(schema, "serilog"), "minimumLevel");
-            minimumLevel["enum"]!.AsArray().Select(x => x!.GetValue<string>()).Should().Contain(["Debug", "Warning"]);
+            EnumNames(minimumLevel).Select(x => x!.GetValue<string>()).Should().Contain(["Debug", "Warning"]);
             minimumLevel["default"]!.GetValue<string>().Should().Be("Information");
             var telemetry = Section(schema, "telemetry");
             Property(telemetry, "endpoint")["format"]!.GetValue<string>().Should().Be("uri");
@@ -383,6 +424,82 @@ namespace Dosaic.Hosting.WebHost.Tests
             ConfigurationSchemaCommand.TryGetPath(args, out var path).Should().BeTrue();
 
             path.Should().Be(expectedPath);
+        }
+
+        [Test]
+        public void HostAndProcessArgumentsAreReadSeparately()
+        {
+            var directory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+            var path = Path.Combine(directory, "schema.json");
+            var defaultFileExisted = File.Exists(ConfigurationSchemaCommand.DefaultFileName);
+            using var output = new StringWriter();
+            try
+            {
+                // "myapp serve --write-config-schema", with args.Skip(1) handed to the host
+                ConfigurationSchemaCommand.TryRun([typeof(HostConfiguration)], ["--write-config-schema"],
+                    ["serve", "--write-config-schema"], output).Should().BeTrue();
+                output.ToString().Should().Contain(ConfigurationSchemaCommand.DefaultFileName)
+                    .And.NotContain("serve");
+
+                ConfigurationSchemaCommand.TryRun([typeof(HostConfiguration)], ["serve"],
+                    ["serve", "--write-config-schema", path], output).Should().BeTrue();
+                File.Exists(path).Should().BeTrue();
+                ConfigurationSchemaCommand.TryRun([typeof(HostConfiguration)], ["serve"], ["serve"], output)
+                    .Should().BeFalse();
+            }
+            finally
+            {
+                if (Directory.Exists(directory)) Directory.Delete(directory, true);
+                if (!defaultFileExisted) File.Delete(ConfigurationSchemaCommand.DefaultFileName);
+            }
+        }
+
+        [Test]
+        public void AnExistingUpToDateSchemaIsNotWrittenAgain()
+        {
+            var path = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"), "appsettings.schema.json");
+            using var output = new StringWriter();
+            try
+            {
+                ConfigurationSchemaCommand.TryRunFromEnvironment([typeof(HostConfiguration)], path, output);
+                var written = File.GetLastWriteTimeUtc(path);
+                File.SetLastWriteTimeUtc(path, written.AddMinutes(-5));
+
+                ConfigurationSchemaCommand.TryRunFromEnvironment([typeof(HostConfiguration)], path, output)
+                    .Should().BeTrue();
+
+                File.GetLastWriteTimeUtc(path).Should().Be(written.AddMinutes(-5));
+                output.ToString().Should().Contain("up to date");
+            }
+            finally
+            {
+                Directory.Delete(Path.GetDirectoryName(path)!, true);
+            }
+        }
+
+        [Test]
+        public void TheEnvironmentVariableReportsASchemaThatCannotBeWrittenInsteadOfThrowing()
+        {
+            var directory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(directory);
+            // a directory where the file should go cannot be written on any platform
+            var path = Path.Combine(directory, "appsettings.schema.json");
+            Directory.CreateDirectory(path);
+            using var output = new StringWriter();
+            try
+            {
+                ConfigurationSchemaCommand.TryRunFromEnvironment([typeof(HostConfiguration)], path, output)
+                    .Should().BeTrue();
+
+                output.ToString().Should().Contain("Could not write the configuration schema");
+                FluentActions.Invoking(() => ConfigurationSchemaCommand.TryRun(
+                        [typeof(HostConfiguration)], ["--write-config-schema", path], TextWriter.Null))
+                    .Should().Throw<Exception>("the argument asked for nothing else, so it may fail loudly");
+            }
+            finally
+            {
+                Directory.Delete(directory, true);
+            }
         }
 
         [Test]

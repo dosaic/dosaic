@@ -151,6 +151,23 @@ namespace Dosaic.Hosting.WebHost.Tests
         }
 
         [Test]
+        public void AHostConfigurationTheResolverBuiltItselfIsNotRegisteredASecondTime()
+        {
+            var serviceCollection = TestingDefaults.ServiceCollection();
+            var implementationResolver = Substitute.For<IImplementationResolver>();
+            implementationResolver.FindTypes().Returns([typeof(HostConfiguration)]);
+            implementationResolver.FindAssemblies().Returns([]);
+            implementationResolver.ResolveInstance(typeof(HostConfiguration)).Returns(new HostConfiguration());
+            var hostConfiguration = new HostConfiguration();
+
+            new ServiceConfigurator(new FakeLogger<ServiceConfigurator>(), CustomConfiguration.Empty, serviceCollection,
+                implementationResolver, hostConfiguration).Configure();
+
+            serviceCollection.Where(x => x.ServiceType == typeof(HostConfiguration)).Should().ContainSingle()
+                .Which.ImplementationInstance.Should().BeSameAs(hostConfiguration);
+        }
+
+        [Test]
         public void NegativeMemoryHealthCheckThresholdThrowsAndNamesTheKey()
         {
             var configuration = CustomConfiguration.Create()

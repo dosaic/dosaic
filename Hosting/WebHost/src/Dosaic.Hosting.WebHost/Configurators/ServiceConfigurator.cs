@@ -87,8 +87,8 @@ namespace Dosaic.Hosting.WebHost.Configurators
             healthChecksBuilder.AddCheck("api", () => HealthCheckResult.Healthy(), tags: new[] { HealthCheckTag.Liveness.Value });
             healthChecksBuilder.AddDiskStorageHealthCheck(o => o.CheckAllDrives = true, "disk_space", tags: new[] { HealthCheckTag.Liveness.Value });
             // a failing liveness check restarts the pod, so the threshold has to fit the memory limit of the deployment
-            var maximumMegabytes = _hostConfiguration.HealthChecks.Memory.MaximumMegabytes
-                                   ?? HostMemoryHealthCheckConfiguration.DefaultMaximumMegabytes;
+            // the getter falls back to the default itself, it never returns null
+            var maximumMegabytes = _hostConfiguration.HealthChecks.Memory.MaximumMegabytes!.Value;
             if (maximumMegabytes < 0)
                 throw new InvalidOperationException(
                     $"Configuration: {MemoryHealthCheckMaximumMegabytesKey} must be 0 (no memory health check) or more, but is {maximumMegabytes}.");
@@ -263,8 +263,9 @@ namespace Dosaic.Hosting.WebHost.Configurators
 
             foreach (var configuration in _implementationResolver.FindAndResolve(f => f.HasAttribute<ConfigurationAttribute>()))
             {
-                // the host configuration is registered above; the resolver hands out that very instance again
-                if (ReferenceEquals(configuration, _hostConfiguration)) continue;
+                // the host configuration is registered above, normalised by HostConfiguration.Load. A resolver
+                // that binds its own instance must not register a second, unnormalised one after it.
+                if (configuration is HostConfiguration) continue;
                 _serviceCollection.AddSingleton(configuration!.GetType(), configuration!);
             }
         }

@@ -194,8 +194,12 @@ DOSAIC_WRITE_CONFIG_SCHEMA=appsettings.schema.json dotnet run -- schema export -
 | `DOSAIC_WRITE_CONFIG_SCHEMA=<path>` | yes | continues with the given arguments, or starts the service when there are none |
 
 This has to be an environment variable: an extra argument would reach the command line parser of the next
-tool, which rejects what it does not know. It is meant for development and CI — do not set it in a
-deployment, the service would write the file on every start.
+tool, which rejects what it does not know. It is meant for development and CI. An unchanged schema is not
+written again (no restart loop under `dotnet watch`), and a schema that cannot be written — read-only file
+system, missing permissions — is reported on standard error while the service starts anyway.
+
+The host's `args` and the process arguments are read separately, so `myapp serve --write-config-schema`
+with `args.Skip(1)` handed to the host writes `appsettings.schema.json` and not a file named `serve`.
 
 Reference the schema from the files that should get completion:
 
@@ -227,8 +231,9 @@ What the schema cannot do:
 
 - Keys are offered in camel case. Configuration keys are not case sensitive, a JSON schema is — a key in
   another casing is not flagged, it just gets no completion.
-- Nothing is marked as required and unknown keys are allowed. Types and enum names are checked, which is
-  stricter than the binder in places (it also accepts `"5432"` for a number).
+- Nothing is marked as required and unknown keys are allowed. Types are checked, which is stricter than
+  the binder in places (it also accepts `"5432"` for a number). Enum names are completed as declared and
+  accepted in any casing or as their number, like the binder does.
 - Sections with a name of your choice (for example RestEase clients) and third party sections
   (`ipRateLimiting`) are not described.
 - Environment variables get no completion.

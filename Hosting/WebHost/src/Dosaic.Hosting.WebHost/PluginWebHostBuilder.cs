@@ -32,8 +32,7 @@ namespace Dosaic.Hosting.WebHost
             // has to happen before anything is configured: writing the schema must not need a database, and the
             // process ends here because whatever runs the host afterwards would not know this argument.
             // The process arguments are checked as well, so it also works when args are not passed along.
-            if (ConfigurationSchemaCommand.TryRun(types, [.. args ?? [], .. Environment.GetCommandLineArgs().Skip(1)],
-                    Console.Out))
+            if (ConfigurationSchemaCommand.TryRun(types, args, Environment.GetCommandLineArgs().Skip(1), Console.Out))
                 Environment.Exit(0);
             // the environment variable writes the schema and carries on, so that a second export selected by the
             // arguments can run in the same process. Standard output stays untouched for that export.

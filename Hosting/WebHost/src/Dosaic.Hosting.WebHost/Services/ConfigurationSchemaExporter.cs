@@ -182,12 +182,7 @@ namespace Dosaic.Hosting.WebHost.Services
                 if (scalar.Format is not null) schema["format"] = scalar.Format;
                 // a flags enum may be written as a combination ("A, B"), which a list of names would reject
                 if (valueType.IsEnum && !valueType.IsDefined(typeof(FlagsAttribute), false))
-                {
-                    var names = new JsonArray();
-                    foreach (var name in Enum.GetNames(valueType)) names.Add(name);
-                    if (nullable) names.Add(null);
-                    schema["enum"] = names;
-                }
+                    schema = CreateEnumSchema(valueType, nullable);
 
                 if (ToJsonDefault(defaultValue) is { } scalarDefault) schema["default"] = scalarDefault;
                 return schema;
@@ -222,6 +217,33 @@ namespace Dosaic.Hosting.WebHost.Services
             return CreateObjectSchema(valueType, defaultValue ?? TryCreate(valueType), ancestors, documentation,
                 bindsReadOnlyCollections);
         }
+
+        /// <summary>
+        ///     The binder reads enum names in any casing and accepts their numeric values, while a JSON schema
+        ///     <c>enum</c> is case sensitive. The exact names are listed for completion, a case-insensitive
+        ///     pattern and integers keep every other spelling the binder accepts valid.
+        /// </summary>
+        private static JsonObject CreateEnumSchema(Type enumType, bool nullable)
+        {
+            var names = Enum.GetNames(enumType);
+            var exact = new JsonArray();
+            foreach (var name in names) exact.Add(name);
+            if (nullable) exact.Add(null);
+            var pattern = "^(?:" + string.Join("|", names.Select(ToCaseInsensitivePattern)) + ")$";
+            return new JsonObject
+            {
+                ["anyOf"] = new JsonArray(
+                    new JsonObject { ["enum"] = exact },
+                    new JsonObject { ["type"] = "string", ["pattern"] = pattern },
+                    new JsonObject { ["type"] = "integer" })
+            };
+        }
+
+        /// <summary>ECMA 262 patterns have no case-insensitive flag, so every letter becomes a class.</summary>
+        private static string ToCaseInsensitivePattern(string name) => string.Concat(name.Select(x =>
+            char.IsLetter(x) && char.ToUpperInvariant(x) != char.ToLowerInvariant(x)
+                ? $"[{char.ToUpperInvariant(x)}{char.ToLowerInvariant(x)}]"
+                : Regex.Escape(x.ToString())));
 
         private static (string Type, string Format)? GetScalarType(Type type)
         {
@@ -288,12 +310,25 @@ namespace Dosaic.Hosting.WebHost.Services
             TimeSpan timeSpan => JsonValue.Create(timeSpan.ToString("c", CultureInfo.InvariantCulture)),
             Guid guid => JsonValue.Create(guid.ToString()),
             Uri uri => JsonValue.Create(uri.ToString()),
-            float or double or decimal => JsonValue.Create(Convert.ToDecimal(value, CultureInfo.InvariantCulture)),
+            decimal number => JsonValue.Create(number),
+            float or double => ToJsonNumber(Convert.ToDouble(value, CultureInfo.InvariantCulture), value),
             byte or sbyte or short or ushort or int or uint or long => JsonValue.Create(
                 Convert.ToInt64(value, CultureInfo.InvariantCulture)),
             ulong unsigned => JsonValue.Create(unsigned),
             _ => null
         };
+
+        /// <summary>
+        ///     JSON has no NaN or infinity, so such a default is left out. Within the range of decimal the value is
+        ///     written as one, which keeps <c>0.1f</c> from turning into <c>0.100000001490116</c>.
+        /// </summary>
+        private static JsonNode ToJsonNumber(double number, object value)
+        {
+            if (!double.IsFinite(number)) return null;
+            return Math.Abs(number) < 7.9e28
+                ? JsonValue.Create(Convert.ToDecimal(value, CultureInfo.InvariantCulture))
+                : JsonValue.Create(number);
+        }
 
         private static void AddDescription(JsonObject schema, string description)
         {
@@ -440,13 +475,35 @@ namespace Dosaic.Hosting.WebHost.Services
         }
 
         /// <summary>
-        ///     Returns true when the value of <see cref="EnvironmentVariable" /> asked for the schema and it
-        ///     was written. <c>true</c> or <c>1</c> mean the default file name, anything else is the path.
+        ///     Checks the arguments given to the host first and the arguments of the process second. Each list
+        ///     is read on its own: merged, an argument at the start of one list would be taken as the path that
+        ///     belongs to <see cref="Argument" /> at the end of the other.
+        /// </summary>
+        public static bool TryRun(Type[] types, IEnumerable<string> args, IEnumerable<string> processArgs,
+            TextWriter output) =>
+            TryRun(types, args, output) || TryRun(types, processArgs, output);
+
+        /// <summary>
+        ///     Returns true when the value of <see cref="EnvironmentVariable" /> asked for the schema. <c>true</c>
+        ///     or <c>1</c> mean the default file name, anything else is the path. The service starts in any
+        ///     case: a schema that cannot be written (read-only file system) is reported on
+        ///     <paramref name="output" /> instead of thrown, and an unchanged schema is not written again, so
+        ///     file watchers (<c>dotnet watch</c>) do not see a change on every start.
         /// </summary>
         public static bool TryRunFromEnvironment(Type[] types, string value, TextWriter output)
         {
             if (!TryGetPathFromEnvironment(value, out var path)) return false;
-            Write(types, path, output);
+            try
+            {
+                Write(types, path, output);
+            }
+            catch (Exception e) when (e is IOException or UnauthorizedAccessException or NotSupportedException
+                                          or ArgumentException or System.Security.SecurityException)
+            {
+                output.WriteLine(
+                    $"Could not write the configuration schema to {path} ({e.GetType().Name}: {e.Message})");
+            }
+
             return true;
         }
 
@@ -464,9 +521,16 @@ namespace Dosaic.Hosting.WebHost.Services
         private static void Write(Type[] types, string path, TextWriter output)
         {
             var fullPath = Path.GetFullPath(path);
+            var content = ConfigurationSchemaExporter.ExportJson(types) + Environment.NewLine;
+            if (File.Exists(fullPath) && File.ReadAllText(fullPath) == content)
+            {
+                output.WriteLine($"The configuration schema in {fullPath} is up to date");
+                return;
+            }
+
             var directory = Path.GetDirectoryName(fullPath);
             if (!string.IsNullOrEmpty(directory)) Directory.CreateDirectory(directory);
-            File.WriteAllText(fullPath, ConfigurationSchemaExporter.ExportJson(types) + Environment.NewLine);
+            File.WriteAllText(fullPath, content);
             output.WriteLine($"Wrote the configuration schema to {fullPath}");
         }
 
