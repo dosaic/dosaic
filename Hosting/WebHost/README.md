@@ -121,6 +121,7 @@ host.Run();
 host:
   urls: "http://+:8080"          # default; separate multiple URLs with ","
   maxRequestSize: 8388608        # default 8 MB
+  additionalConfigPaths: ""      # see "Additional Config Paths"
   healthChecks:
     memory:
       maximumMegabytes: 2048     # default; liveness threshold, 0 = no memory check (see "Health Endpoints")
@@ -131,7 +132,31 @@ Environment variables (single `_` maps to `:` hierarchy):
 ```shell
 HOST_URLS=http://+:8080
 HOST_MAXREQUESTSIZE=8388608
+HOST_HEALTHCHECKS_MEMORY_MAXIMUMMEGABYTES=2048
 ```
+
+The whole section is typed as `HostConfiguration` (`Dosaic.Hosting.Abstractions.Configuration`). The host
+reads it once, registers it as a singleton and hands the same instance to plugin constructors:
+
+```csharp
+public class MyPlugin(HostConfiguration hostConfiguration) : IPluginServiceConfiguration
+{
+    public void ConfigureServices(IServiceCollection serviceCollection)
+    {
+        var limit = hostConfiguration.MaxRequestSize;                             // 8388608 unless configured
+        var memory = hostConfiguration.HealthChecks.Memory.MaximumMegabytes;      // 2048 unless configured
+    }
+}
+```
+
+| Key | Property | Default |
+|---|---|---|
+| `host:urls` | `Urls` | `null` → `aspnetcore:urls` → `http://+:8080` |
+| `host:maxRequestSize` | `MaxRequestSize` | `8388608` |
+| `host:additionalConfigPaths` | `AdditionalConfigPaths` | `null` |
+| `host:healthChecks:memory:maximumMegabytes` | `HealthChecks.Memory.MaximumMegabytes` | `2048`, `0` = no check |
+
+A missing `host` section, missing keys and explicit `null` values all keep the defaults.
 
 ### Configuration File Loading Order
 

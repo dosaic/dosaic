@@ -1,5 +1,6 @@
 using AwesomeAssertions;
 using Dosaic.Hosting.Abstractions.Attributes;
+using Dosaic.Hosting.Abstractions.Configuration;
 using Dosaic.Hosting.Abstractions.Extensions;
 using Dosaic.Hosting.Abstractions.Plugins;
 using Dosaic.Hosting.Abstractions.Services;
@@ -37,6 +38,24 @@ namespace Dosaic.Hosting.WebHost.Tests
             assemblies.Should().HaveCount(1);
             assembly = assemblies.Single();
             assembly.Should().BeSameAs(typeof(TypeImplementationResolverTests).Assembly);
+        }
+
+        [Test]
+        public void InstancesTheHostAlreadyBuiltAreHandedOutAsTheyAre()
+        {
+            var hostConfiguration = new HostConfiguration { Urls = "http://+:1" };
+            var resolver = new TypeImplementationResolver(CustomConfiguration.Empty, _resolvedTypes,
+                new Dictionary<Type, object> { [typeof(HostConfiguration)] = hostConfiguration });
+
+            resolver.ResolveInstance(typeof(HostConfiguration)).Should().BeSameAs(hostConfiguration,
+                "binding it from the empty host section a second time would fail and yield another instance");
+            resolver.ResolveInstance(typeof(NeedsHostConfiguration)).As<NeedsHostConfiguration>()
+                .HostConfiguration.Should().BeSameAs(hostConfiguration);
+        }
+
+        private class NeedsHostConfiguration(HostConfiguration hostConfiguration)
+        {
+            public HostConfiguration HostConfiguration { get; } = hostConfiguration;
         }
 
         [Test]

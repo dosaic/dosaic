@@ -1,3 +1,4 @@
+using Dosaic.Hosting.Abstractions.Configuration;
 using Dosaic.Hosting.Abstractions.Extensions;
 using Dosaic.Hosting.Abstractions.Plugins;
 using Dosaic.Hosting.Abstractions.Services;
@@ -23,6 +24,7 @@ namespace Dosaic.Hosting.WebHost
         private readonly ILogger<PluginWebHostBuilder> _logger;
 
         private readonly Type[] _resolvedTypes;
+        private readonly HostConfiguration _hostConfiguration;
 
         // ReSharper disable once MemberCanBePrivate.Global
         public PluginWebHostBuilder(Type[] types, params string[] args)
@@ -35,6 +37,7 @@ namespace Dosaic.Hosting.WebHost
                 ?? LogEventLevel.Information);
             _logger = GetLoggerFactory().CreateLogger<PluginWebHostBuilder>();
             _resolvedTypes = types;
+            _hostConfiguration = HostConfiguration.Load(_webApplicationBuilder.Configuration);
             _implementationResolver = GetImplementationResolver(_webApplicationBuilder);
         }
 
@@ -47,12 +50,12 @@ namespace Dosaic.Hosting.WebHost
 
         public IHost Build()
         {
-            var webApplicationConfigurator = new HostConfigurator(_webApplicationBuilder, _logger);
+            var webApplicationConfigurator = new HostConfigurator(_webApplicationBuilder, _logger, _hostConfiguration);
             webApplicationConfigurator.Configure();
             LogPlugins();
 
             var serviceConfigurator = new ServiceConfigurator(_logger, _webApplicationBuilder.Configuration,
-                _webApplicationBuilder.Services, _implementationResolver);
+                _webApplicationBuilder.Services, _implementationResolver, _hostConfiguration);
             serviceConfigurator.Configure();
             var host = _webApplicationBuilder.Build();
             var appConfigurator = new AppConfigurator(_logger, host, _implementationResolver);
@@ -77,7 +80,8 @@ namespace Dosaic.Hosting.WebHost
                         .MakeGenericMethod(t)
                         .Invoke(null, [loggerFactory])!)
                 },
-                { typeof(ILoggerFactory), loggerFactory }
+                { typeof(ILoggerFactory), loggerFactory },
+                { typeof(HostConfiguration), _hostConfiguration }
             };
 
             // use type resolving from source generator so we can use native AOT compilation

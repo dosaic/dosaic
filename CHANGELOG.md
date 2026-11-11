@@ -83,6 +83,10 @@ string is unchanged while the keys are left on their defaults.
 
 ### New API
 
+- `Dosaic.Hosting.Abstractions.Configuration.HostConfiguration` types the whole `host` section (`urls`,
+  `maxRequestSize`, `additionalConfigPaths`, `healthChecks:memory:maximumMegabytes`). The host reads it once,
+  registers it as a singleton and passes the same instance to plugin constructors. Key names and defaults
+  are unchanged.
 - `Dosaic.Extensions.Abstractions.RateLimiting.IDistributedRateLimiterFactory` (BCL types only) and
   `InProcessRateLimiterFactory`. The abstraction lives in `Dosaic.Extensions.Abstractions` rather than
   `Dosaic.Hosting.Abstractions`, so `Dosaic.Extensions.RestEase` stays usable outside the Dosaic host.

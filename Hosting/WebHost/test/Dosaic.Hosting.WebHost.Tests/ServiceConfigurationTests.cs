@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Reflection;
 using AwesomeAssertions;
+using Dosaic.Hosting.Abstractions.Configuration;
 using Dosaic.Hosting.Abstractions.Services;
 using Dosaic.Hosting.WebHost.Configurators;
 using Dosaic.Hosting.WebHost.Logging;
@@ -129,6 +130,24 @@ namespace Dosaic.Hosting.WebHost.Tests
             var registrations = ConfigureHealthChecks(configuration);
 
             registrations.Select(x => x.Name).Should().Equal("api", "disk_space");
+        }
+
+        [Test]
+        public void MemoryHealthCheckUsesTheHostConfigurationItWasGiven()
+        {
+            var serviceCollection = TestingDefaults.ServiceCollection();
+            var implementationResolver = Substitute.For<IImplementationResolver>();
+            implementationResolver.FindTypes().Returns([]);
+            implementationResolver.FindAssemblies().Returns([]);
+            var hostConfiguration = new HostConfiguration();
+            hostConfiguration.HealthChecks.Memory.MaximumMegabytes = 777;
+
+            new ServiceConfigurator(new FakeLogger<ServiceConfigurator>(), CustomConfiguration.Empty, serviceCollection,
+                implementationResolver, hostConfiguration).ConfigureHealthChecks();
+
+            var registrations = serviceCollection.BuildServiceProvider()
+                .GetRequiredService<IOptions<HealthCheckServiceOptions>>().Value.Registrations.ToList();
+            GetMemoryThresholdInMegabytes(registrations).Should().Be(777);
         }
 
         [Test]

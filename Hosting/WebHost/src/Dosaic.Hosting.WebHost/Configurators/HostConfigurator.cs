@@ -8,8 +8,12 @@ using Microsoft.Extensions.Logging;
 
 namespace Dosaic.Hosting.WebHost.Configurators
 {
-    internal class HostConfigurator(WebApplicationBuilder builder, ILogger logger)
+    internal class HostConfigurator(WebApplicationBuilder builder, ILogger logger,
+        HostConfiguration hostConfiguration = null)
     {
+        private readonly HostConfiguration _hostConfiguration =
+            hostConfiguration ?? HostConfiguration.Load(builder.Configuration);
+
         public const string HostAdditionalconfigpathsEnvVarName = "HOST:ADDITIONALCONFIGPATHS";
 
         public void Configure()
@@ -81,7 +85,7 @@ namespace Dosaic.Hosting.WebHost.Configurators
         {
             var paths = new List<string>();
 
-            var envVar = configurationManager.GetValue<string>(HostAdditionalconfigpathsEnvVarName);
+            var envVar = HostConfiguration.Load(configurationManager).AdditionalConfigPaths;
             if (!string.IsNullOrWhiteSpace(envVar))
             {
                 paths.AddRange(envVar.Split([',', ';'], StringSplitOptions.RemoveEmptyEntries)
@@ -121,11 +125,10 @@ namespace Dosaic.Hosting.WebHost.Configurators
 
         private void ConfigureWebHost()
         {
-            var config = builder.Configuration;
-            var urls = config.GetValue<string>("host:urls")
-                       ?? config.GetValue<string>("aspnetcore:urls")
-                       ?? "http://+:8080";
-            var maxRequestSize = config.GetValue<long?>("host:maxRequestSize") ?? 8388608; // 8 MB default
+            var urls = _hostConfiguration.Urls
+                       ?? builder.Configuration.GetValue<string>("aspnetcore:urls")
+                       ?? HostConfiguration.DefaultUrls;
+            var maxRequestSize = _hostConfiguration.MaxRequestSize;
             logger.LogInformation("Hosting urls {HostingUrls}", urls.Replace(",", " , "));
             builder.WebHost.UseKestrel(options =>
             {
