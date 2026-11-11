@@ -138,9 +138,11 @@ namespace Dosaic.Hosting.WebHost.Configurators
                 : otelConfig.Name;
             var serviceVersion = entryAssembly.GetName().Version?.ToString() ?? "unknown";
             var serviceInstanceId = Environment.MachineName;
+            // telemetry:endpoint is the only switch for OTLP. Without it no signal gets an OTLP exporter, so
+            // neither OTEL_EXPORTER_OTLP_ENDPOINT nor the OpenTelemetry default (localhost:4317) is used.
+            var exportsOtlp = otelConfig?.Endpoint is not null;
             Action<OtlpExporterOptions> setExporterOptions = opts =>
             {
-                if (otelConfig?.Endpoint is null) return;
                 opts.Endpoint = otelConfig.Endpoint;
                 opts.Headers = string.Join(",", otelConfig.Headers.Select(x => $"{x.Name}={x.Value}"));
                 opts.Protocol = otelConfig.Protocol;
@@ -162,11 +164,12 @@ namespace Dosaic.Hosting.WebHost.Configurators
                         .AddHttpClientInstrumentation()
                         .AddRuntimeInstrumentation()
                         .AddProcessInstrumentation()
-                        .AddMeter("*", Tracing.SourceName)
-                        .AddOtlpExporter(setExporterOptions)
-                        .AddPrometheusExporter();
+                        .AddMeter("*", Tracing.SourceName);
+                    if (exportsOtlp)
+                        builder.AddOtlpExporter(setExporterOptions);
+                    builder.AddPrometheusExporter();
                 });
-            if (otelConfig?.Endpoint is null) return;
+            if (!exportsOtlp) return;
             Sdk.SetDefaultTextMapPropagator(new B3Propagator(true));
             _serviceCollection.AddSingleton<ILogEventEnricher, OpentelemetryTraceEnricher>();
             otel.WithTracing(

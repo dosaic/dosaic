@@ -347,7 +347,17 @@ telemetry:
       value: "Bearer <token>"
 ```
 
-Without `telemetry:endpoint`, only the Prometheus scraping endpoint (`/metrics`) is active.
+Without `telemetry:endpoint`, only the Prometheus scraping endpoint (`/metrics`) is active. No signal gets an
+OTLP exporter, so nothing is sent to the OpenTelemetry default `http://localhost:4317`.
+
+`telemetry:endpoint` is the only switch for the OTLP export:
+
+| `telemetry:endpoint` | `OTEL_EXPORTER_OTLP_ENDPOINT` | Result |
+|---|---|---|
+| not set or empty | set or not set | No OTLP export of traces, metrics or logs. The variable is ignored. |
+| set | set or not set | Traces, metrics and logs go to `telemetry:endpoint`. `telemetry:protocol` and `telemetry:headers` also replace `OTEL_EXPORTER_OTLP_PROTOCOL` and `OTEL_EXPORTER_OTLP_HEADERS`. |
+
+To use a collector from the environment, set `TELEMETRY_ENDPOINT` instead of `OTEL_EXPORTER_OTLP_ENDPOINT`.
 
 Metrics instrumentation (always active):
 - ASP.NET Core request metrics
