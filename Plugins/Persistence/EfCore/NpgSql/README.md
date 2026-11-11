@@ -41,10 +41,12 @@ npgsql:
   connectionParameters: ""      # raw Npgsql connection string, applied first (default: empty)
 ```
 
-`connectionParameters` is meant for Npgsql parameters without a setting of their own
-(`Timeout=5;Application Name=api`). It is applied first; the discrete settings above — including their
-defaults such as `port`, `maxPoolSize` or `keepAlive` — override it. All of this happens before the
-`WithDataSource` hook runs, so the hook still has the last word. An unknown `sslMode` or an unparsable
+`connectionParameters` is a raw Npgsql connection string (`Timeout=5;Application Name=api`). It is applied
+first, and every discrete setting above that is **configured** overrides it. The defaults of `port`,
+`connectionLifetime`, `keepAlive`, `maxPoolSize` and `includeErrorDetail` only fill in what
+`connectionParameters` leaves unset, so `connectionParameters: "Port=6432;Maximum Pool Size=20"` (pgBouncer)
+works without repeating those keys. `Hangfire` applies the same rules to `hangfire:connectionParameters`.
+All of this happens before the `WithDataSource` hook runs, so the hook still has the last word. An unknown `sslMode` or an unparsable
 `connectionParameters` throws when the context is configured and names the key.
 
 ### Configuration class

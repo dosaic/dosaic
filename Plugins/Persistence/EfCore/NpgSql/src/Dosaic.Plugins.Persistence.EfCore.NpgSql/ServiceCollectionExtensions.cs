@@ -1,3 +1,4 @@
+using Dosaic.Hosting.Abstractions.Configuration;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.EntityFrameworkCore.Metadata;
@@ -18,51 +19,36 @@ namespace Dosaic.Plugins.Persistence.EfCore.NpgSql
         }
 
         /// <summary>
-        ///     <see cref="EfCoreNpgSqlConfiguration.ConnectionParameters" /> first, then every discrete setting on top.
-        ///     The <c>WithDataSource</c> hook of the consumer runs afterwards and therefore still wins.
+        ///     <see cref="EfCoreNpgSqlConfiguration.ConnectionParameters" /> first, then every configured discrete
+        ///     setting on top. Defaults only fill in what the parameters leave unset, the same rules
+        ///     <see cref="ConnectionStringSettings" /> applies for every plugin. The <c>WithDataSource</c> hook of
+        ///     the consumer runs afterwards and therefore still wins.
         /// </summary>
         internal static NpgsqlConnectionStringBuilder CreateConnectionStringBuilder(
-            EfCoreNpgSqlConfiguration configuration)
-        {
-            NpgsqlConnectionStringBuilder builder;
-            try
-            {
-                builder = new NpgsqlConnectionStringBuilder(configuration.ConnectionParameters ?? "");
-            }
-            catch (Exception e)
-            {
-                // the raw value may carry credentials, so neither it nor the inner message is repeated here
-                throw new InvalidOperationException(
-                    $"Configuration: npgsql:connectionParameters is not a valid Npgsql connection string ({e.GetType().Name}).");
-            }
-
-            if (!string.IsNullOrEmpty(configuration.Host)) builder.Host = configuration.Host;
-            builder.Port = configuration.Port;
-            if (!string.IsNullOrEmpty(configuration.Username)) builder.Username = configuration.Username;
-            if (!string.IsNullOrEmpty(configuration.Password)) builder.Password = configuration.Password;
-            if (!string.IsNullOrEmpty(configuration.Database)) builder.Database = configuration.Database;
-            builder.ConnectionLifetime = configuration.ConnectionLifetime;
-            builder.KeepAlive = configuration.KeepAlive;
-            builder.MaxPoolSize = configuration.MaxPoolSize;
-            builder.ArrayNullabilityMode = ArrayNullabilityMode.PerInstance;
-            builder.IncludeErrorDetail = configuration.IncludeErrorDetail;
-            if (!string.IsNullOrWhiteSpace(configuration.SslMode)) builder.SslMode = ParseSslMode(configuration.SslMode);
-            if (!string.IsNullOrWhiteSpace(configuration.RootCertificate))
-                builder.RootCertificate = configuration.RootCertificate;
-            if (configuration.NoResetOnClose) builder.NoResetOnClose = true;
-            return builder;
-        }
-
-        private static SslMode ParseSslMode(string value)
-        {
-            var name = value.Trim();
-            // Enum.TryParse also accepts numbers, which would silently pick a mode nobody wrote down
-            if (name.All(char.IsLetter) && Enum.TryParse<SslMode>(name, true, out var sslMode))
-                return sslMode;
-            throw new InvalidOperationException(
-                $"Configuration: npgsql:sslMode '{value}' is not a valid Npgsql SslMode. " +
-                $"Expected one of: {string.Join(", ", Enum.GetNames<SslMode>())}.");
-        }
+            EfCoreNpgSqlConfiguration configuration) =>
+            ConnectionStringSettings.Parse<NpgsqlConnectionStringBuilder>("npgsql:connectionParameters",
+                    configuration.ConnectionParameters)
+                .Override(!string.IsNullOrEmpty(configuration.Host), b => b.Host = configuration.Host)
+                .OverrideOrDefault(configuration.PortConfigured, b => b.Port = configuration.Port)
+                .Override(!string.IsNullOrEmpty(configuration.Username), b => b.Username = configuration.Username)
+                .Override(!string.IsNullOrEmpty(configuration.Password), b => b.Password = configuration.Password)
+                .Override(!string.IsNullOrEmpty(configuration.Database), b => b.Database = configuration.Database)
+                .OverrideOrDefault(configuration.ConnectionLifetimeConfigured,
+                    b => b.ConnectionLifetime = configuration.ConnectionLifetime)
+                .OverrideOrDefault(configuration.KeepAliveConfigured, b => b.KeepAlive = configuration.KeepAlive)
+                .OverrideOrDefault(configuration.MaxPoolSizeConfigured,
+                    b => b.MaxPoolSize = configuration.MaxPoolSize)
+                // the plugin maps arrays with this mode, the parameters must not change it
+                .Override(true, b => b.ArrayNullabilityMode = ArrayNullabilityMode.PerInstance)
+                .OverrideOrDefault(configuration.IncludeErrorDetailConfigured,
+                    b => b.IncludeErrorDetail = configuration.IncludeErrorDetail)
+                .Override(!string.IsNullOrWhiteSpace(configuration.SslMode),
+                    b => b.SslMode = ConnectionStringSettings.ParseEnumName<SslMode>("npgsql:sslMode",
+                        configuration.SslMode))
+                .Override(!string.IsNullOrWhiteSpace(configuration.RootCertificate),
+                    b => b.RootCertificate = configuration.RootCertificate)
+                .Override(configuration.NoResetOnClose, b => b.NoResetOnClose = true)
+                .Builder;
 
         public static void ConfigureNpgSqlContext<TDbContext>(this DbContextOptionsBuilder builder,
             IServiceProvider provider,

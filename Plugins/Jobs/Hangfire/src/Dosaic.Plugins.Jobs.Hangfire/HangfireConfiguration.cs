@@ -1,4 +1,5 @@
 using Dosaic.Hosting.Abstractions.Attributes;
+using Dosaic.Hosting.Abstractions.Configuration;
 using Hangfire.States;
 using Npgsql;
 
@@ -23,7 +24,8 @@ namespace Dosaic.Plugins.Jobs.Hangfire
         /// <summary>
         ///     The connection string every PostgreSQL path of this plugin uses (storage, batching, prefetching,
         ///     uniqueness). Built with <see cref="NpgsqlConnectionStringBuilder" />, so values are escaped.
-        ///     <see cref="ConnectionParameters" /> is applied first, the discrete keys override it.
+        ///     <see cref="ConnectionParameters" /> is applied first, the discrete keys that are set override it
+        ///     (see <see cref="ConnectionStringSettings" />).
         /// </summary>
         public string ConnectionString => BuildConnectionString();
 
@@ -109,42 +111,23 @@ namespace Dosaic.Plugins.Jobs.Hangfire
 
         private string BuildConnectionString()
         {
-            NpgsqlConnectionStringBuilder builder;
-            try
-            {
-                builder = new NpgsqlConnectionStringBuilder(ConnectionParameters ?? "");
-            }
-            catch (Exception e)
-            {
-                // the raw value may carry credentials, so neither it nor the inner message is repeated here
-                throw new InvalidOperationException(
-                    $"Configuration: hangfire:connectionParameters is not a valid Npgsql connection string ({e.GetType().Name}).");
-            }
-
-            if (!string.IsNullOrEmpty(Host)) builder.Host = Host;
-            if (Port > 0) builder.Port = Port;
-            if (!string.IsNullOrEmpty(Database)) builder.Database = Database;
-            if (!string.IsNullOrEmpty(User)) builder.Username = User;
-            if (!string.IsNullOrEmpty(Password)) builder.Password = Password;
-            if (!string.IsNullOrWhiteSpace(SslMode)) builder.SslMode = ParseSslMode(SslMode);
-            if (!string.IsNullOrWhiteSpace(RootCertificate)) builder.RootCertificate = RootCertificate;
-            if (MaxPoolSize.HasValue) builder.MaxPoolSize = MaxPoolSize.Value;
-            if (NoResetOnClose) builder.NoResetOnClose = true;
+            var builder = ConnectionStringSettings.Parse<NpgsqlConnectionStringBuilder>(
+                    "hangfire:connectionParameters", ConnectionParameters)
+                .Override(!string.IsNullOrEmpty(Host), b => b.Host = Host)
+                .Override(Port > 0, b => b.Port = Port)
+                .Override(!string.IsNullOrEmpty(Database), b => b.Database = Database)
+                .Override(!string.IsNullOrEmpty(User), b => b.Username = User)
+                .Override(!string.IsNullOrEmpty(Password), b => b.Password = Password)
+                .Override(!string.IsNullOrWhiteSpace(SslMode),
+                    b => b.SslMode = ConnectionStringSettings.ParseEnumName<Npgsql.SslMode>("hangfire:sslMode", SslMode))
+                .Override(!string.IsNullOrWhiteSpace(RootCertificate), b => b.RootCertificate = RootCertificate)
+                .Override(MaxPoolSize.HasValue, b => b.MaxPoolSize = MaxPoolSize!.Value)
+                .Override(NoResetOnClose, b => b.NoResetOnClose = true)
+                .Builder;
             // the interpolated string this replaced ended with a separator; keeping it means a configuration
             // without special characters or new keys yields the exact same string (and Npgsql pool) as before
             var connectionString = builder.ConnectionString;
             return connectionString.Length == 0 ? connectionString : connectionString + ";";
-        }
-
-        private static Npgsql.SslMode ParseSslMode(string value)
-        {
-            var name = value.Trim();
-            // Enum.TryParse also accepts numbers, which would silently pick a mode nobody wrote down
-            if (name.All(char.IsLetter) && Enum.TryParse<Npgsql.SslMode>(name, true, out var sslMode))
-                return sslMode;
-            throw new InvalidOperationException(
-                $"Configuration: hangfire:sslMode '{value}' is not a valid Npgsql SslMode. " +
-                $"Expected one of: {string.Join(", ", Enum.GetNames<Npgsql.SslMode>())}.");
         }
     }
 

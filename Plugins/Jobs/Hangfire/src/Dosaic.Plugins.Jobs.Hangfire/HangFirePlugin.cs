@@ -41,9 +41,10 @@ namespace Dosaic.Plugins.Jobs.Hangfire
         private JobStorage _managedStorage;
 
         /// <summary>
-        ///     Built once - every connection has to use the very same string to end up in the same Npgsql pool.
+        ///     Built once in the constructor, so a broken connection configuration fails at startup instead of on
+        ///     the first connection. Null when this plugin does not build the PostgreSQL storage.
         /// </summary>
-        private readonly Lazy<string> _connectionString;
+        private readonly string _connectionString;
 
         /// <summary>Same character set Hangfire accepts for queue names.</summary>
         private static readonly Regex _queueName = new("^[a-z0-9_-]+$", RegexOptions.Compiled);
@@ -56,7 +57,7 @@ namespace Dosaic.Plugins.Jobs.Hangfire
             _implementationResolver = implementationResolver;
             _configurators = configurators;
             _hangfireConfig = configuration;
-            _connectionString = new Lazy<string>(() => _hangfireConfig.ConnectionString);
+            _connectionString = BuildsPostgresStorage ? configuration.ConnectionString : null;
         }
 
         private HangfireServerConfiguration ServerConfig => _hangfireConfig.Server ?? new HangfireServerConfiguration();
@@ -68,8 +69,6 @@ namespace Dosaic.Plugins.Jobs.Hangfire
 
         public void ConfigureServices(IServiceCollection serviceCollection)
         {
-            // fail on a broken connection configuration here instead of on the first connection
-            if (BuildsPostgresStorage) _ = _connectionString.Value;
             serviceCollection.AddFeatureManagement();
             serviceCollection.AddHangfire(conf =>
                 {
@@ -115,7 +114,7 @@ namespace Dosaic.Plugins.Jobs.Hangfire
             HangfireSqlNoiseProcessor.RegisterFirst(serviceCollection);
         }
 
-        private NpgsqlConnection CreateConnection() => new(_connectionString.Value);
+        private NpgsqlConnection CreateConnection() => new(_connectionString);
 
         internal PostgreSqlStorageOptions CreateStorageOptions() => new()
         {
@@ -131,7 +130,7 @@ namespace Dosaic.Plugins.Jobs.Hangfire
             PostgresSchemaGuard.ValidateName(_hangfireConfig.SchemaName);
             var storageOptions = CreateStorageOptions();
             var storage = new PostgreSqlStorage(
-                new NpgsqlConnectionFactory(_connectionString.Value, storageOptions), storageOptions);
+                new NpgsqlConnectionFactory(_connectionString, storageOptions), storageOptions);
             var prefetchQueues = GetQueueConfigurations().Where(x => x.PrefetchCount > 1).ToArray();
             if (prefetchQueues.Length == 0) return _managedStorage = storage;
             var invisibilityTimeout = TimeSpan.FromMinutes(_hangfireConfig.InvisibilityTimeoutInMinutes);

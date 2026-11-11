@@ -198,6 +198,57 @@ namespace Dosaic.Plugins.Persistence.EfCore.NpgSql.Tests
         }
 
         [Test]
+        public void DefaultsOnlyFillInWhatTheConnectionParametersLeaveUnset()
+        {
+            // pgBouncer: nothing but host and credentials configured discretely
+            var config = new EfCoreNpgSqlConfiguration
+            {
+                Host = "pgbouncer",
+                Username = "user",
+                ConnectionParameters = "Port=6432;Maximum Pool Size=20;Keepalive=0;Include Error Detail=true"
+            };
+
+            var connectionString = ServiceCollectionExtensions.CreateConnectionStringBuilder(config);
+
+            connectionString.Port.Should().Be(6432);
+            connectionString.MaxPoolSize.Should().Be(20);
+            connectionString.KeepAlive.Should().Be(0);
+            connectionString.IncludeErrorDetail.Should().BeTrue();
+            connectionString.ConnectionLifetime.Should().Be(60, "the parameters leave it unset");
+            connectionString.Host.Should().Be("pgbouncer");
+        }
+
+        [Test]
+        public void WithoutConnectionParametersTheDefaultsApply()
+        {
+            var connectionString =
+                ServiceCollectionExtensions.CreateConnectionStringBuilder(new EfCoreNpgSqlConfiguration());
+
+            connectionString.Port.Should().Be(5432);
+            connectionString.MaxPoolSize.Should().Be(100);
+            connectionString.KeepAlive.Should().Be(15);
+            connectionString.ConnectionLifetime.Should().Be(60);
+            connectionString.IncludeErrorDetail.Should().BeFalse();
+        }
+
+        [Test]
+        public void ConfiguredValuesOverrideTheConnectionParametersEvenWhenTheyEqualTheDefault()
+        {
+            var config = new EfCoreNpgSqlConfiguration
+            {
+                Port = 5432,
+                MaxPoolSize = 100,
+                ConnectionParameters = "Port=6432;Maximum Pool Size=20;Array Nullability Mode=Always"
+            };
+
+            var connectionString = ServiceCollectionExtensions.CreateConnectionStringBuilder(config);
+
+            connectionString.Port.Should().Be(5432);
+            connectionString.MaxPoolSize.Should().Be(100);
+            connectionString.ArrayNullabilityMode.Should().Be(Npgsql.ArrayNullabilityMode.PerInstance);
+        }
+
+        [Test]
         public void DataSourceHookOfTheConsumerRunsAfterTheConnectionSettings()
         {
             _config.SslMode = "Require";
