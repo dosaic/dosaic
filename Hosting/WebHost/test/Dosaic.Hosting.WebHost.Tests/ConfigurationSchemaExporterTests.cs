@@ -15,6 +15,34 @@ namespace Dosaic.Hosting.WebHost.Tests
             Safe
         }
 
+        [Flags]
+        public enum SampleFlags
+        {
+            None = 0,
+            Read = 1,
+            Write = 2
+        }
+
+        [AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct)]
+        public sealed class ValueObjectAttribute : Attribute;
+
+        [ValueObject]
+        public readonly struct SampleId(int value)
+        {
+            public int Value { get; } = value;
+        }
+
+        public class SpecialTypes
+        {
+            public DateOnly Day { get; set; }
+            public TimeOnly Time { get; set; }
+            public SampleFlags Flags { get; set; }
+            public Dictionary<SampleMode, int> ByMode { get; set; }
+            public SampleId Id { get; set; }
+            public SampleId? OptionalId { get; set; }
+            public Uri Endpoint { get; set; }
+        }
+
         public class SampleNested
         {
             public int Retries { get; set; } = 3;
@@ -171,6 +199,23 @@ namespace Dosaic.Hosting.WebHost.Tests
             Types(workers).Should().Equal("object");
             Types(workers["additionalProperties"]).Should().Equal("integer");
             Property(Property(sample, "named")["additionalProperties"]!.AsObject(), "retries").Should().NotBeNull();
+        }
+
+        [Test]
+        public void SpecialTypesAreDescribedTheWayTheyAreWritten()
+        {
+            var special = Section(Export(("special", typeof(SpecialTypes))), "special");
+
+            Property(special, "day")["format"]!.GetValue<string>().Should().Be("date");
+            Property(special, "time")["format"]!.GetValue<string>().Should().Be("time");
+            Types(Property(special, "flags")).Should().Equal("string");
+            Property(special, "flags")["enum"].Should().BeNull("a combination like 'Read, Write' has to stay valid");
+            Types(Property(special, "byMode")).Should().Equal("object");
+            Types(Property(special, "byMode")["additionalProperties"]).Should().Equal("integer");
+            Types(Property(special, "id")).Should().Equal("integer");
+            Property(special, "id")["properties"].Should().BeNull("a value object is written as its bare value");
+            Types(Property(special, "optionalId")).Should().Equal("integer");
+            Types(Property(special, "endpoint")).Should().Equal("string", "null");
         }
 
         [Test]
@@ -347,6 +392,7 @@ namespace Dosaic.Hosting.WebHost.Tests
             ConfigurationSchemaCommand.TryGetPath([], out _).Should().BeFalse();
             ConfigurationSchemaCommand.TryGetPath(null, out _).Should().BeFalse();
             ConfigurationSchemaCommand.TryGetPath([null, "--write-config-schema-x"], out _).Should().BeFalse();
+            ConfigurationSchemaCommand.TryRun([typeof(HostConfiguration)], null, TextWriter.Null).Should().BeFalse();
         }
 
         [Test]

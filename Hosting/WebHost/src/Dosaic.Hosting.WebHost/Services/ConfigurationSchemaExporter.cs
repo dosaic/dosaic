@@ -171,13 +171,17 @@ namespace Dosaic.Hosting.WebHost.Services
         {
             var underlying = Nullable.GetUnderlyingType(type);
             var valueType = underlying ?? type;
-            var nullable = underlying is not null || type == typeof(string);
+            // a value object is written as the bare value it wraps
+            if (GetValueObjectType(valueType) is { } wrapped)
+                return CreateSchema(wrapped, null, ancestors, documentation, bindsReadOnlyCollections);
+            var nullable = underlying is not null || !valueType.IsValueType;
 
             if (GetScalarType(valueType) is { } scalar)
             {
                 var schema = new JsonObject { ["type"] = nullable ? new JsonArray(scalar.Type, "null") : scalar.Type };
                 if (scalar.Format is not null) schema["format"] = scalar.Format;
-                if (valueType.IsEnum)
+                // a flags enum may be written as a combination ("A, B"), which a list of names would reject
+                if (valueType.IsEnum && !valueType.IsDefined(typeof(FlagsAttribute), false))
                 {
                     var names = new JsonArray();
                     foreach (var name in Enum.GetNames(valueType)) names.Add(name);
@@ -227,6 +231,8 @@ namespace Dosaic.Hosting.WebHost.Services
             if (type == typeof(Guid)) return ("string", "uuid");
             if (type == typeof(Uri)) return ("string", "uri");
             if (type == typeof(DateTime) || type == typeof(DateTimeOffset)) return ("string", "date-time");
+            if (type == typeof(DateOnly)) return ("string", "date");
+            if (type == typeof(TimeOnly)) return ("string", "time");
             if (type == typeof(byte) || type == typeof(sbyte) || type == typeof(short) || type == typeof(ushort) ||
                 type == typeof(int) || type == typeof(uint) || type == typeof(long) || type == typeof(ulong))
                 return ("integer", null);
@@ -239,8 +245,16 @@ namespace Dosaic.Hosting.WebHost.Services
             var dictionary = new[] { type }.Concat(type.GetInterfaces()).FirstOrDefault(x =>
                 x.IsGenericType && (x.GetGenericTypeDefinition() == typeof(IDictionary<,>) ||
                                     x.GetGenericTypeDefinition() == typeof(IReadOnlyDictionary<,>)));
-            return dictionary?.GetGenericArguments()[0] == typeof(string) ? dictionary.GetGenericArguments()[1] : null;
+            // whatever the key type is, in a configuration file the keys are property names
+            return dictionary?.GetGenericArguments()[1];
         }
+
+        /// <summary>The type a Vogen value object wraps, or null when the type is not one.</summary>
+        private static Type GetValueObjectType(Type type) =>
+            type.GetCustomAttributes(false).Any(x => x.GetType().Name.StartsWith("ValueObjectAttribute",
+                StringComparison.Ordinal))
+                ? type.GetProperty("Value", BindingFlags.Instance | BindingFlags.Public)?.PropertyType
+                : null;
 
         private static Type GetElementType(Type type)
         {
@@ -262,7 +276,7 @@ namespace Dosaic.Hosting.WebHost.Services
             (type.IsClass || type is { IsValueType: true, IsPrimitive: false }) &&
             !type.IsAbstract && !type.IsGenericTypeDefinition && type != typeof(object) &&
             !typeof(Delegate).IsAssignableFrom(type) && !typeof(Type).IsAssignableFrom(type) &&
-            type.Namespace?.StartsWith("System", StringComparison.Ordinal) != true;
+            type.Namespace != "System" && type.Namespace?.StartsWith("System.", StringComparison.Ordinal) != true;
 
         private static JsonNode ToJsonDefault(object value) => value switch
         {

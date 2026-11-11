@@ -32,7 +32,7 @@ namespace Dosaic.Hosting.WebHost
             // has to happen before anything is configured: writing the schema must not need a database, and the
             // process ends here because whatever runs the host afterwards would not know this argument.
             // The process arguments are checked as well, so it also works when args are not passed along.
-            if (ConfigurationSchemaCommand.TryRun(types, [.. args, .. Environment.GetCommandLineArgs().Skip(1)],
+            if (ConfigurationSchemaCommand.TryRun(types, [.. args ?? [], .. Environment.GetCommandLineArgs().Skip(1)],
                     Console.Out))
                 Environment.Exit(0);
             SystemExtensions.SetDefaultCultureInfo();

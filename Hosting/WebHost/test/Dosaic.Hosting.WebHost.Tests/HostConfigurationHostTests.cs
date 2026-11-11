@@ -45,7 +45,8 @@ namespace Dosaic.Hosting.WebHost.Tests
             using var host = BuildHost();
 
             var hostConfiguration = host.Services.GetRequiredService<HostConfiguration>();
-            host.Services.GetServices<HostConfiguration>().Should().OnlyContain(x => ReferenceEquals(x, hostConfiguration));
+            host.Services.GetServices<HostConfiguration>().Should().ContainSingle()
+                .Which.Should().BeSameAs(hostConfiguration);
             hostConfiguration.AdditionalConfigPaths.Should().NotBeNullOrWhiteSpace("the test appsettings set it");
             hostConfiguration.MaxRequestSize.Should().Be(HostConfiguration.DefaultMaxRequestSize);
             hostConfiguration.HealthChecks.Memory.MaximumMegabytes.Should().Be(2048);

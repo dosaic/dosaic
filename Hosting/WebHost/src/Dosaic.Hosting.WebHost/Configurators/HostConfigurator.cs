@@ -77,6 +77,13 @@ namespace Dosaic.Hosting.WebHost.Configurators
                 configurationManager.AddFile(file);
         }
 
+        /// <summary>
+        ///     <c>appsettings.schema.json</c> (written by <c>--write-config-schema</c>) describes the
+        ///     configuration, it is not configuration. Loading it would add its keys to every service.
+        /// </summary>
+        internal static bool IsSchemaFile(string filename) =>
+            filename.EndsWith(".schema.json", StringComparison.InvariantCultureIgnoreCase);
+
         private static bool IsSecretsFile(string filename) => filename.EndsWith(".secrets.yaml") ||
                                                               filename.EndsWith(".secrets.yml") ||
                                                               filename.EndsWith(".secrets.json");
@@ -100,6 +107,7 @@ namespace Dosaic.Hosting.WebHost.Configurators
             var files = Directory.GetFiles(Environment.CurrentDirectory)
                 .Select(x => x.Split(Path.DirectorySeparatorChar).Last())
                 .Where(x => !string.IsNullOrEmpty(x) && x.StartsWith("appsettings.", StringComparison.InvariantCulture))
+                .Where(x => !IsSchemaFile(x))
                 .Where(x => extensions.Any(e => x.EndsWith(e, StringComparison.InvariantCultureIgnoreCase)))
                 .OrderBy(x => x.Split('.').Length);
 
@@ -112,6 +120,7 @@ namespace Dosaic.Hosting.WebHost.Configurators
                 throw new DirectoryNotFoundException(directory);
 
             var files = Directory.EnumerateFiles(directory, "appsettings.*", SearchOption.AllDirectories)
+                .Where(x => !IsSchemaFile(x))
                 .Where(x => extensions.Any(e => x.EndsWith($".{e}", StringComparison.InvariantCultureIgnoreCase)));
 
             return files;

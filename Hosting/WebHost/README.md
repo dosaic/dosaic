@@ -161,7 +161,8 @@ A missing `host` section, missing keys and explicit `null` values all keep the d
 ### Configuration schema (editor completion)
 
 Start the service with `--write-config-schema [path]` and it writes a JSON schema of its configuration
-instead of starting. The default path is `appsettings.schema.json` in the working directory:
+instead of starting. The default path is `appsettings.schema.json` in the working directory. Files ending in `.schema.json`
+are never loaded as configuration, even though the name starts with `appsettings.`:
 
 ```shell
 dotnet run -- --write-config-schema
@@ -209,7 +210,8 @@ What the schema cannot do:
 
 - Keys are offered in camel case. Configuration keys are not case sensitive, a JSON schema is — a key in
   another casing is not flagged, it just gets no completion.
-- Nothing is marked as required or forbidden, so the schema never rejects a file the service would accept.
+- Nothing is marked as required and unknown keys are allowed. Types and enum names are checked, which is
+  stricter than the binder in places (it also accepts `"5432"` for a number).
 - Sections with a name of your choice (for example RestEase clients) and third party sections
   (`ipRateLimiting`) are not described.
 - Environment variables get no completion.

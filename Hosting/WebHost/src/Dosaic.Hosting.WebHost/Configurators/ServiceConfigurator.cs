@@ -263,6 +263,8 @@ namespace Dosaic.Hosting.WebHost.Configurators
 
             foreach (var configuration in _implementationResolver.FindAndResolve(f => f.HasAttribute<ConfigurationAttribute>()))
             {
+                // the host configuration is registered above; the resolver hands out that very instance again
+                if (ReferenceEquals(configuration, _hostConfiguration)) continue;
                 _serviceCollection.AddSingleton(configuration!.GetType(), configuration!);
             }
         }
