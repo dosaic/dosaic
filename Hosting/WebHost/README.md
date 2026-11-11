@@ -288,7 +288,23 @@ Built-in liveness checks registered automatically:
 |---|---|
 | `api` | Always healthy — confirms the process is running |
 | `disk_space` | Checks free space on all drives |
-| `memory` | Asserts allocated memory is below 2 GB |
+| `memory` | Asserts allocated memory (`GC.GetTotalMemory`) is below the configured threshold, 2 GB by default |
+
+A failing liveness check makes Kubernetes restart the pod, so the memory threshold should match the
+memory limit of the deployment:
+
+```yaml
+host:
+  healthChecks:
+    memory:
+      maximumMegabytes: 2048     # default; 0 = do not register the memory check
+```
+
+```shell
+HOST_HEALTHCHECKS_MEMORY_MAXIMUMMEGABYTES=6144
+```
+
+`api` and `disk_space` are always registered. A negative value stops the host at startup.
 
 Plugins can contribute additional checks via `IPluginHealthChecksConfiguration.ConfigureHealthChecks()`.
 Custom checks can also be auto-discovered by implementing `IHealthCheck` and annotating the class with `[HealthCheck("name", ...tags)]`.

@@ -73,14 +73,24 @@ namespace Dosaic.Hosting.WebHost.Configurators
                 });
         }
 
-        private void ConfigureHealthChecks()
+        internal const string MemoryHealthCheckMaximumMegabytesKey = "host:healthChecks:memory:maximumMegabytes";
+        internal const int DefaultMemoryHealthCheckMaximumMegabytes = 1024 * 2;
+
+        internal void ConfigureHealthChecks()
         {
             var healthChecksBuilder = _serviceCollection.AddHealthChecks();
 
             // default health checks
             healthChecksBuilder.AddCheck("api", () => HealthCheckResult.Healthy(), tags: new[] { HealthCheckTag.Liveness.Value });
             healthChecksBuilder.AddDiskStorageHealthCheck(o => o.CheckAllDrives = true, "disk_space", tags: new[] { HealthCheckTag.Liveness.Value });
-            healthChecksBuilder.AddProcessAllocatedMemoryHealthCheck(1024 * 2, "memory", tags: new[] { HealthCheckTag.Liveness.Value });
+            // a failing liveness check restarts the pod, so the threshold has to fit the memory limit of the deployment
+            var maximumMegabytes = _configuration.GetValue<int?>(MemoryHealthCheckMaximumMegabytesKey)
+                                   ?? DefaultMemoryHealthCheckMaximumMegabytes;
+            if (maximumMegabytes < 0)
+                throw new InvalidOperationException(
+                    $"Configuration: {MemoryHealthCheckMaximumMegabytesKey} must be 0 (no memory health check) or more, but is {maximumMegabytes}.");
+            if (maximumMegabytes > 0)
+                healthChecksBuilder.AddProcessAllocatedMemoryHealthCheck(maximumMegabytes, "memory", tags: new[] { HealthCheckTag.Liveness.Value });
 
             // custom health checks (discovered by attributes)
             var healthChecks = (
