@@ -74,4 +74,24 @@ public class EfCoreNpgSqlConfiguration
     /// When enabled, the query splitting behavior is set to split query. This is useful for large queries that can be split into multiple queries.
     /// </summary>
     public bool SplitQuery { get; set; }
+
+    /// <summary>
+    /// Npgsql SslMode name (Disable, Allow, Prefer, Require, VerifyCA, VerifyFull). Empty (default) leaves Npgsql's own default in place.
+    /// </summary>
+    public string SslMode { get; set; }
+
+    /// <summary>
+    /// Path of the CA certificate file used to verify the server. Empty (default) = not set.
+    /// </summary>
+    public string RootCertificate { get; set; }
+
+    /// <summary>
+    /// Skips the DISCARD ALL Npgsql sends when a connection returns to the pool. Required behind pgBouncer in transaction mode.
+    /// </summary>
+    public bool NoResetOnClose { get; set; }
+
+    /// <summary>
+    /// Optional raw Npgsql connection string for parameters without a setting of their own. It is applied first, the discrete settings (including their defaults) override it.
+    /// </summary>
+    public string ConnectionParameters { get; set; }
 }

@@ -17,6 +17,53 @@ namespace Dosaic.Plugins.Persistence.EfCore.NpgSql
             serviceCollection.AddHostedService<NpgsqlDbMigratorService<TDbContext>>();
         }
 
+        /// <summary>
+        ///     <see cref="EfCoreNpgSqlConfiguration.ConnectionParameters" /> first, then every discrete setting on top.
+        ///     The <c>WithDataSource</c> hook of the consumer runs afterwards and therefore still wins.
+        /// </summary>
+        internal static NpgsqlConnectionStringBuilder CreateConnectionStringBuilder(
+            EfCoreNpgSqlConfiguration configuration)
+        {
+            NpgsqlConnectionStringBuilder builder;
+            try
+            {
+                builder = new NpgsqlConnectionStringBuilder(configuration.ConnectionParameters ?? "");
+            }
+            catch (Exception e)
+            {
+                // the raw value may carry credentials, so neither it nor the inner message is repeated here
+                throw new InvalidOperationException(
+                    $"Configuration: npgsql:connectionParameters is not a valid Npgsql connection string ({e.GetType().Name}).");
+            }
+
+            if (!string.IsNullOrEmpty(configuration.Host)) builder.Host = configuration.Host;
+            builder.Port = configuration.Port;
+            if (!string.IsNullOrEmpty(configuration.Username)) builder.Username = configuration.Username;
+            if (!string.IsNullOrEmpty(configuration.Password)) builder.Password = configuration.Password;
+            if (!string.IsNullOrEmpty(configuration.Database)) builder.Database = configuration.Database;
+            builder.ConnectionLifetime = configuration.ConnectionLifetime;
+            builder.KeepAlive = configuration.KeepAlive;
+            builder.MaxPoolSize = configuration.MaxPoolSize;
+            builder.ArrayNullabilityMode = ArrayNullabilityMode.PerInstance;
+            builder.IncludeErrorDetail = configuration.IncludeErrorDetail;
+            if (!string.IsNullOrWhiteSpace(configuration.SslMode)) builder.SslMode = ParseSslMode(configuration.SslMode);
+            if (!string.IsNullOrWhiteSpace(configuration.RootCertificate))
+                builder.RootCertificate = configuration.RootCertificate;
+            if (configuration.NoResetOnClose) builder.NoResetOnClose = true;
+            return builder;
+        }
+
+        private static SslMode ParseSslMode(string value)
+        {
+            var name = value.Trim();
+            // Enum.TryParse also accepts numbers, which would silently pick a mode nobody wrote down
+            if (name.All(char.IsLetter) && Enum.TryParse<SslMode>(name, true, out var sslMode))
+                return sslMode;
+            throw new InvalidOperationException(
+                $"Configuration: npgsql:sslMode '{value}' is not a valid Npgsql SslMode. " +
+                $"Expected one of: {string.Join(", ", Enum.GetNames<SslMode>())}.");
+        }
+
         public static void ConfigureNpgSqlContext<TDbContext>(this DbContextOptionsBuilder builder,
             IServiceProvider provider,
             EfCoreNpgSqlConfiguration configuration,
@@ -26,19 +73,7 @@ namespace Dosaic.Plugins.Persistence.EfCore.NpgSql
             configure?.Invoke(npgSqlConfiguration);
 
             var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
-            var connectionStringBuilder = new NpgsqlConnectionStringBuilder
-            {
-                Host = configuration.Host,
-                Port = configuration.Port,
-                Username = configuration.Username,
-                Password = configuration.Password,
-                Database = configuration.Database,
-                ConnectionLifetime = configuration.ConnectionLifetime,
-                KeepAlive = configuration.KeepAlive,
-                MaxPoolSize = configuration.MaxPoolSize,
-                ArrayNullabilityMode = ArrayNullabilityMode.PerInstance,
-                IncludeErrorDetail = configuration.IncludeErrorDetail,
-            };
+            var connectionStringBuilder = CreateConnectionStringBuilder(configuration);
 
             var dataSourceBuilder = new NpgsqlDataSourceBuilder(connectionStringBuilder.ConnectionString)
                 .MapDbEnums<TDbContext>();

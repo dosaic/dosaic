@@ -35,7 +35,17 @@ npgsql:
   includeErrorDetail: false     # include PG error details — may expose sensitive data
   enableDetailedErrors: false   # EF Core detailed errors — may expose sensitive data
   enableSensitiveDataLogging: false  # log parameter values — may expose sensitive data
+  sslMode: ""                   # Disable|Allow|Prefer|Require|VerifyCA|VerifyFull; empty = not set (default)
+  rootCertificate: ""           # CA certificate file; empty = not set (default)
+  noResetOnClose: false         # true behind pgBouncer in transaction mode (default: false)
+  connectionParameters: ""      # raw Npgsql connection string, applied first (default: empty)
 ```
+
+`connectionParameters` is meant for Npgsql parameters without a setting of their own
+(`Timeout=5;Application Name=api`). It is applied first; the discrete settings above — including their
+defaults such as `port`, `maxPoolSize` or `keepAlive` — override it. All of this happens before the
+`WithDataSource` hook runs, so the hook still has the last word. An unknown `sslMode` or an unparsable
+`connectionParameters` throws when the context is configured and names the key.
 
 ### Configuration class
 
@@ -57,6 +67,10 @@ public class EfCoreNpgSqlConfiguration
     public bool EnableDetailedErrors { get; set; }
     public bool EnableSensitiveDataLogging { get; set; }
     public bool SplitQuery { get; set; }
+    public string SslMode { get; set; }
+    public string RootCertificate { get; set; }
+    public bool NoResetOnClose { get; set; }
+    public string ConnectionParameters { get; set; }
 }
 ```
 
