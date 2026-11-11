@@ -56,7 +56,7 @@ batch, prefetch and uniqueness connections.
 | `npgsql:sslMode` | `""` (not set) | Npgsql `SslMode` name. |
 | `npgsql:rootCertificate` | `""` (not set) | `RootCertificate`, path of the CA certificate file. |
 | `npgsql:noResetOnClose` | `false` | `NoResetOnClose`. |
-| `npgsql:connectionParameters` | `""` | Raw Npgsql connection string, applied first; the discrete settings, including their defaults, override it. |
+| `npgsql:connectionParameters` | `""` | Raw Npgsql connection string, applied first; configured discrete settings override it, the defaults of `port`, `connectionLifetime`, `keepAlive`, `maxPoolSize` and `includeErrorDetail` only fill in what it leaves unset. Same rules as `hangfire:connectionParameters`. |
 
 All four are applied before the `WithDataSource` hook, so the hook still wins. The generated connection
 string is unchanged while the keys are left on their defaults.
@@ -100,6 +100,22 @@ string is unchanged while the keys are left on their defaults.
   one (`useInMemory: true`) unless the host registered its own. Redis keys are
   `{instanceName}ratelimit:{key}:{sliding|fixed|token|concurrency}`; the limiters need Redis 5 or newer.
 - `distributed: true` without a registered factory throws when the client pipeline is built.
+- Redis errors of a distributed limiter: a single timeout or dropped connection rejects that call (the
+  script may have taken the permits); only 3 failures in a row switch to the in-process limiter for 5
+  seconds. Errors Redis answers with (`WRONGTYPE`, `READONLY`, `OOM`, script errors) are thrown to the
+  caller. See the Redis README.
+- `Dosaic.Hosting.Abstractions.Configuration.ConnectionStringSettings` builds a connection string from a raw
+  `connectionParameters` value and discrete keys with the rules both PostgreSQL plugins use.
+
+### Fixes
+
+- Dictionaries in configuration classes bind when every key is a number (`"1": 4`) — the section used to be
+  read as a list and binding failed. Below a dictionary of plain values, keys that environment variables
+  split at `_` are joined back, so `HANGFIRE_SERVER_QUEUES_MY_QUEUE=3` serves `my_queue`.
+- `DOSAIC_WRITE_CONFIG_SCHEMA` does not rewrite an unchanged schema and reports a schema it cannot write
+  instead of failing the start. The host's `args` and the process arguments are read separately for
+  `--write-config-schema`. Enum values are accepted in any casing and as numbers by the schema, and a
+  `NaN`, infinite or huge `double` default no longer breaks the export.
 
 ### Dependencies
 
