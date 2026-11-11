@@ -60,6 +60,26 @@ hangfire:
       queuePollIntervalInMs: 200
     - name: critical
       workerCount: 10
+
+  # PostgreSQL connection (all optional, see "PostgreSQL connection")
+  sslMode: ""                     # Disable|Allow|Prefer|Require|VerifyCA|VerifyFull; empty = not set
+  rootCertificate: ""             # CA certificate file; empty = not set
+  maxPoolSize: null               # null = Npgsql default (100)
+  noResetOnClose: false           # true behind pgBouncer in transaction mode
+  connectionParameters: ""        # raw Npgsql connection string, applied first
+
+  # Process roles (see "Running one image in several roles")
+  server:
+    enabled: true                 # false = this process starts no Hangfire server at all
+    queues: {}                    # map queueName -> workerCount; empty = layout from queues/queueConfigurations
+    shutdownTimeoutInSeconds: null  # null = Hangfire default
+  prepareSchemaIfNecessary: true  # false = never create/upgrade the Hangfire schema
+  registerRecurringJobs: true     # false = skip ConfigureJobs and the [RecurringJob] scan
+  healthCheck:
+    enabled: true                 # false = no "hangfire" health check
+    minimumAvailableServers: null # null = 1 when this process starts a server, otherwise no server count check
+  statisticsMetrics:
+    enabled: true                 # false = this process does not export hangfire_job_count
 ```
 
 ### Configuration class reference
@@ -86,7 +106,35 @@ public class HangfireConfiguration
     public bool UseSlidingInvisibilityTimeout { get; set; }
     public int BatchChunkSize { get; set; }
     public QueueConfiguration[] QueueConfigurations { get; set; } = [];
-    public string ConnectionString => $"Host={Host};Port={Port};Database={Database};Username={User};Password={Password};";
+    public string SslMode { get; set; }
+    public string RootCertificate { get; set; }
+    public int? MaxPoolSize { get; set; }
+    public bool NoResetOnClose { get; set; }
+    public string ConnectionParameters { get; set; }
+    public HangfireServerConfiguration Server { get; set; } = new();
+    public bool PrepareSchemaIfNecessary { get; set; } = true;
+    public bool RegisterRecurringJobs { get; set; } = true;
+    public HangfireHealthCheckConfiguration HealthCheck { get; set; } = new();
+    public HangfireStatisticsMetricsConfiguration StatisticsMetrics { get; set; } = new();
+    public string ConnectionString { get; }   // built with NpgsqlConnectionStringBuilder
+}
+
+public class HangfireServerConfiguration
+{
+    public bool Enabled { get; set; } = true;
+    public Dictionary<string, int> Queues { get; set; } = [];
+    public int? ShutdownTimeoutInSeconds { get; set; }
+}
+
+public class HangfireHealthCheckConfiguration
+{
+    public bool Enabled { get; set; } = true;
+    public int? MinimumAvailableServers { get; set; }
+}
+
+public class HangfireStatisticsMetricsConfiguration
+{
+    public bool Enabled { get; set; } = true;
 }
 
 public class QueueConfiguration
@@ -97,6 +145,92 @@ public class QueueConfiguration
     public int? QueuePollIntervalInMs { get; set; }
 }
 ```
+
+### PostgreSQL connection
+
+Every PostgreSQL connection of the plugin — the Hangfire storage as well as Dosaic's own batch, prefetch
+and uniqueness connections — uses `HangfireConfiguration.ConnectionString`. It is built with
+`NpgsqlConnectionStringBuilder`, so values are escaped: a password containing `;`, `=` or quotes is safe.
+
+| Key | Default | Maps to |
+|---|---|---|
+| `hangfire:sslMode` | `""` (not set) | `SslMode` — `Disable`, `Allow`, `Prefer`, `Require`, `VerifyCA`, `VerifyFull` (case-insensitive) |
+| `hangfire:rootCertificate` | `""` (not set) | `RootCertificate` — path of the CA certificate file |
+| `hangfire:maxPoolSize` | `null` (Npgsql default, 100) | `MaxPoolSize` |
+| `hangfire:noResetOnClose` | `false` | `NoResetOnClose` |
+| `hangfire:connectionParameters` | `""` | raw Npgsql connection string, applied **first** |
+
+- `connectionParameters` is the escape hatch for anything without a key of its own
+  (`Timeout=5;Application Name=jobs`). Every discrete key that is set overrides it; a discrete key that
+  is left empty keeps the value from `connectionParameters`.
+- `port` is only applied when it is greater than 0.
+- An unknown `sslMode` or an unparsable `connectionParameters` stops the host at startup and names the key.
+
+```yaml
+hangfire:
+  host: pgbouncer
+  port: 6432
+  sslMode: VerifyFull
+  rootCertificate: /etc/ssl/postgres/ca.crt
+  maxPoolSize: 20
+  noResetOnClose: true            # pgBouncer in transaction mode
+```
+
+### Running one image in several roles
+
+All of the following keys default to the behaviour of a single, all-in-one process.
+
+| Key | Default | Effect |
+|---|---|---|
+| `hangfire:server:enabled` | `true` | `false` never calls `AddHangfireServer` — no server of any kind. Wins over `server:queues`. |
+| `hangfire:server:queues` | `{}` | Map `queueName -> workerCount`. Empty keeps the layout described under "Tuning queues". |
+| `hangfire:server:shutdownTimeoutInSeconds` | `null` | `BackgroundJobServerOptions.ShutdownTimeout`; `null` keeps Hangfire's default. |
+| `hangfire:prepareSchemaIfNecessary` | `true` | `PostgreSqlStorageOptions.PrepareSchemaIfNecessary`. |
+| `hangfire:registerRecurringJobs` | `true` | `false` skips `JobOptions.ConfigureJobs` **and** the `[RecurringJob]` scan. |
+| `hangfire:healthCheck:enabled` | `true` | `false` registers no `hangfire` health check. |
+| `hangfire:healthCheck:minimumAvailableServers` | `null` | `null` = 1 when this process starts a server, otherwise no server count check. |
+| `hangfire:statisticsMetrics:enabled` | `true` | `false` does not start `HangfireStatisticsMetricsReporter`. |
+
+**`server:queues`** — as soon as the map has an entry, it alone defines the servers of the process:
+
+- every entry with a count above 0 gets its own server (`Queues = [name]`, `WorkerCount = count`,
+  server name suffix `:name`);
+- an entry with `0` is skipped, which is how a later configuration layer drops a queue — a map merges by
+  key, whereas an array such as `queues` merges by index and can never lose an entry;
+- there is no shared server and `default` is **not** added automatically;
+- `queues`, `workerCount` and `queueConfigurations[].workerCount` no longer influence the server layout,
+  while `queueConfigurations[].prefetchCount` / `queuePollIntervalInMs` still apply (they act on the storage);
+- names are trimmed and lower-cased (environment variables arrive upper-case); an invalid name or a
+  negative count stops the host at startup and names the key;
+- when every entry is `0` a warning is logged and no server is started.
+
+Environment variables use the usual `_` to `:` mapping, so queue names set this way cannot contain `_`:
+
+```shell
+HANGFIRE_SERVER_ENABLED=false           # api / migrate: no server
+HANGFIRE_SERVER_QUEUES_IMPORT=40        # worker: serve only "import", with 40 workers
+HANGFIRE_SERVER_QUEUES_MAIL=0           # ... and drop "mail" that a config file listed
+```
+
+With the server switched off, `IJobManager`, `IBackgroundJobClient`, `IRecurringJobManager`, batching,
+`[UniquePerQueue]`, the dashboard and the filters keep working — the process only stops executing jobs.
+
+| Role | `server:enabled` | `server:queues` | `registerRecurringJobs` | `prepareSchemaIfNecessary` |
+|---|---|---|---|---|
+| api | `false` | — | `true` | `false` |
+| worker | `true` | `{import: 40}` | `true` | `false` |
+| combined | `true` | `{}` | `true` | `true` |
+| migrate | `false` | — | `false` | `true` |
+
+- **Schema.** The schema is created or upgraded when the storage is built, which happens while the host
+  is being built — also in a process without a server. With `prepareSchemaIfNecessary: false` and a
+  missing schema, startup fails with `Hangfire schema '<name>' has no version row - the schema was not prepared.`
+- **Readiness.** The health check counts the servers registered in the storage. A process that starts no
+  server (server disabled, or every `server:queues` entry `0`) therefore skips that count by default,
+  otherwise it could never become ready before some other process serves. Set
+  `healthCheck:minimumAvailableServers` explicitly to require servers regardless.
+- **Metrics.** `hangfire_job_count` reports storage-wide numbers, so every process exports the same
+  values. Leave `statisticsMetrics:enabled` on for one role and switch it off for the others.
 
 ## Usage
 
@@ -535,6 +669,8 @@ All `IHangfireConfigurator` implementations are discovered automatically by the 
 ### Health check
 
 A Hangfire readiness health check is registered automatically and is accessible via the standard Dosaic health endpoints (`/health/readiness`). It verifies that at least one Hangfire server is running.
+
+`hangfire:healthCheck:enabled: false` removes the check, `hangfire:healthCheck:minimumAvailableServers` changes the required number of servers. A process that starts no server itself does not check the server count unless that key is set — see "Running one image in several roles".
 
 ### OpenTelemetry tracing
 

@@ -39,7 +39,18 @@ namespace Dosaic.Plugins.Jobs.Hangfire
             connection.Open();
             using var command = new NpgsqlCommand(
                 $"""SELECT max("version"::integer) FROM "{ValidateName(schema)}"."schema";""", connection);
-            var value = command.ExecuteScalar();
+            object value;
+            try
+            {
+                value = command.ExecuteScalar();
+            }
+            catch (PostgresException e) when (e.SqlState is PostgresErrorCodes.UndefinedTable
+                                                  or PostgresErrorCodes.InvalidSchemaName)
+            {
+                // nothing created the schema at all, e.g. hangfire:prepareSchemaIfNecessary is off everywhere
+                value = null;
+            }
+
             if (value is null or DBNull)
                 throw new InvalidOperationException(
                     $"Hangfire schema '{schema}' has no version row - the schema was not prepared.");
