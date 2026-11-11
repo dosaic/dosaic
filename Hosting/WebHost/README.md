@@ -121,6 +121,9 @@ host.Run();
 host:
   urls: "http://+:8080"          # default; separate multiple URLs with ","
   maxRequestSize: 8388608        # default 8 MB
+  healthChecks:
+    memory:
+      maximumMegabytes: 2048     # default; liveness threshold, 0 = no memory check (see "Health Endpoints")
 ```
 
 Environment variables (single `_` maps to `:` hierarchy):

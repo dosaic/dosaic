@@ -196,7 +196,8 @@ Defined in `PluginActivateableExtensions.GetSortOrderForPlugin`:
 | Bogus | 35.6.5 | Fake data generation |
 | AutoBogus | — | Convention-based fakes |
 | WireMock.Net | 2.18.0 | HTTP server mocking |
-| Testcontainers.PostgreSql | 4.15.0 | Throwaway PostgreSQL for integration tests (Hangfire plugin) |
+| Testcontainers.PostgreSql | 4.16.0 | Throwaway PostgreSQL for integration tests (Hangfire plugin) |
+| Testcontainers.Redis | 4.16.0 | Throwaway Redis / Valkey for integration tests (Redis plugin rate limiter) |
 | RichardSzalay.MockHttp | — | HttpClient mocking |
 | TngTech.ArchUnitNET.NUnit | — | Architecture tests |
 | Allure.NUnit | — | Test reporting |

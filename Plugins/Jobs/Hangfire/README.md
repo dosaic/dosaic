@@ -37,7 +37,8 @@ hangfire:
   # Enable Microsoft Feature Management integration to toggle jobs via config
   enableJobsByFeatureManagementConfig: false
 
-  # Additional queues to listen on (the "default" queue is always included)
+  # Additional queues to listen on (the "default" queue is always included,
+  # unless server.queues below defines the servers)
   queues:
     - default
     - critical
@@ -461,7 +462,9 @@ dotnet test Plugins/Jobs/Hangfire/test/Dosaic.Plugins.Jobs.Hangfire.Tests --filt
 ### Tuning queues for high volume (workers and prefetching)
 
 Each entry in `queueConfigurations` gets its own background job server, which makes worker count and
-fetch behaviour tunable per queue instead of globally:
+fetch behaviour tunable per queue instead of globally. This describes the default layout; once
+`server.queues` has entries it alone decides which servers a process starts (see
+"Running one image in several roles"), while `prefetchCount` and `queuePollIntervalInMs` keep applying:
 
 ```yaml
 hangfire:
