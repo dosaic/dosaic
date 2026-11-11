@@ -158,6 +158,62 @@ public class MyPlugin(HostConfiguration hostConfiguration) : IPluginServiceConfi
 
 A missing `host` section, missing keys and explicit `null` values all keep the defaults.
 
+### Configuration schema (editor completion)
+
+Start the service with `--write-config-schema [path]` and it writes a JSON schema of its configuration
+instead of starting. The default path is `appsettings.schema.json` in the working directory:
+
+```shell
+dotnet run -- --write-config-schema
+dotnet run -- --write-config-schema ./config/appsettings.schema.json
+```
+
+The schema is built from the `[Configuration]` classes of the plugins the service is built with, plus the
+sections the web host reads itself (`host`, `serilog`, `telemetry`, `CorsPolicy`). It carries types, enum
+values, defaults and descriptions, so it always matches the installed packages.
+
+- It runs before anything is configured: no database, no connection strings and no valid configuration are
+  needed.
+- The process arguments are read directly, so `args` do not have to be passed to `PluginWebHostBuilder`.
+  A `Program.cs` that hands them to something else afterwards (`.Build().RunWithGraphQLCommands(args)`)
+  works unchanged — the process ends before that code runs.
+- From code: `PluginWebHostBuilder.WriteConfigurationSchema(DosaicPluginTypes.All, path)`.
+
+Reference the schema from the files that should get completion:
+
+```yaml
+# yaml-language-server: $schema=./appsettings.schema.json
+host:
+  maxRequestSize: 8388608
+```
+
+```json
+{
+  "$schema": "./appsettings.schema.json"
+}
+```
+
+YAML completion needs an editor with the YAML language server (VS Code with the Red Hat YAML extension,
+JetBrains Rider). Commit the schema file and regenerate it after package updates.
+
+Descriptions come from the XML documentation of the packages. NuGet does not copy those files to the
+output by default; add this to the service project to get them:
+
+```xml
+<PropertyGroup>
+  <CopyDocumentationFilesFromPackages>true</CopyDocumentationFilesFromPackages>
+</PropertyGroup>
+```
+
+What the schema cannot do:
+
+- Keys are offered in camel case. Configuration keys are not case sensitive, a JSON schema is — a key in
+  another casing is not flagged, it just gets no completion.
+- Nothing is marked as required or forbidden, so the schema never rejects a file the service would accept.
+- Sections with a name of your choice (for example RestEase clients) and third party sections
+  (`ipRateLimiting`) are not described.
+- Environment variables get no completion.
+
 ### Configuration File Loading Order
 
 Dosaic loads configuration in the following order (later sources override earlier ones):

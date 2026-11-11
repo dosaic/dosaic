@@ -29,6 +29,12 @@ namespace Dosaic.Hosting.WebHost
         // ReSharper disable once MemberCanBePrivate.Global
         public PluginWebHostBuilder(Type[] types, params string[] args)
         {
+            // has to happen before anything is configured: writing the schema must not need a database, and the
+            // process ends here because whatever runs the host afterwards would not know this argument.
+            // The process arguments are checked as well, so it also works when args are not passed along.
+            if (ConfigurationSchemaCommand.TryRun(types, [.. args, .. Environment.GetCommandLineArgs().Skip(1)],
+                    Console.Out))
+                Environment.Exit(0);
             SystemExtensions.SetDefaultCultureInfo();
             _webApplicationBuilder = WebApplication.CreateBuilder(args);
             HostConfigurator.ConfigureAppConfiguration(_webApplicationBuilder.Configuration, args);
@@ -42,6 +48,14 @@ namespace Dosaic.Hosting.WebHost
         }
 
         public static PluginWebHostBuilder Create(Type[] types, params string[] args) => new(types, args);
+
+        /// <summary>
+        ///     Writes a JSON schema of the configuration of the given plugin types to <paramref name="path" />,
+        ///     for completion and validation of <c>appsettings.*</c> files in editors. The same happens when
+        ///     the service is started with <c>--write-config-schema [path]</c>.
+        /// </summary>
+        public static void WriteConfigurationSchema(Type[] types, string path) =>
+            ConfigurationSchemaCommand.TryRun(types, [ConfigurationSchemaCommand.Argument, path], TextWriter.Null);
 
         public static void RunDefault(Type[] types, params string[] args)
         {

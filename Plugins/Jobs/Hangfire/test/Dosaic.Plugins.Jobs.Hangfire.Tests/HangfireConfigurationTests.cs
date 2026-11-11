@@ -239,6 +239,30 @@ namespace Dosaic.Plugins.Jobs.Hangfire.Tests
         }
 
         [Test]
+        public void TheConfigurationSchemaDescribesTheHangfireSection()
+        {
+            var path = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.schema.json");
+            try
+            {
+                Hosting.WebHost.PluginWebHostBuilder.WriteConfigurationSchema([typeof(HangfireConfiguration)], path);
+
+                var hangfire = System.Text.Json.Nodes.JsonNode.Parse(File.ReadAllText(path))!["properties"]!["hangfire"]!
+                    ["properties"]!;
+                var server = hangfire["server"]!["properties"]!;
+                server["enabled"]!["default"]!.GetValue<bool>().Should().BeTrue();
+                server["queues"]!["additionalProperties"]!["type"]!.GetValue<string>().Should().Be("integer");
+                hangfire["prepareSchemaIfNecessary"]!["default"]!.GetValue<bool>().Should().BeTrue();
+                hangfire["queueConfigurations"]!["items"]!["properties"]!["prefetchCount"]!["default"]!
+                    .GetValue<long>().Should().Be(1);
+                hangfire["connectionString"].Should().BeNull("it is computed, not configured");
+            }
+            finally
+            {
+                File.Delete(path);
+            }
+        }
+
+        [Test]
         public void UnrelatedKeysLeaveTheNewSettingsOnTheirDefaults()
         {
             var config = Bind(new Dictionary<string, string> { ["hangfire:host"] = "db" });

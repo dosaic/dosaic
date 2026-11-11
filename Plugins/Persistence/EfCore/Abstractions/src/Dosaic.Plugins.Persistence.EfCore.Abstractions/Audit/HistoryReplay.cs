@@ -15,7 +15,7 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Audit
     {
         /// <summary>
         /// Replays the supplied bundled change rows (in chronological order) against a fresh
-        /// <typeparamref name="TRoot"/> instance with <see cref="IModel.Id"/> set to <paramref name="rootId"/>.
+        /// <typeparamref name="TRoot"/> instance with <c>IModel.Id</c> set to <paramref name="rootId"/>.
         /// Returns <c>null</c> when the resulting graph contains no Added evidence (i.e. the root never existed yet).
         /// </summary>
         public static TRoot Replay<TRoot>(NanoId rootId, IEnumerable<ObjectChanges> rows)
