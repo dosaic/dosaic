@@ -202,7 +202,9 @@ All of the following keys default to the behaviour of a single, all-in-one proce
   while `queueConfigurations[].prefetchCount` / `queuePollIntervalInMs` still apply (they act on the storage);
 - names are trimmed and lower-cased (environment variables arrive upper-case); an invalid name or a
   negative count stops the host at startup and names the key;
-- when every entry is `0` a warning is logged and no server is started.
+- when every entry is `0` a warning is logged and no server is started;
+- a map whose keys are **all** purely numeric (`"1": 5`) cannot be bound — the configuration loader reads
+  such a section as a list and startup fails. Give queues a name containing a letter.
 
 Environment variables use the usual `_` to `:` mapping, so queue names set this way cannot contain `_`:
 

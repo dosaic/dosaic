@@ -351,7 +351,10 @@ namespace Dosaic.Plugins.Jobs.Hangfire.Tests
             _hangfireConfiguration.Server.Queues = new Dictionary<string, int> { ["import"] = 0, ["mail"] = 0 };
             var logger = new FakeLogger<HangFirePlugin>();
             var loggerFactory = Substitute.For<ILoggerFactory>();
-            loggerFactory.CreateLogger(Arg.Any<string>()).Returns(logger);
+            // ConfigureApplication leaves a LogJobExecutionFilter built from this factory in the global filters,
+            // so every other category gets a logger that tolerates being called by later tests
+            loggerFactory.CreateLogger(Arg.Any<string>()).Returns(NullLogger.Instance);
+            loggerFactory.CreateLogger(typeof(HangFirePlugin).FullName).Returns(logger);
 
             _implementationResolver.FindTypes().Returns([]);
 
