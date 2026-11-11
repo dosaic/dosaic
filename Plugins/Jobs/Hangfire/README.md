@@ -204,15 +204,16 @@ All of the following keys default to the behaviour of a single, all-in-one proce
 - names are trimmed and lower-cased (environment variables arrive upper-case); an invalid name or a
   negative count stops the host at startup and names the key;
 - when every entry is `0` a warning is logged and no server is started;
-- a map whose keys are **all** purely numeric (`"1": 5`) cannot be bound — the configuration loader reads
-  such a section as a list and startup fails. Give queues a name containing a letter.
+- purely numeric names (`"1": 5`) are queue names like any other.
 
-Environment variables use the usual `_` to `:` mapping, so queue names set this way cannot contain `_`:
+Environment variables use the usual `_` to `:` mapping. Below `server:queues` the parts are joined back
+with `_`, so `HANGFIRE_SERVER_QUEUES_MY_QUEUE=3` serves the queue `my_queue`:
 
 ```shell
 HANGFIRE_SERVER_ENABLED=false           # api / migrate: no server
 HANGFIRE_SERVER_QUEUES_IMPORT=40        # worker: serve only "import", with 40 workers
 HANGFIRE_SERVER_QUEUES_MAIL=0           # ... and drop "mail" that a config file listed
+HANGFIRE_SERVER_QUEUES_MY_QUEUE=3       # queue "my_queue"
 ```
 
 With the server switched off, `IJobManager`, `IBackgroundJobClient`, `IRecurringJobManager`, batching,

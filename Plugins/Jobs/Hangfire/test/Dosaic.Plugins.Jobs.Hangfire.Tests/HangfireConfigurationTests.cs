@@ -239,6 +239,41 @@ namespace Dosaic.Plugins.Jobs.Hangfire.Tests
         }
 
         [Test]
+        public void QueueNamesWithUnderscoresCanComeFromEnvironmentVariables()
+        {
+            Environment.SetEnvironmentVariable("HANGFIRE_SERVER_QUEUES_MY_QUEUE", "3");
+            Environment.SetEnvironmentVariable("HANGFIRE_SERVER_QUEUES_MAIL", "2");
+            try
+            {
+                var config = (HangfireConfiguration)new ConfigurationBuilder()
+                    .Add(new Dosaic.Hosting.Abstractions.Configuration.EnvConfigurationSource())
+                    .Build()
+                    .GetSection("hangfire", typeof(HangfireConfiguration));
+
+                config.Server.Queues.Should().HaveCount(2);
+                config.Server.Queues.Should().Contain(x => x.Key.ToLowerInvariant() == "my_queue" && x.Value == 3);
+                config.Server.Queues.Should().Contain(x => x.Key.ToLowerInvariant() == "mail" && x.Value == 2);
+            }
+            finally
+            {
+                Environment.SetEnvironmentVariable("HANGFIRE_SERVER_QUEUES_MY_QUEUE", null);
+                Environment.SetEnvironmentVariable("HANGFIRE_SERVER_QUEUES_MAIL", null);
+            }
+        }
+
+        [Test]
+        public void NumericQueueNamesStayQueueNames()
+        {
+            var config = Bind(new Dictionary<string, string>
+            {
+                ["hangfire:server:queues:1"] = "4",
+                ["hangfire:server:queues:2"] = "2"
+            });
+
+            config.Server.Queues.Should().BeEquivalentTo(new Dictionary<string, int> { ["1"] = 4, ["2"] = 2 });
+        }
+
+        [Test]
         public void TheConfigurationSchemaDescribesTheHangfireSection()
         {
             var path = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.schema.json");

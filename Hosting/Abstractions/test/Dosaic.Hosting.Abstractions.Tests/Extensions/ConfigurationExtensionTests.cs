@@ -121,6 +121,63 @@ namespace Dosaic.Hosting.Abstractions.Tests.Extensions
                 .Which.Should().BeEmpty();
         }
 
+        [Test]
+        public void DictionaryKeysStayNamesEvenWhenTheyAreAllNumbers()
+        {
+            var configuration = new ConfigurationBuilder()
+                .AddInMemoryCollection(new Dictionary<string, string>
+                {
+                    { "conf:nested:counts:1", "4" },
+                    { "conf:nested:counts:2", "2" },
+                    { "conf:byName:10:age", "3" },
+                    { "conf:list:0", "7" },
+                })
+                .Build();
+
+            var config = (MapConfiguration)configuration.GetSection("conf", typeof(MapConfiguration));
+
+            config.Nested.Counts.Should().BeEquivalentTo(new Dictionary<string, int> { ["1"] = 4, ["2"] = 2 });
+            config.ByName.Should().ContainKey("10").WhoseValue.Age.Should().Be(3);
+            config.List.Should().Equal(7);
+        }
+
+        [Test]
+        public void UnderscoresThatEnvironmentVariablesTurnedIntoSectionsAreJoinedBackForPlainValueMaps()
+        {
+            var configuration = new ConfigurationBuilder()
+                .AddInMemoryCollection(new Dictionary<string, string>
+                {
+                    // HANGFIRE_..._MY_QUEUE=3 reaches the configuration as my:queue
+                    { "conf:nested:counts:my:queue", "3" },
+                    { "conf:nested:counts:my:other:queue", "5" },
+                    { "conf:nested:counts:plain", "1" },
+                    { "conf:byName:first:age", "4" },
+                })
+                .Build();
+
+            var config = (MapConfiguration)configuration.GetSection("conf", typeof(MapConfiguration));
+
+            config.Nested.Counts.Should().BeEquivalentTo(new Dictionary<string, int>
+            {
+                ["my_queue"] = 3,
+                ["my_other_queue"] = 5,
+                ["plain"] = 1
+            });
+            config.ByName.Should().ContainKey("first").WhoseValue.Age.Should().Be(4);
+        }
+
+        private class MapConfiguration
+        {
+            public MapNestConfiguration Nested { get; set; }
+            public Dictionary<string, TestNestConfiguration> ByName { get; set; }
+            public int[] List { get; set; }
+        }
+
+        private class MapNestConfiguration
+        {
+            public IDictionary<string, int> Counts { get; set; }
+        }
+
         private class TestConfiguration
         {
             public string Key1 { get; set; }
