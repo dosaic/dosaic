@@ -506,6 +506,18 @@ namespace Dosaic.Plugins.Jobs.Hangfire.Tests
             act.Should().Throw<InvalidOperationException>().WithMessage("*hangfire:sslMode*");
         }
 
+        [Test]
+        public void MalformedConnectionParametersStopThePostgresStorageAtConfigureServices()
+        {
+            _hangfireConfiguration.InMemory = false;
+            _hangfireConfiguration.ConnectionParameters = "Password=secret;broken";
+
+            var act = () => GetPlugin().ConfigureServices(new ServiceCollection());
+
+            act.Should().Throw<InvalidOperationException>()
+                .Where(x => x.Message.Contains("hangfire:connectionParameters") && !x.Message.Contains("secret"));
+        }
+
         [Test, Parallelizable(ParallelScope.None)]
         public void DoesNotConfigureStorageIfConfiguratorsIncludeStorage()
         {
