@@ -10,7 +10,8 @@ namespace Dosaic.Hosting.Abstractions.Tests.Configuration
         public enum Mode
         {
             Disable,
-            Require
+            Require,
+            VerifyFull
         }
 
         private static string Build(string parameters, Action<ConnectionStringSettings<DbConnectionStringBuilder>> apply)
@@ -55,20 +56,36 @@ namespace Dosaic.Hosting.Abstractions.Tests.Configuration
 
         [TestCase("require", Mode.Require)]
         [TestCase(" Disable ", Mode.Disable)]
+        [TestCase("VerifyFull", Mode.VerifyFull)]
+        [TestCase("verifyfull", Mode.VerifyFull)]
         public void EnumNamesAreParsedIgnoringCase(string value, Mode expected)
         {
             ConnectionStringSettings.ParseEnumName<Mode>("section:mode", value).Should().Be(expected);
         }
 
+        [TestCase("verify-full")]
+        [TestCase("Verify-Full")]
+        [TestCase(" VERIFY-FULL ")]
+        public void HyphensMaySeparateTheWordsOfAName(string value)
+        {
+            ConnectionStringSettings.ParseEnumName<Mode>("section:mode", value).Should().Be(Mode.VerifyFull);
+        }
+
         [TestCase("1")]
         [TestCase("")]
+        [TestCase("-")]
+        [TestCase("-require")]
+        [TestCase("require-")]
+        [TestCase("verify--full")]
+        [TestCase("verify_full")]
         [TestCase("require-full")]
         [TestCase("sometimes")]
         public void NumbersAndUnknownNamesAreRefused(string value)
         {
             var act = () => ConnectionStringSettings.ParseEnumName<Mode>("section:mode", value);
 
-            act.Should().Throw<InvalidOperationException>().WithMessage($"*section:mode '{value}'*Disable, Require*");
+            act.Should().Throw<InvalidOperationException>()
+                .WithMessage($"*section:mode '{value}'*Disable, Require, VerifyFull*hyphen*");
         }
     }
 }

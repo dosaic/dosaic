@@ -63,7 +63,7 @@ hangfire:
       workerCount: 10
 
   # PostgreSQL connection (all optional, see "PostgreSQL connection")
-  sslMode: ""                     # Disable|Allow|Prefer|Require|VerifyCA|VerifyFull; empty = not set
+  sslMode: ""                     # Disable|Allow|Prefer|Require|VerifyCA|VerifyFull or verify-full etc.; empty = not set
   rootCertificate: ""             # CA certificate file; empty = not set
   maxPoolSize: null               # null = Npgsql default (100)
   noResetOnClose: false           # true behind pgBouncer in transaction mode
@@ -155,7 +155,7 @@ and uniqueness connections — uses `HangfireConfiguration.ConnectionString`. It
 
 | Key | Default | Maps to |
 |---|---|---|
-| `hangfire:sslMode` | `""` (not set) | `SslMode` — `Disable`, `Allow`, `Prefer`, `Require`, `VerifyCA`, `VerifyFull` (case-insensitive) |
+| `hangfire:sslMode` | `""` (not set) | `SslMode` — `Disable`, `Allow`, `Prefer`, `Require`, `VerifyCA`, `VerifyFull`, or the libpq names `disable`, `allow`, `prefer`, `require`, `verify-ca`, `verify-full` (case-insensitive) |
 | `hangfire:rootCertificate` | `""` (not set) | `RootCertificate` — path of the CA certificate file |
 | `hangfire:maxPoolSize` | `null` (Npgsql default, 100) | `MaxPoolSize` |
 | `hangfire:noResetOnClose` | `false` | `NoResetOnClose` |
@@ -166,6 +166,8 @@ and uniqueness connections — uses `HangfireConfiguration.ConnectionString`. It
   is left empty keeps the value from `connectionParameters`.
 - `port` is only applied when it is greater than 0.
 - An unknown `sslMode` or an unparsable `connectionParameters` stops the host at startup and names the key.
+  This check runs only when the plugin builds the PostgreSQL storage itself (not `inMemory`, no configurator
+  that brings its own storage). The plugin does not check that the `rootCertificate` file exists.
 
 ```yaml
 hangfire:

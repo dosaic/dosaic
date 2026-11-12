@@ -2,6 +2,31 @@
 
 All Dosaic packages are released together under one version.
 
+## Unreleased (next: 1.2.50)
+
+An application that sets `telemetry:endpoint` and valid `npgsql` connection keys behaves as in 1.2.49.
+
+### Behaviour changes
+
+- **`Dosaic.Hosting.WebHost` — no OTLP metric export without `telemetry:endpoint`.** Traces and logs were
+  already exported only when `telemetry:endpoint` is set. Metrics always got an OTLP exporter, which sent
+  to `OTEL_EXPORTER_OTLP_ENDPOINT` or to the OpenTelemetry default `http://localhost:4317`. Now no signal
+  gets an OTLP exporter without `telemetry:endpoint`, and `OTEL_EXPORTER_OTLP_ENDPOINT` alone turns
+  nothing on. The Prometheus endpoint `/metrics` and all metric instrumentation are unchanged. If you
+  relied on `OTEL_EXPORTER_OTLP_ENDPOINT` for metrics, set `TELEMETRY_ENDPOINT` instead.
+- **`Dosaic.Plugins.Persistence.EfCore.NpgSql` — invalid connection keys stop the start.** The new
+  `EfCoreNpgSqlPlugin` builds the connection string from the `npgsql` section when the host starts. An
+  unknown `npgsql:sslMode` or an unparsable `npgsql:connectionParameters` now stops the host instead of
+  failing the first DbContext, the same as `hangfire:sslMode` and `hangfire:connectionParameters`. The
+  `rootCertificate` file is not checked.
+
+### Fixes
+
+- `npgsql:sslMode` and `hangfire:sslMode` accept the libpq names that Helm charts and CloudNativePG use:
+  `disable`, `allow`, `prefer`, `require`, `verify-ca`, `verify-full`, in any casing.
+  `ConnectionStringSettings.ParseEnumName` lets a hyphen separate the words of an enum name, and its error
+  message says so.
+
 ## 1.2.49
 
 Everything in this release is opt-in: an unchanged configuration behaves exactly as in 1.2.48, with the

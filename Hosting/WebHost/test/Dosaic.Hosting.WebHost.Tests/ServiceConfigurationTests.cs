@@ -16,6 +16,7 @@ using NSubstitute;
 using NUnit.Framework;
 using OpenTelemetry;
 using OpenTelemetry.Logs;
+using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
 using Serilog.Core;
 
@@ -67,6 +68,107 @@ namespace Dosaic.Hosting.WebHost.Tests
             serviceConfigurator.ConfigureTelemetry();
 
             Baggage.GetBaggage("AppName").Should().Be("custom-service-name");
+        }
+
+        private const BindingFlags AnyInstance = BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public;
+
+        private static List<object> GetMetricExporters(IConfiguration configuration,
+            Dictionary<string, string> otelEnvironment = null, IServiceCollection serviceCollection = null)
+        {
+            serviceCollection ??= TestingDefaults.ServiceCollection();
+            if (otelEnvironment is not null)
+                serviceCollection.AddSingleton<IConfiguration>(new ConfigurationBuilder()
+                    .AddInMemoryCollection(otelEnvironment).Build());
+            new ServiceConfigurator(new FakeLogger<ServiceConfigurator>(), configuration, serviceCollection,
+                Substitute.For<IImplementationResolver>()).ConfigureTelemetry();
+            using var serviceProvider = serviceCollection.BuildServiceProvider();
+            // the SDK keeps its metric readers and their exporters internal
+            var reader = GetMember(serviceProvider.GetRequiredService<MeterProvider>(), "Reader");
+            var readers = new List<object>();
+            var node = GetMember(reader, "Head");
+            if (node is null) readers.Add(reader);
+            while (node is not null)
+            {
+                readers.Add(GetMember(node, "Value"));
+                node = GetMember(node, "Next");
+            }
+
+            return readers.Select(x => GetMember(x, "Exporter")).ToList();
+        }
+
+        private static object GetMember(object instance, string name)
+        {
+            for (var type = instance.GetType(); type is not null; type = type.BaseType)
+            {
+                if (type.GetField(name, AnyInstance) is { } field) return field.GetValue(instance);
+                if (type.GetProperty(name, AnyInstance) is { } property) return property.GetValue(instance);
+            }
+
+            return null;
+        }
+
+        private static Uri FindEndpoint(object instance, int depth = 4)
+        {
+            if (instance is null || depth == 0) return null;
+            for (var type = instance.GetType(); type is not null; type = type.BaseType)
+            {
+                foreach (var field in type.GetFields(AnyInstance | BindingFlags.DeclaredOnly))
+                {
+                    var value = field.GetValue(instance);
+                    if (value is Uri uri) return uri;
+                    if (value is null || field.FieldType.IsValueType || value is string) continue;
+                    if (FindEndpoint(value, depth - 1) is { } found) return found;
+                }
+            }
+
+            return null;
+        }
+
+        [TestCase(null)]
+        [TestCase("")]
+        public void MetricsAreOnlyExposedForPrometheusWithoutAnEndpoint(string endpoint)
+        {
+            var configuration = endpoint is null
+                ? CustomConfiguration.Create().Build()
+                : CustomConfiguration.Create().Add("telemetry:endpoint", endpoint).Build();
+
+            var exporters = GetMetricExporters(configuration);
+
+            exporters.Select(x => x.GetType().Name).Should().Equal("PrometheusExporter");
+        }
+
+        [Test]
+        public void OtelExporterEndpointVariableAloneDoesNotTurnOnAnyOtlpExport()
+        {
+            var serviceCollection = TestingDefaults.ServiceCollection();
+            var exporters = GetMetricExporters(CustomConfiguration.Create().Build(),
+                new Dictionary<string, string> { ["OTEL_EXPORTER_OTLP_ENDPOINT"] = "http://collector:4317" },
+                serviceCollection);
+
+            exporters.Select(x => x.GetType().Name).Should().Equal("PrometheusExporter");
+            serviceCollection.Should().NotContain(x => x.ServiceType == typeof(TracerProvider));
+            serviceCollection.Should().NotContain(x => x.ServiceType == typeof(LoggerProvider));
+        }
+
+        [Test]
+        public void MetricsAreExportedViaOtlpAndPrometheusWithAnEndpoint()
+        {
+            var configuration = CustomConfiguration.Create().Add("telemetry:endpoint", "http://localhost:1111").Build();
+
+            var exporters = GetMetricExporters(configuration);
+
+            exporters.Select(x => x.GetType().Name).Should().Equal("OtlpMetricExporter", "PrometheusExporter");
+        }
+
+        [Test]
+        public void ConfiguredEndpointWinsOverTheOtelExporterEndpointVariable()
+        {
+            var configuration = CustomConfiguration.Create().Add("telemetry:endpoint", "http://localhost:1111").Build();
+
+            var exporters = GetMetricExporters(configuration,
+                new Dictionary<string, string> { ["OTEL_EXPORTER_OTLP_ENDPOINT"] = "http://collector:4317" });
+
+            FindEndpoint(exporters[0])!.Authority.Should().Be("localhost:1111");
         }
 
         private static List<HealthCheckRegistration> ConfigureHealthChecks(IConfiguration configuration)
