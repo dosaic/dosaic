@@ -15,6 +15,7 @@ using Microsoft.Extensions.Options;
 using NSubstitute;
 using NUnit.Framework;
 using OpenTelemetry;
+using OpenTelemetry.Exporter;
 using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
@@ -110,6 +111,9 @@ namespace Dosaic.Hosting.WebHost.Tests
         private static Uri FindEndpoint(object instance, int depth = 4)
         {
             if (instance is null || depth == 0) return null;
+            // the http export client of some signals is created on first use
+            if (instance.GetType().IsGenericType && instance.GetType().GetGenericTypeDefinition() == typeof(Lazy<>))
+                return FindEndpoint(instance.GetType().GetProperty("Value")!.GetValue(instance), depth);
             for (var type = instance.GetType(); type is not null; type = type.BaseType)
             {
                 foreach (var field in type.GetFields(AnyInstance | BindingFlags.DeclaredOnly))
@@ -169,6 +173,118 @@ namespace Dosaic.Hosting.WebHost.Tests
                 new Dictionary<string, string> { ["OTEL_EXPORTER_OTLP_ENDPOINT"] = "http://collector:4317" });
 
             FindEndpoint(exporters[0])!.Authority.Should().Be("localhost:1111");
+        }
+
+        private static Dictionary<string, Uri> GetOtlpEndpoints(string endpoint, string protocol)
+        {
+            var configuration = CustomConfiguration.Create()
+                .Add("telemetry:endpoint", endpoint)
+                .Add("telemetry:protocol", protocol)
+                .Build();
+            var serviceCollection = TestingDefaults.ServiceCollection();
+            var metricExporter = GetMetricExporters(configuration, serviceCollection: serviceCollection)[0];
+            using var serviceProvider = serviceCollection.BuildServiceProvider();
+            var traceExporter = GetMember(GetMember(serviceProvider.GetRequiredService<TracerProvider>(), "Processor"),
+                "exporter");
+            var logExporter = GetMember(GetMember(serviceProvider.GetRequiredService<LoggerProvider>(), "Processor"),
+                "exporter");
+            return new Dictionary<string, Uri>
+            {
+                ["traces"] = FindEndpoint(traceExporter),
+                ["metrics"] = FindEndpoint(metricExporter),
+                ["logs"] = FindEndpoint(logExporter)
+            };
+        }
+
+        [TestCase("http/protobuf")]
+        [TestCase("HttpProtobuf")]
+        [TestCase("HTTP/PROTOBUF")]
+        public void HttpProtobufPostsEverySignalToItsOwnPath(string protocol)
+        {
+            var endpoints = GetOtlpEndpoints("http://collector:4318", protocol);
+
+            endpoints["traces"].Should().Be(new Uri("http://collector:4318/v1/traces"));
+            endpoints["metrics"].Should().Be(new Uri("http://collector:4318/v1/metrics"));
+            endpoints["logs"].Should().Be(new Uri("http://collector:4318/v1/logs"));
+        }
+
+        [Test]
+        public void HttpProtobufKeepsTheBasePathOfTheEndpoint()
+        {
+            var endpoints = GetOtlpEndpoints("https://gateway.example.com/otlp/", "http/protobuf");
+
+            endpoints["traces"].Should().Be(new Uri("https://gateway.example.com/otlp/v1/traces"));
+            endpoints["metrics"].Should().Be(new Uri("https://gateway.example.com/otlp/v1/metrics"));
+            endpoints["logs"].Should().Be(new Uri("https://gateway.example.com/otlp/v1/logs"));
+        }
+
+        [TestCase("grpc")]
+        [TestCase("Grpc")]
+        [TestCase("")]
+        public void GrpcSendsEverySignalToTheConfiguredEndpoint(string protocol)
+        {
+            var endpoints = GetOtlpEndpoints("http://collector:4317", protocol);
+
+            endpoints.Values.Should().AllSatisfy(x =>
+            {
+                x.Authority.Should().Be("collector:4317");
+                x.AbsolutePath.Should().NotContain("v1/");
+            });
+        }
+
+        [TestCase("http://collector:4318", "http://collector:4318/v1/traces")]
+        [TestCase("http://collector:4318/", "http://collector:4318/v1/traces")]
+        [TestCase("http://collector:4318/otlp", "http://collector:4318/otlp/v1/traces")]
+        [TestCase("http://collector:4318/otlp/?tenant=a", "http://collector:4318/otlp/v1/traces?tenant=a")]
+        public void HttpProtobufEndpointGetsTheSignalPath(string endpoint, string expected)
+        {
+            ServiceConfigurator.GetOtlpEndpoint(new Uri(endpoint), OtlpExportProtocol.HttpProtobuf,
+                    ServiceConfigurator.OtlpSignalPaths.Traces)
+                .Should().Be(new Uri(expected));
+        }
+
+        [Test]
+        public void GrpcEndpointIsNotChanged()
+        {
+            var endpoint = new Uri("http://collector:4317/");
+
+            ServiceConfigurator.GetOtlpEndpoint(endpoint, OtlpExportProtocol.Grpc,
+                ServiceConfigurator.OtlpSignalPaths.Traces).Should().BeSameAs(endpoint);
+        }
+
+        [TestCase(null, OtlpExportProtocol.Grpc)]
+        [TestCase(" ", OtlpExportProtocol.Grpc)]
+        [TestCase("grpc", OtlpExportProtocol.Grpc)]
+        [TestCase("GRPC", OtlpExportProtocol.Grpc)]
+        [TestCase("http/protobuf", OtlpExportProtocol.HttpProtobuf)]
+        [TestCase("HttpProtobuf", OtlpExportProtocol.HttpProtobuf)]
+        [TestCase("http-protobuf", OtlpExportProtocol.HttpProtobuf)]
+        public void OtlpProtocolAcceptsTheSpecificationAndTheEnumNames(string value, OtlpExportProtocol expected)
+        {
+            ServiceConfigurator.ParseOtlpProtocol(value).Should().Be(expected);
+        }
+
+        [Test]
+        public void UnknownOtlpProtocolStopsTheStartAndNamesTheKey()
+        {
+            var configuration = CustomConfiguration.Create()
+                .Add("telemetry:endpoint", "http://collector:4318")
+                .Add("telemetry:protocol", "http/json")
+                .Build();
+
+            var configure = () => new ServiceConfigurator(new FakeLogger<ServiceConfigurator>(), configuration,
+                TestingDefaults.ServiceCollection(), Substitute.For<IImplementationResolver>()).ConfigureTelemetry();
+
+            configure.Should().Throw<InvalidOperationException>()
+                .WithMessage("telemetry:protocol 'http/json' is not supported. Use 'grpc' or 'http/protobuf'.");
+        }
+
+        [Test]
+        public void UnknownOtlpProtocolIsIgnoredWithoutAnEndpoint()
+        {
+            var configuration = CustomConfiguration.Create().Add("telemetry:protocol", "http/json").Build();
+
+            GetMetricExporters(configuration).Select(x => x.GetType().Name).Should().Equal("PrometheusExporter");
         }
 
         private static List<HealthCheckRegistration> ConfigureHealthChecks(IConfiguration configuration)

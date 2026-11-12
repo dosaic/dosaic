@@ -345,7 +345,7 @@ namespace Dosaic.Hosting.WebHost.Tests
             minimumLevel["default"]!.GetValue<string>().Should().Be("Information");
             var telemetry = Section(schema, "telemetry");
             Property(telemetry, "endpoint")["format"]!.GetValue<string>().Should().Be("uri");
-            Property(telemetry, "protocol")["default"]!.GetValue<string>().Should().Be("Grpc");
+            Property(telemetry, "protocol")["default"]!.GetValue<string>().Should().Be("grpc");
             Property(Property(telemetry, "headers")["items"]!.AsObject(), "name").Should().NotBeNull();
             var cors = Section(schema, DosaicWebHostDefaults.CorsConfigSectionName);
             Types(Property(cors, "origins")).Should().Equal("array");
