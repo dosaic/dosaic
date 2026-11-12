@@ -2,6 +2,7 @@ using System.Collections.Immutable;
 using System.Net.Http;
 using Amazon.Runtime;
 using Amazon.S3;
+using Amazon.S3.Model;
 using AwesomeAssertions;
 using Dosaic.Plugins.Persistence.S3.File;
 using Dosaic.Testing.NUnit;
@@ -14,6 +15,7 @@ using MimeDetective;
 using MimeDetective.Definitions;
 using MimeDetective.Storage;
 using NSubstitute;
+using NSubstitute.ExceptionExtensions;
 using NUnit.Framework;
 using FileType = Dosaic.Plugins.Persistence.S3.File.FileType;
 
@@ -22,20 +24,20 @@ namespace Dosaic.Plugins.Persistence.S3.Tests
     [TestFixture]
     public class S3FileStoragePluginTests
     {
-        private readonly S3Configuration _configuration = new()
-        {
-            Endpoint = "s3.endpoint.de",
-            AccessKey = "access",
-            SecretKey = "secret",
-            Region = "region",
-            UseSsl = true
-        };
-
+        private S3Configuration _configuration = null!;
         private S3FileStoragePlugin _plugin = null!;
 
         [SetUp]
         public void Init()
         {
+            _configuration = new S3Configuration
+            {
+                Endpoint = "s3.endpoint.de",
+                AccessKey = "access",
+                SecretKey = "secret",
+                Region = "region",
+                UseSsl = true
+            };
             _plugin = new S3FileStoragePlugin(_configuration);
         }
 
@@ -225,6 +227,71 @@ namespace Dosaic.Plugins.Persistence.S3.Tests
             _configuration.HealthCheckPath = "/health/live";
             _plugin.ConfigureHealthChecks(healthChecksBuilder);
             AssertUriHealthCheck(healthChecksBuilder);
+        }
+
+        [TestCase(false)]
+        [TestCase(true)]
+        public void PluginRegistersNoHealthCheckWhenItIsDisabled(bool useLocalFileSystem)
+        {
+            var healthChecksBuilder = Substitute.For<IHealthChecksBuilder>();
+            _configuration.UseLocalFileSystem = useLocalFileSystem;
+            _configuration.HealthCheck.Enabled = false;
+
+            _plugin.ConfigureHealthChecks(healthChecksBuilder);
+
+            healthChecksBuilder.DidNotReceiveWithAnyArgs().Add(default!);
+        }
+
+        [Test]
+        public void HealthCheckIsEnabledByDefault()
+        {
+            new S3Configuration().HealthCheck.Enabled.Should().BeTrue();
+        }
+
+        private IHealthCheck CreateBucketHealthCheck(IAmazonS3 s3Client)
+        {
+            var healthChecksBuilder = Substitute.For<IHealthChecksBuilder>();
+            _configuration.BucketPrefix = "dev-";
+            _configuration.HealthCheck.Bucket = "documents";
+            _configuration.HealthCheckPath = "/ignored";
+
+            _plugin.ConfigureHealthChecks(healthChecksBuilder);
+
+            var registration = (HealthCheckRegistration)healthChecksBuilder.ReceivedCalls().Single().GetArguments()[0]!;
+            registration.Name.Should().Be("s3");
+            registration.FailureStatus.Should().Be(HealthStatus.Unhealthy);
+            registration.Tags.Should().BeEquivalentTo(["readiness"]);
+            return registration.Factory(new ServiceCollection().AddSingleton(s3Client).BuildServiceProvider());
+        }
+
+        [Test]
+        public async Task BucketHealthCheckSendsAHeadRequestWithThePrefixedBucket()
+        {
+            var s3Client = Substitute.For<IAmazonS3>();
+            s3Client.HeadBucketAsync(Arg.Any<HeadBucketRequest>(), Arg.Any<CancellationToken>())
+                .Returns(new HeadBucketResponse());
+
+            var result = await CreateBucketHealthCheck(s3Client)
+                .CheckHealthAsync(new HealthCheckContext(), CancellationToken.None);
+
+            result.Status.Should().Be(HealthStatus.Healthy);
+            await s3Client.Received(1).HeadBucketAsync(Arg.Is<HeadBucketRequest>(r => r.BucketName == "dev-documents"),
+                Arg.Any<CancellationToken>());
+        }
+
+        [Test]
+        public async Task BucketHealthCheckIsUnhealthyWhenTheHeadRequestFails()
+        {
+            var s3Client = Substitute.For<IAmazonS3>();
+            var error = new AmazonS3Exception("Forbidden");
+            s3Client.HeadBucketAsync(Arg.Any<HeadBucketRequest>(), Arg.Any<CancellationToken>()).Throws(error);
+
+            var result = await CreateBucketHealthCheck(s3Client)
+                .CheckHealthAsync(new HealthCheckContext(), CancellationToken.None);
+
+            result.Status.Should().Be(HealthStatus.Unhealthy);
+            result.Description.Should().Be("S3 bucket 'dev-documents' is not accessible.");
+            result.Exception.Should().BeSameAs(error);
         }
 
         private void AssertUriHealthCheck(IHealthChecksBuilder healthChecksBuilder)

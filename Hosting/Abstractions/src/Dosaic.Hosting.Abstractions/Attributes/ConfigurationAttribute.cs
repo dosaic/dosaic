@@ -16,5 +16,11 @@ namespace Dosaic.Hosting.Abstractions.Attributes
         }
 
         public string Section => string.Join(":", _sections);
+
+        /// <summary>
+        ///     Keys below <see cref="Section" /> the type cannot work without. They are named in the error a host
+        ///     reports when the whole section is missing. Empty (default) names none.
+        /// </summary>
+        public string[] RequiredKeys { get; set; } = [];
     }
 }

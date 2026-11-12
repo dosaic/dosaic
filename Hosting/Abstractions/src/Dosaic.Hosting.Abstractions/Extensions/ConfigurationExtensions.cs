@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Reflection;
+using Dosaic.Hosting.Abstractions.Attributes;
 using Microsoft.Extensions.Configuration;
 
 namespace Dosaic.Hosting.Abstractions.Extensions
@@ -13,18 +14,34 @@ namespace Dosaic.Hosting.Abstractions.Extensions
             return config;
         }
 
+        /// <exception cref="InvalidOperationException">
+        ///     The section does not exist and <paramref name="type" /> is no collection. The message names the
+        ///     section and the <see cref="ConfigurationAttribute.RequiredKeys" /> of the type.
+        /// </exception>
         public static object GetSection(this IConfiguration configuration, string sectionKey, Type type)
         {
+            var configurationSection = configuration.GetSection(sectionKey);
+            if (!configurationSection.Exists() && GetDictionaryValueType(type) is null && GetElementType(type) is null)
+                throw new InvalidOperationException(MissingSectionMessage(sectionKey, type));
             try
             {
-                var section = configuration.GetSection(sectionKey);
-                return ConfigurationSectionToObject(section, type).Serialize(SerializationMethod.Yaml)
+                return ConfigurationSectionToObject(configurationSection, type).Serialize(SerializationMethod.Yaml)
                     .Deserialize(type, SerializationMethod.Yaml);
             }
             catch (Exception e)
             {
                 throw new AggregateException($"Failed to bind configuration section '{sectionKey}' to type '{type.FullName}'.", e);
             }
+        }
+
+        private static string MissingSectionMessage(string sectionKey, Type type)
+        {
+            var requiredKeys = type.GetCustomAttribute<ConfigurationAttribute>()?.RequiredKeys ?? [];
+            var message = $"Configuration section '{sectionKey}' is missing. {type.Name} is bound from it.";
+            if (requiredKeys.Length == 0) return message;
+            var keys = requiredKeys.Select(key => $"{sectionKey}:{key}").ToList();
+            var environment = keys.Select(key => key.Replace(':', '_').ToUpperInvariant());
+            return $"{message} Set at least {string.Join(", ", keys)} (environment: {string.Join(", ", environment)}).";
         }
 
         /// <param name="section">The section to convert.</param>

@@ -4,7 +4,8 @@ All Dosaic packages are released together under one version.
 
 ## Unreleased (next: 1.2.50)
 
-An application that sets `telemetry:endpoint` and valid `npgsql` connection keys behaves as in 1.2.49.
+An application that sets `telemetry:endpoint` and valid `npgsql` connection keys behaves as in 1.2.49, with
+the exceptions listed under "Behaviour changes".
 
 ### Behaviour changes
 
@@ -20,8 +21,47 @@ An application that sets `telemetry:endpoint` and valid `npgsql` connection keys
   failing the first DbContext, the same as `hangfire:sslMode` and `hangfire:connectionParameters`. The
   `rootCertificate` file is not checked.
 
+- **`Dosaic.Hosting.WebHost` — OTLP over HTTP posts to the signal paths.** With `telemetry:protocol:
+  http/protobuf` traces, metrics and logs were all posted to the root of `telemetry:endpoint`, which an OTLP
+  collector rejects. They now go to `<endpoint>/v1/traces`, `/v1/metrics` and `/v1/logs`, as the OTLP
+  specification and `OTEL_EXPORTER_OTLP_ENDPOINT` define; a base path of the endpoint is kept. gRPC is
+  unchanged. If you pointed `telemetry:endpoint` at one signal path as a workaround, set the base URL instead.
+- **`Dosaic.Plugins.Persistence.EfCore.NpgSql` — `npgsql:host`, `npgsql:database` and `npgsql:username` are
+  required.** They may also come from `Host`, `Database` and `Username` in `npgsql:connectionParameters`. A
+  section without one of them stops the host at startup, naming the missing keys and their environment
+  variables. Such a host failed at the first database access before.
+- **`Dosaic.Plugins.Persistence.S3` — the bucket migration log counts right.** The migration still makes 4
+  attempts by default. Each failure is logged as `(attempt n of 4)`, and the last line says
+  `after 4 attempts -> giving up` instead of `after 3 attempts`. `BlobStorageBucketMigrationService` takes an
+  `IHostApplicationLifetime`, which every host registers.
+
+### New configuration keys
+
+| Key | Default | Effect |
+|---|---|---|
+| `s3:healthCheck:enabled` | `true` | `false` registers no `s3` or `s3-local-filesystem` health check. |
+| `s3:healthCheck:bucket` | `""` | When set, the `s3` check sends `HEAD <bucketPrefix><bucket>` with the configured credentials instead of the anonymous URL check. |
+| `s3:bucketMigration:maxAttempts` | `4` | Attempts of the bucket migration, `0` = until the host stops. |
+| `s3:bucketMigration:stopHostOnFailure` | `false` | `true` stops the host with exit code 1 when the buckets cannot be created. |
+| `npgsql:migration:maxAttempts` | `0` | Attempts of `NpgsqlDbMigratorService`, `0` = until the host stops (as before). |
+| `npgsql:migration:stopHostOnFailure` | `false` | `true` stops the host with exit code 1 when the migration fails. |
+
+### New API
+
+- `Dosaic.Hosting.Abstractions`: `StartupRetryOptions` and `StartupRetry.RunAsync` run a startup task with a
+  limited number of attempts and can stop the host with exit code 1. `ConfigurationAttribute.RequiredKeys`
+  names the keys a section cannot do without.
+- `Dosaic.Plugins.Persistence.EfCore.Abstractions`: `AddDbMigratorService<TDbContext>(StartupRetryOptions)`.
+
 ### Fixes
 
+- `telemetry:protocol` accepts `http/protobuf` and `grpc`, the values of `OTEL_EXPORTER_OTLP_PROTOCOL` that the
+  README always listed. Only the enum names `Grpc` and `HttpProtobuf` worked; `http/protobuf` stopped the start
+  with a binder error. An unknown value now stops the start with a message naming `telemetry:protocol`.
+- A missing configuration section for a `[Configuration]` class stopped the start with `No node deserializer
+  was able to deserialize the node`. The message now names the section, the class and its required keys, for
+  example `Configuration section 'npgsql' is missing. EfCoreNpgSqlConfiguration is bound from it. Set at least
+  npgsql:host, npgsql:database, npgsql:username (environment: NPGSQL_HOST, NPGSQL_DATABASE, NPGSQL_USERNAME).`
 - `npgsql:sslMode` and `hangfire:sslMode` accept the libpq names that Helm charts and CloudNativePG use:
   `disable`, `allow`, `prefer`, `require`, `verify-ca`, `verify-full`, in any casing.
   `ConnectionStringSettings.ParseEnumName` lets a hyphen separate the words of an enum name, and its error

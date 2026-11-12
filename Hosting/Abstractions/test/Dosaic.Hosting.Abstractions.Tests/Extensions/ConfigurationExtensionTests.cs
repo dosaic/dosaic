@@ -1,4 +1,5 @@
 using AwesomeAssertions;
+using Dosaic.Hosting.Abstractions.Attributes;
 using Dosaic.Hosting.Abstractions.Extensions;
 using Microsoft.Extensions.Configuration;
 using NUnit.Framework;
@@ -105,6 +106,52 @@ namespace Dosaic.Hosting.Abstractions.Tests.Extensions
             var exception = act.Should().Throw<AggregateException>().Which;
             exception.Message.Should().Contain("conf").And.Contain(typeof(TestConfiguration).FullName);
             exception.InnerException.Should().NotBeNull();
+        }
+
+        [Test]
+        public void MissingSectionNamesTheSectionAndTheType()
+        {
+            var configuration = new ConfigurationBuilder()
+                .AddInMemoryCollection(new Dictionary<string, string> { { "other:key", "value" } })
+                .Build();
+
+            var act = () => configuration.GetSection("conf", typeof(TestConfiguration));
+
+            act.Should().Throw<InvalidOperationException>()
+                .WithMessage("Configuration section 'conf' is missing. TestConfiguration is bound from it.");
+        }
+
+        [Test]
+        public void MissingSectionNamesTheRequiredKeys()
+        {
+            var configuration = new ConfigurationBuilder().Build();
+
+            var act = () => configuration.GetSection("my:conf", typeof(RequiredKeysConfiguration));
+
+            act.Should().Throw<InvalidOperationException>()
+                .WithMessage("Configuration section 'my:conf' is missing. RequiredKeysConfiguration is bound from it. " +
+                             "Set at least my:conf:host, my:conf:user (environment: MY_CONF_HOST, MY_CONF_USER).");
+        }
+
+        [Test]
+        public void ASectionWithAnyKeyIsBoundEvenWhenRequiredKeysAreMissing()
+        {
+            var configuration = new ConfigurationBuilder()
+                .AddInMemoryCollection(new Dictionary<string, string> { { "conf:port", "1" } })
+                .Build();
+
+            var result = (RequiredKeysConfiguration)configuration.GetSection("conf", typeof(RequiredKeysConfiguration));
+
+            result.Port.Should().Be(1);
+            result.Host.Should().BeNull();
+        }
+
+        [Configuration("conf", RequiredKeys = ["host", "user"])]
+        public class RequiredKeysConfiguration
+        {
+            public string Host { get; set; }
+            public string User { get; set; }
+            public int Port { get; set; }
         }
 
         [Test]

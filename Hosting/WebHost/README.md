@@ -341,7 +341,7 @@ Use `telemetry:name` to explicitly set the service name used by OpenTelemetry re
 telemetry:
   name: Dosaic.Example.Service    # optional OpenTelemetry service name
   endpoint: http://localhost:4317 # OTLP endpoint
-  protocol: grpc                  # grpc | http/protobuf
+  protocol: grpc                  # grpc (default) | http/protobuf, Grpc and HttpProtobuf work as well
   headers:
     - name: Authorization
       value: "Bearer <token>"
@@ -358,6 +358,16 @@ OTLP exporter, so nothing is sent to the OpenTelemetry default `http://localhost
 | set | set or not set | Traces, metrics and logs go to `telemetry:endpoint`. `telemetry:protocol` and `telemetry:headers` also replace `OTEL_EXPORTER_OTLP_PROTOCOL` and `OTEL_EXPORTER_OTLP_HEADERS`. |
 
 To use a collector from the environment, set `TELEMETRY_ENDPOINT` instead of `OTEL_EXPORTER_OTLP_ENDPOINT`.
+
+`telemetry:protocol` takes the values of `OTEL_EXPORTER_OTLP_PROTOCOL`: `grpc` (default) and `http/protobuf`,
+in any casing, and the enum names `Grpc` and `HttpProtobuf`. Any other value stops the start when
+`telemetry:endpoint` is set. As `OTEL_EXPORTER_OTLP_ENDPOINT` would, `telemetry:endpoint` is the base URL:
+
+| `telemetry:protocol` | `telemetry:endpoint` | Traces, metrics, logs are sent to |
+|---|---|---|
+| `grpc` | `http://collector:4317` | `http://collector:4317` (the gRPC services) |
+| `http/protobuf` | `http://collector:4318` | `http://collector:4318/v1/traces`, `/v1/metrics`, `/v1/logs` |
+| `http/protobuf` | `https://gateway/otlp/` | `https://gateway/otlp/v1/traces`, `/v1/metrics`, `/v1/logs` |
 
 Metrics instrumentation (always active):
 - ASP.NET Core request metrics

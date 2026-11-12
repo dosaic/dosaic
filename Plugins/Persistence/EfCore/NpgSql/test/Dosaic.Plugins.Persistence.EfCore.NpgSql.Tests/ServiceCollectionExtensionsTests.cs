@@ -345,6 +345,42 @@ namespace Dosaic.Plugins.Persistence.EfCore.NpgSql.Tests
             serviceDescriptor?.Lifetime.Should().Be(ServiceLifetime.Singleton);
         }
 
+        private static NpgsqlDbMigratorService<TestEfCoreDb> ResolveMigrator(IServiceCollection services)
+        {
+            services.AddSingleton(Substitute.For<ILogger>());
+            services.AddSingleton(Substitute.For<Microsoft.Extensions.Hosting.IHostApplicationLifetime>());
+            services.AddNpgsqlDbMigratorService<TestEfCoreDb>();
+            return services.BuildServiceProvider().GetServices<Microsoft.Extensions.Hosting.IHostedService>()
+                .OfType<NpgsqlDbMigratorService<TestEfCoreDb>>().Single();
+        }
+
+        [Test]
+        public void NpgsqlDbMigratorServiceTakesTheRetriesFromTheNpgsqlConfiguration()
+        {
+            var services = TestingDefaults.ServiceCollection();
+            var configuration = new EfCoreNpgSqlConfiguration
+            {
+                Migration = { MaxAttempts = 3, StopHostOnFailure = true }
+            };
+            services.AddSingleton(configuration);
+
+            var migrator = ResolveMigrator(services);
+
+            migrator.GetInaccessibleValue<Dosaic.Hosting.Abstractions.Services.StartupRetryOptions>("_retryOptions")
+                .Should().BeSameAs(configuration.Migration);
+            migrator.GetInaccessibleValue<Microsoft.Extensions.Hosting.IHostApplicationLifetime>("_lifetime")
+                .Should().NotBeNull();
+        }
+
+        [Test]
+        public void NpgsqlDbMigratorServiceRetriesWithoutLimitWithoutTheNpgsqlConfiguration()
+        {
+            var migrator = ResolveMigrator(TestingDefaults.ServiceCollection());
+
+            migrator.GetInaccessibleValue<Dosaic.Hosting.Abstractions.Services.StartupRetryOptions>("_retryOptions")
+                .Should().BeNull();
+        }
+
         [Test]
         public void CanConfigureDeep()
         {

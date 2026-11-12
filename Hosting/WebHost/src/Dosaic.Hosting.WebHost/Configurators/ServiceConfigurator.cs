@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Diagnostics;
 using System.IO.Compression;
 using System.Reflection;
@@ -141,11 +142,12 @@ namespace Dosaic.Hosting.WebHost.Configurators
             // telemetry:endpoint is the only switch for OTLP. Without it no signal gets an OTLP exporter, so
             // neither OTEL_EXPORTER_OTLP_ENDPOINT nor the OpenTelemetry default (localhost:4317) is used.
             var exportsOtlp = otelConfig?.Endpoint is not null;
-            Action<OtlpExporterOptions> setExporterOptions = opts =>
+            var protocol = exportsOtlp ? ParseOtlpProtocol(otelConfig.Protocol) : OtlpExportProtocol.Grpc;
+            Action<OtlpExporterOptions> SetExporterOptions(string signalPath) => opts =>
             {
-                opts.Endpoint = otelConfig.Endpoint;
+                opts.Endpoint = GetOtlpEndpoint(otelConfig.Endpoint, protocol, signalPath);
                 opts.Headers = string.Join(",", otelConfig.Headers.Select(x => $"{x.Name}={x.Value}"));
-                opts.Protocol = otelConfig.Protocol;
+                opts.Protocol = protocol;
             };
             Action<ResourceBuilder> setResource = resource =>
             {
@@ -166,7 +168,7 @@ namespace Dosaic.Hosting.WebHost.Configurators
                         .AddProcessInstrumentation()
                         .AddMeter("*", Tracing.SourceName);
                     if (exportsOtlp)
-                        builder.AddOtlpExporter(setExporterOptions);
+                        builder.AddOtlpExporter(SetExporterOptions(OtlpSignalPaths.Metrics));
                     builder.AddPrometheusExporter();
                 });
             if (!exportsOtlp) return;
@@ -178,17 +180,55 @@ namespace Dosaic.Hosting.WebHost.Configurators
                     .AddSource(Tracing.SourceName)
                     .AddHttpClientInstrumentation()
                     .AddAspNetCoreInstrumentation(instrumentationOptions => instrumentationOptions.Filter = (context) => !context.Request.Path.StartsWithSegments("/swagger"))
-                    .AddOtlpExporter(setExporterOptions)
+                    .AddOtlpExporter(SetExporterOptions(OtlpSignalPaths.Traces))
             );
             otel.WithLogging(builder =>
             {
                 builder.ConfigureResource(setResource)
-                    .AddOtlpExporter(setExporterOptions);
+                    .AddOtlpExporter(SetExporterOptions(OtlpSignalPaths.Logs));
             }, opts =>
             {
                 opts.IncludeFormattedMessage = true;
                 opts.IncludeScopes = true;
             });
+        }
+
+        internal static class OtlpSignalPaths
+        {
+            public const string Traces = "v1/traces";
+            public const string Metrics = "v1/metrics";
+            public const string Logs = "v1/logs";
+        }
+
+        /// <summary>
+        ///     The OpenTelemetry SDK appends the signal path (<c>/v1/traces</c>, <c>/v1/metrics</c>,
+        ///     <c>/v1/logs</c>) only to an endpoint it reads from <c>OTEL_EXPORTER_OTLP_ENDPOINT</c>. An endpoint
+        ///     set in code is used as is, so over http/protobuf every signal would be posted to the endpoint root.
+        ///     gRPC needs no path, its endpoint is returned unchanged.
+        /// </summary>
+        internal static Uri GetOtlpEndpoint(Uri endpoint, OtlpExportProtocol protocol, string signalPath)
+        {
+            if (protocol != OtlpExportProtocol.HttpProtobuf) return endpoint;
+            var builder = new UriBuilder(endpoint);
+            builder.Path = builder.Path.TrimEnd('/') + "/" + signalPath;
+            return builder.Uri;
+        }
+
+        /// <summary>
+        ///     Accepts the values of <c>OTEL_EXPORTER_OTLP_PROTOCOL</c> (<c>grpc</c>, <c>http/protobuf</c>) and the
+        ///     <see cref="OtlpExportProtocol" /> names (<c>Grpc</c>, <c>HttpProtobuf</c>) in any casing.
+        /// </summary>
+        internal static OtlpExportProtocol ParseOtlpProtocol(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value)) return OtlpExportProtocol.Grpc;
+            var normalized = new string(value.Where(char.IsLetter).ToArray()).ToLowerInvariant();
+            return normalized switch
+            {
+                "grpc" => OtlpExportProtocol.Grpc,
+                "httpprotobuf" => OtlpExportProtocol.HttpProtobuf,
+                _ => throw new InvalidOperationException(
+                    $"telemetry:protocol '{value}' is not supported. Use 'grpc' or 'http/protobuf'.")
+            };
         }
 
         private void ConfigureWebServices()
@@ -333,7 +373,9 @@ namespace Dosaic.Hosting.WebHost.Configurators
         internal class OtelConfiguration
         {
             public string Name { get; set; }
-            public OtlpExportProtocol Protocol { get; set; } = OtlpExportProtocol.Grpc;
+            [Description(
+                "OTLP protocol: grpc (default) or http/protobuf, the values of OTEL_EXPORTER_OTLP_PROTOCOL. Grpc and HttpProtobuf are accepted as well. With http/protobuf the signal paths /v1/traces, /v1/metrics and /v1/logs are appended to telemetry:endpoint.")]
+            public string Protocol { get; set; } = "grpc";
             public Uri Endpoint { get; set; }
             public IList<NameValuePair> Headers { get; set; } = [];
 

@@ -6,6 +6,7 @@ using Dosaic.Plugins.Persistence.EfCore.Abstractions.Eventsourcing;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
 namespace Dosaic.Plugins.Persistence.EfCore.Abstractions
@@ -24,6 +25,20 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions
             where TDbContext : DbContext
         {
             serviceCollection.AddHostedService<DbMigratorService<TDbContext>>();
+        }
+
+        /// <summary>
+        ///     Migrates <typeparamref name="TDbContext" /> in the background when the host starts, with the given
+        ///     number of attempts. <see cref="StartupRetryOptions.StopHostOnFailure" /> stops the host with exit
+        ///     code 1 when the last attempt failed.
+        /// </summary>
+        public static void AddDbMigratorService<TDbContext>(this IServiceCollection serviceCollection,
+            StartupRetryOptions retryOptions)
+            where TDbContext : DbContext
+        {
+            serviceCollection.AddHostedService(sp => new DbMigratorService<TDbContext>(
+                sp.GetRequiredService<IServiceScopeFactory>(), sp.GetRequiredService<ILogger>(), retryOptions,
+                sp.GetService<IHostApplicationLifetime>()));
         }
 
         public static void MigrateEfContexts<TDbContext>(this IApplicationBuilder applicationBuilder)

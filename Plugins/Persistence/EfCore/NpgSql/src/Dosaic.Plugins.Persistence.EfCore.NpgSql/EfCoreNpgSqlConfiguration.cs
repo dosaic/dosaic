@@ -1,11 +1,12 @@
 using Dosaic.Hosting.Abstractions.Attributes;
+using Dosaic.Hosting.Abstractions.Services;
 
 namespace Dosaic.Plugins.Persistence.EfCore.NpgSql;
 
 /// <summary>
 /// Configuration for the persistence layer
 /// </summary>
-[Configuration("npgsql")]
+[Configuration("npgsql", RequiredKeys = ["host", "database", "username"])]
 // ReSharper disable once ClassNeverInstantiated.Global
 public class EfCoreNpgSqlConfiguration
 {
@@ -100,6 +101,12 @@ public class EfCoreNpgSqlConfiguration
     /// Optional raw Npgsql connection string. It is applied first, every discrete setting that is configured overrides it. The defaults of port, connectionLifetime, keepAlive, maxPoolSize and includeErrorDetail only apply to what it leaves unset, so "Port=6432;Maximum Pool Size=20" works for pgBouncer.
     /// </summary>
     public string ConnectionParameters { get; set; }
+
+    /// <summary>
+    /// Retries of <c>AddNpgsqlDbMigratorService</c>. maxAttempts 0 (default) retries until the host stops,
+    /// stopHostOnFailure stops the host with exit code 1 when the last attempt failed.
+    /// </summary>
+    public StartupRetryOptions Migration { get; set; } = new();
 
     internal bool PortConfigured => _port.HasValue;
     internal bool ConnectionLifetimeConfigured => _connectionLifetime.HasValue;
