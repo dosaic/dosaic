@@ -263,16 +263,32 @@ namespace Dosaic.Plugins.Persistence.EfCore.NpgSql.Tests
             seenByHook.Should().Be(Npgsql.SslMode.Require);
         }
 
+        [TestCase("disable", Npgsql.SslMode.Disable)]
+        [TestCase("allow", Npgsql.SslMode.Allow)]
+        [TestCase("prefer", Npgsql.SslMode.Prefer)]
+        [TestCase("require", Npgsql.SslMode.Require)]
+        [TestCase("verify-ca", Npgsql.SslMode.VerifyCA)]
+        [TestCase("verify-full", Npgsql.SslMode.VerifyFull)]
+        [TestCase("VERIFY-FULL", Npgsql.SslMode.VerifyFull)]
+        [TestCase("VerifyFull", Npgsql.SslMode.VerifyFull)]
+        public void SslModeAcceptsTheNpgsqlAndTheLibpqNames(string sslMode, Npgsql.SslMode expected)
+        {
+            _config.SslMode = sslMode;
+
+            ServiceCollectionExtensions.CreateConnectionStringBuilder(_config).SslMode.Should().Be(expected);
+        }
+
         [TestCase("sometimes")]
         [TestCase("3")]
-        [TestCase("verify-full")]
+        [TestCase("verify_full")]
         public void InvalidSslModeThrowsAndNamesTheKey(string sslMode)
         {
             _config.SslMode = sslMode;
 
             var act = () => _builder.ConfigureNpgSqlContext<TestEfCoreDb>(_serviceProvider, _config);
 
-            act.Should().Throw<InvalidOperationException>().WithMessage($"*npgsql:sslMode '{sslMode}'*");
+            act.Should().Throw<InvalidOperationException>()
+                .WithMessage($"*npgsql:sslMode '{sslMode}'*Disable, Allow, Prefer, Require, VerifyCA, VerifyFull*");
         }
 
         [Test]

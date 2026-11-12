@@ -82,7 +82,7 @@ public class EfCoreNpgSqlConfiguration
     public bool SplitQuery { get; set; }
 
     /// <summary>
-    /// Npgsql SslMode name (Disable, Allow, Prefer, Require, VerifyCA, VerifyFull). Empty (default) leaves Npgsql's own default in place.
+    /// Npgsql SslMode name (Disable, Allow, Prefer, Require, VerifyCA, VerifyFull) in any casing, or the libpq name (disable, allow, prefer, require, verify-ca, verify-full). Empty (default) leaves Npgsql's own default in place.
     /// </summary>
     public string SslMode { get; set; }
 
