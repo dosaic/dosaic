@@ -143,7 +143,8 @@ or add as a package reference to your `.csproj`:
 | Method | Description |
 |---|---|
 | `AddEfCoreContext<TContext>(healthChecksBuilder)` | Adds a readiness health check for `TContext` |
-| `AddDbMigratorService<TDbContext>(services)` | Registers the background migration service |
+| `AddDbMigratorService<TDbContext>(services)` | Registers the background migration service, it retries every second until the host stops |
+| `AddDbMigratorService<TDbContext>(services, StartupRetryOptions)` | The same with `MaxAttempts` (0 = no limit) and `StopHostOnFailure` (exit code 1 after the last failed attempt) |
 | `MigrateEfContexts<TDbContext>(applicationBuilder)` | Eagerly migrates all registered instances of `TDbContext` at startup |
 
 ## Usage

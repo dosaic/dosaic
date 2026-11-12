@@ -1,10 +1,12 @@
 using AwesomeAssertions;
+using Dosaic.Hosting.Abstractions.Services;
 using Dosaic.Plugins.Persistence.EfCore.Abstractions.Database;
 using Dosaic.Testing.NUnit;
 using Dosaic.Testing.NUnit.Assertions;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using NUnit.Framework;
@@ -29,6 +31,39 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests
 
             serviceDescriptor.Should().NotBeNull();
             serviceDescriptor?.Lifetime.Should().Be(ServiceLifetime.Singleton);
+        }
+
+        [Test]
+        public async Task DbMigratorServiceWithRetryOptionsStopsTheHostAfterTheLastFailedAttempt()
+        {
+            var services = TestingDefaults.ServiceCollection();
+            var lifetime = Substitute.For<IHostApplicationLifetime>();
+            var logger = new FakeLogger<ServiceCollectionExtensionsTests>();
+            services.AddSingleton<ILogger>(logger);
+            services.AddSingleton(lifetime);
+            // no TestEfCoreDb is registered, so every attempt fails
+            services.AddDbMigratorService<TestEfCoreDb>(new StartupRetryOptions
+            {
+                MaxAttempts = 1,
+                StopHostOnFailure = true
+            });
+            var migrator = (BackgroundService)services.BuildServiceProvider().GetServices<IHostedService>()
+                .Single(x => x is DbMigratorService<TestEfCoreDb>);
+
+            try
+            {
+                await migrator.StartAsync(CancellationToken.None);
+                await migrator.ExecuteTask!;
+
+                logger.Entries.Single().Message.Should()
+                    .Be("Could not migrate database after 1 attempts -> stopping the host");
+                lifetime.Received(1).StopApplication();
+                Environment.ExitCode.Should().Be(1);
+            }
+            finally
+            {
+                Environment.ExitCode = 0;
+            }
         }
 
         [Test]

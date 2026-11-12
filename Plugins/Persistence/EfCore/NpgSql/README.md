@@ -39,6 +39,9 @@ npgsql:
   rootCertificate: ""           # CA certificate file; empty = not set (default)
   noResetOnClose: false         # true behind pgBouncer in transaction mode (default: false)
   connectionParameters: ""      # raw Npgsql connection string, applied first (default: empty)
+  migration:
+    maxAttempts: 0              # AddNpgsqlDbMigratorService attempts; 0 = until the host stops (default: 0)
+    stopHostOnFailure: false    # true stops the host (exit code 1) after the last attempt (default: false)
 ```
 
 `connectionParameters` is a raw Npgsql connection string (`Timeout=5;Application Name=api`). It is applied
@@ -51,8 +54,14 @@ All of this happens before the `WithDataSource` hook runs, so the hook still has
 `sslMode` accepts the Npgsql names (`VerifyFull`) and the libpq names that Helm charts and CloudNativePG use
 (`disable`, `allow`, `prefer`, `require`, `verify-ca`, `verify-full`). Case is ignored.
 
-`EfCoreNpgSqlPlugin` builds the connection string once when the host starts. An unknown `sslMode` or an
-unparsable `connectionParameters` stops the host at startup. The message names the key, and for `sslMode` it
+`host`, `database` and `username` are required, either as keys or as `Host`, `Database` and `Username` in
+`connectionParameters`. Without an `npgsql` section the host stops at startup with
+`Configuration section 'npgsql' is missing. EfCoreNpgSqlConfiguration is bound from it. Set at least npgsql:host,
+npgsql:database, npgsql:username (environment: NPGSQL_HOST, NPGSQL_DATABASE, NPGSQL_USERNAME).` A section
+without one of these keys stops it with `Configuration section 'npgsql' is incomplete.` and the missing keys.
+
+`EfCoreNpgSqlPlugin` builds the connection string once when the host starts. A missing required key, an
+unknown `sslMode` or an unparsable `connectionParameters` stops the host at startup. The message names the key, and for `sslMode` it
 lists the valid values. The plugin does not check that the `rootCertificate` file exists. The same checks run
 again when a context is configured, which covers code that calls `ConfigureNpgSqlContext` outside a Dosaic host.
 
@@ -60,7 +69,7 @@ again when a context is configured, which covers code that calls `ConfigureNpgSq
 
 ```csharp
 // Automatically resolved by Dosaic via [Configuration("npgsql")]
-[Configuration("npgsql")]
+[Configuration("npgsql", RequiredKeys = ["host", "database", "username"])]
 public class EfCoreNpgSqlConfiguration
 {
     public string Host { get; set; }
@@ -80,6 +89,7 @@ public class EfCoreNpgSqlConfiguration
     public string RootCertificate { get; set; }
     public bool NoResetOnClose { get; set; }
     public string ConnectionParameters { get; set; }
+    public StartupRetryOptions Migration { get; set; } = new();
 }
 ```
 
@@ -201,7 +211,12 @@ services.AddDbContext<MyDbContext>((provider, options) =>
 
 1. Retrieves all pending EF Core migrations and applies them in order.
 2. After a successful migration run, reloads the Npgsql type map so that any newly created PostgreSQL enum types are immediately usable.
-3. Retries on failure with a 1-second delay.
+3. Retries on failure with a 1-second delay. Every failed attempt is logged with its number.
+
+`npgsql:migration:maxAttempts` limits the attempts (default `0`: until the host stops). After the last failed
+attempt the error is logged and the host keeps running, unless `npgsql:migration:stopHostOnFailure: true` stops
+it with exit code 1. The service reads both keys when the `npgsql` configuration is registered, which the
+Dosaic web host does; otherwise it retries until the host stops.
 
 Register it with:
 
