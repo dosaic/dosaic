@@ -3,7 +3,7 @@
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
     <MicrosoftExtensionsVersion>10.0.14</MicrosoftExtensionsVersion>
-    <MicrosoftAspNetCoreVersion>10.0.14</MicrosoftAspNetCoreVersion>
+    <MicrosoftAspNetCoreVersion>10.0.15</MicrosoftAspNetCoreVersion>
     <MicrosoftEfCoreVersion>10.0.14</MicrosoftEfCoreVersion>
   </PropertyGroup>
   <ItemGroup>
