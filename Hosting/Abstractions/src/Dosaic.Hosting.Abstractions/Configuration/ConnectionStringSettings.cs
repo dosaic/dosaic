@@ -78,17 +78,20 @@ namespace Dosaic.Hosting.Abstractions.Configuration
         }
 
         /// <summary>
-        ///     Parses an enum by name, ignoring case. Numbers are refused although <c>Enum.TryParse</c> accepts
-        ///     them, because they would silently pick a value nobody wrote down.
+        ///     Parses an enum by name, ignoring case. A hyphen can separate the words of a name, so the libpq
+        ///     spelling <c>verify-full</c> parses as <c>VerifyFull</c>. Numbers are refused although
+        ///     <c>Enum.TryParse</c> accepts them, because they would silently pick a value nobody wrote down.
         /// </summary>
         public static TEnum ParseEnumName<TEnum>(string configurationKey, string value) where TEnum : struct, Enum
         {
-            var name = value.Trim();
-            if (name.Length > 0 && name.All(char.IsLetter) && Enum.TryParse<TEnum>(name, true, out var result))
+            var words = value.Trim().Split('-');
+            if (words.All(x => x.Length > 0 && x.All(char.IsLetter))
+                && Enum.TryParse<TEnum>(string.Concat(words), true, out var result))
                 return result;
             throw new InvalidOperationException(
                 $"Configuration: {configurationKey} '{value}' is not a valid {typeof(TEnum).Name}. " +
-                $"Expected one of: {string.Join(", ", Enum.GetNames<TEnum>())}.");
+                $"Expected one of: {string.Join(", ", Enum.GetNames<TEnum>())}. " +
+                "Case is ignored and a hyphen can separate the words.");
         }
     }
 }

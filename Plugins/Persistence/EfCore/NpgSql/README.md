@@ -35,7 +35,7 @@ npgsql:
   includeErrorDetail: false     # include PG error details — may expose sensitive data
   enableDetailedErrors: false   # EF Core detailed errors — may expose sensitive data
   enableSensitiveDataLogging: false  # log parameter values — may expose sensitive data
-  sslMode: ""                   # Disable|Allow|Prefer|Require|VerifyCA|VerifyFull; empty = not set (default)
+  sslMode: ""                   # Disable|Allow|Prefer|Require|VerifyCA|VerifyFull or verify-full etc.; empty = not set (default)
   rootCertificate: ""           # CA certificate file; empty = not set (default)
   noResetOnClose: false         # true behind pgBouncer in transaction mode (default: false)
   connectionParameters: ""      # raw Npgsql connection string, applied first (default: empty)
@@ -46,8 +46,15 @@ first, and every discrete setting above that is **configured** overrides it. The
 `connectionLifetime`, `keepAlive`, `maxPoolSize` and `includeErrorDetail` only fill in what
 `connectionParameters` leaves unset, so `connectionParameters: "Port=6432;Maximum Pool Size=20"` (pgBouncer)
 works without repeating those keys. `Hangfire` applies the same rules to `hangfire:connectionParameters`.
-All of this happens before the `WithDataSource` hook runs, so the hook still has the last word. An unknown `sslMode` or an unparsable
-`connectionParameters` throws when the context is configured and names the key.
+All of this happens before the `WithDataSource` hook runs, so the hook still has the last word.
+
+`sslMode` accepts the Npgsql names (`VerifyFull`) and the libpq names that Helm charts and CloudNativePG use
+(`disable`, `allow`, `prefer`, `require`, `verify-ca`, `verify-full`). Case is ignored.
+
+`EfCoreNpgSqlPlugin` builds the connection string once when the host starts. An unknown `sslMode` or an
+unparsable `connectionParameters` stops the host at startup. The message names the key, and for `sslMode` it
+lists the valid values. The plugin does not check that the `rootCertificate` file exists. The same checks run
+again when a context is configured, which covers code that calls `ConfigureNpgSqlContext` outside a Dosaic host.
 
 ### Configuration class
 
