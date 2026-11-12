@@ -1,4 +1,5 @@
 using Dosaic.Hosting.Abstractions.Attributes;
+using Dosaic.Hosting.Abstractions.Services;
 
 namespace Dosaic.Plugins.Persistence.S3;
 
@@ -15,7 +16,17 @@ public class S3Configuration
     public string SecretKey { get; set; } = "";
     public string Region { get; set; } = "";
     public bool UseSsl { get; set; }
+    /// <summary>
+    /// Path appended to the endpoint for the anonymous URL readiness check. Not used when
+    /// <see cref="S3HealthCheckConfiguration.Bucket"/> is set.
+    /// </summary>
     public string HealthCheckPath { get; set; } = "";
+
+    /// <summary>The readiness health check of this plugin.</summary>
+    public S3HealthCheckConfiguration HealthCheck { get; set; } = new();
+
+    /// <summary>Retries of the bucket migration (<c>AddFileStorageWithBucketMigration</c>).</summary>
+    public S3BucketMigrationConfiguration BucketMigration { get; set; } = new();
 
     public bool SkipFileDeletion { get; set; }
 
@@ -47,4 +58,26 @@ public class S3Configuration
     /// The region used for request signing, falls back to <see cref="DefaultRegion"/> when not configured.
     /// </summary>
     public string GetSigningRegion() => string.IsNullOrEmpty(Region) ? DefaultRegion : Region;
+}
+
+public class S3HealthCheckConfiguration
+{
+    /// <summary>False registers no "s3" or "s3-local-filesystem" health check.</summary>
+    public bool Enabled { get; set; } = true;
+
+    /// <summary>
+    /// Bucket probed with a HEAD request that uses the configured credentials. The <c>bucketPrefix</c> is
+    /// prepended, the same as for the bucket enums. Empty (default) keeps the anonymous URL check of the
+    /// endpoint and <c>healthCheckPath</c>, which most S3 providers answer with 403.
+    /// </summary>
+    public string Bucket { get; set; } = "";
+}
+
+public class S3BucketMigrationConfiguration : StartupRetryOptions
+{
+    /// <summary>Defaults to 4 attempts, the count of earlier releases.</summary>
+    public S3BucketMigrationConfiguration()
+    {
+        MaxAttempts = 4;
+    }
 }

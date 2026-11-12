@@ -28,12 +28,32 @@ s3:
   forcePathStyle: true               # optional, default true (required by MinIO, Ceph, ...)
   useChecksums: false                # optional, default false, enable AWS SDK request/response checksums
   bucketPrefix: "myapp-"             # optional, prefixed to every bucket name
-  healthCheckPath: ""                # optional, path appended to endpoint URL for readiness check
+  healthCheckPath: ""                # optional, path appended to endpoint URL for the anonymous readiness check
+  healthCheck:
+    enabled: true                    # optional, default true, false registers no readiness check
+    bucket: ""                       # optional, HEAD this bucket (bucketPrefix + bucket) with the credentials
+  bucketMigration:
+    maxAttempts: 4                   # optional, default 4, 0 = retry until the host stops
+    stopHostOnFailure: false         # optional, default false, true stops the host (exit code 1) after the last attempt
   useLocalFileSystem: false          # optional, use local filesystem instead of S3 (dev/test mode)
   localFileSystemPath: "./nodep-s3"  # optional, root path used when useLocalFileSystem is true
 ```
 
 When `useLocalFileSystem: true` the plugin stores files on the local disk at `localFileSystemPath` instead of connecting to an S3 endpoint. This is useful for local development and integration tests where no MinIO/S3 instance is available.
+
+### Readiness health check
+
+| Configuration | Check |
+|---|---|
+| `useLocalFileSystem: true` | `s3-local-filesystem` writes and deletes a probe file in `localFileSystemPath` |
+| `healthCheck:bucket` set | `s3` sends `HEAD <bucketPrefix><bucket>` with the configured credentials |
+| otherwise (default) | `s3` sends an anonymous `GET` to the endpoint plus `healthCheckPath` |
+| `healthCheck:enabled: false` | no check |
+
+Most S3 providers answer the anonymous request to the endpoint root with 403, which fails readiness. Point
+`healthCheckPath` to an anonymous health URL (MinIO: `/minio/health/live`), set `healthCheck:bucket` to a bucket
+the credentials can access, or turn the check off with `healthCheck:enabled: false`
+(`S3_HEALTHCHECK_ENABLED=false`).
 
 ### Credentials
 
@@ -83,6 +103,11 @@ services.AddBlobStorageBucketMigrationService<MyBucket>();
 
 `IFileStorage<MyBucket>` can then be injected anywhere in your application.
 
+The bucket migration lists the buckets and creates the missing ones of the enum. A failed attempt is logged
+with its number and retried after 1, 2, 3, ... seconds. `s3:bucketMigration:maxAttempts` (default `4`, `0` =
+until the host stops) limits the attempts. After the last one the error is logged and the host keeps
+running, unless `s3:bucketMigration:stopHostOnFailure: true` stops it with exit code 1.
+
 ### Untyped bucket storage
 
 The plugin also registers an untyped `IFileStorage`. Because there is no enum to inspect, **no bucket migration service exists for this interface** — you must create buckets manually at runtime:
@@ -111,6 +136,8 @@ services.AddS3BlobStoragePlugin(new S3Configuration
     ForcePathStyle = true,     // optional, default true
     UseChecksums = false,      // optional, default false
     HealthCheckPath = "",      // optional
+    HealthCheck = { Enabled = true, Bucket = "" },              // optional
+    BucketMigration = { MaxAttempts = 4, StopHostOnFailure = false }, // optional
 });
 ```
 
@@ -363,9 +390,9 @@ public class FilesController(IFileStorage<MyBucket> fileStorage) : ControllerBas
 - **Automatic MIME detection** from file extension or stream content via Mime-Detective
 - **Automatic SHA-256 hashing** stored as object metadata on upload
 - **Bucket prefix support** to namespace all buckets per environment
-- **Automatic bucket migration** via `BlobStorageBucketMigrationService<T>` (hosted background service with retry)
+- **Automatic bucket migration** via `BlobStorageBucketMigrationService<T>` (hosted background service with a configurable number of attempts)
 - **Opaque file IDs** using Sqids encoding (bucket + key → single URL-safe string)
 - **OpenTelemetry tracing** on all storage operations via the shared `Dosaic.Hosting.Abstractions.Tracing` entry point (`Dosaic` `ActivitySource`); each operation uses `Tracing.TrackStatusAsync` so spans get `Ok`/`Error` status automatically
-- **Readiness health check** — URL probe for S3 or filesystem write-test for local mode
+- **Readiness health check** — anonymous URL probe or credentialed bucket HEAD for S3, filesystem write-test for local mode, can be turned off
 - **Replaceable** `IFileTypeDefinitionResolver` and `IContentInspector` for custom MIME handling
 

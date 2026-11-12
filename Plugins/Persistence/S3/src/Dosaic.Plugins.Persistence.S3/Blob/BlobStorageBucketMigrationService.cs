@@ -1,15 +1,21 @@
 using Amazon.S3;
 using Amazon.S3.Model;
+using Dosaic.Hosting.Abstractions.Services;
 using Dosaic.Plugins.Persistence.S3.File;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
 namespace Dosaic.Plugins.Persistence.S3.Blob;
 
-internal class BlobStorageBucketMigrationService<T>(S3Configuration config, IAmazonS3 s3Client, ILogger logger, IFileStorage storage)
-    : BackgroundService where T : struct, Enum
+internal class BlobStorageBucketMigrationService<T>(
+    S3Configuration config,
+    IAmazonS3 s3Client,
+    ILogger logger,
+    IFileStorage storage,
+    IHostApplicationLifetime lifetime) : BackgroundService where T : struct, Enum
 {
-    private int _retryCount = 1;
+    internal Func<int, TimeSpan> RetryDelay { get; set; } = attempt => TimeSpan.FromSeconds(attempt);
+
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         if (config.UseLocalFileSystem)
@@ -17,50 +23,36 @@ internal class BlobStorageBucketMigrationService<T>(S3Configuration config, IAma
             logger.LogInformation("S3 bucket migration skipped because local file system storage is used");
             return;
         }
-        while (!stoppingToken.IsCancellationRequested)
+
+        var bucketTypeName = typeof(T).Name;
+        await StartupRetry.RunAsync(config.BucketMigration, $"migrate s3 buckets<{bucketTypeName}>",
+            ct => MigrateAsync(bucketTypeName, ct), RetryDelay, logger, lifetime, stoppingToken);
+    }
+
+    private async Task MigrateAsync(string bucketTypeName, CancellationToken stoppingToken)
+    {
+        var requiredBuckets = Enum.GetValues<T>()
+            .Where(x => !string.IsNullOrEmpty(x.GetName()))
+            .Select(x => storage.ResolveBucketName(x.GetName()))
+            .ToList();
+
+        var existingBuckets =
+            (await s3Client.ListBucketsAsync(stoppingToken)).Buckets?.Select(x => x.BucketName).ToList() ?? [];
+
+        var missingBuckets = requiredBuckets.Except(existingBuckets).ToList();
+        logger.LogInformation("S3 buckets<{bucketType} {@Buckets}", bucketTypeName,
+            new
+            {
+                MissingBuckets = missingBuckets,
+                RequiredBuckets = requiredBuckets,
+                ExistingBuckets = existingBuckets
+            });
+
+        foreach (var missingBucket in missingBuckets)
         {
-            var bucketTypeName = typeof(T).Name;
-            try
-            {
-                var requiredBuckets = Enum.GetValues<T>()
-                    .Where(x => !string.IsNullOrEmpty(x.GetName()))
-                    .Select(x => storage.ResolveBucketName(x.GetName()))
-                    .ToList();
-
-                var existingBuckets =
-                    (await s3Client.ListBucketsAsync(stoppingToken)).Buckets?.Select(x => x.BucketName).ToList() ?? [];
-
-                var missingBuckets = requiredBuckets.Except(existingBuckets).ToList();
-                logger.LogInformation("S3 buckets<{bucketType} {@Buckets}", bucketTypeName,
-                    new
-                    {
-                        MissingBuckets = missingBuckets,
-                        RequiredBuckets = requiredBuckets,
-                        ExistingBuckets = existingBuckets
-                    });
-
-                if (missingBuckets.Count == 0) return;
-                foreach (var missingBucket in missingBuckets)
-                {
-                    logger.LogInformation("S3 buckets<{bucketType}>: create missing bucket {missingBucket}",
-                        bucketTypeName, missingBucket);
-                    await s3Client.PutBucketAsync(new PutBucketRequest { BucketName = missingBucket },
-                        stoppingToken);
-                }
-
-                return;
-            }
-            catch (Exception e)
-            {
-                if (_retryCount >= 4)
-                {
-                    logger.LogError(e, "Could not migrate s3 buckets<{bucketType}> after 3 attempts -> giving up", bucketTypeName);
-                    return;
-                }
-                logger.LogError(e, "Could not migrate s3 buckets<{bucketType}> -> retrying", bucketTypeName);
-                await Task.Delay(_retryCount * 1000, stoppingToken);
-                _retryCount++;
-            }
+            logger.LogInformation("S3 buckets<{bucketType}>: create missing bucket {missingBucket}",
+                bucketTypeName, missingBucket);
+            await s3Client.PutBucketAsync(new PutBucketRequest { BucketName = missingBucket }, stoppingToken);
         }
     }
 }

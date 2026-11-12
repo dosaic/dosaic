@@ -33,12 +33,23 @@ public class S3FileStoragePlugin(S3Configuration configuration)
 
     public void ConfigureHealthChecks(IHealthChecksBuilder healthChecksBuilder)
     {
+        var healthCheck = configuration.HealthCheck ?? new S3HealthCheckConfiguration();
+        if (!healthCheck.Enabled) return;
         if (configuration.UseLocalFileSystem)
         {
             var localPath = configuration.LocalFileSystemPath;
             healthChecksBuilder.Add(new HealthCheckRegistration(
                 "s3-local-filesystem",
                 _ => new LocalFileSystemStorageHealthCheck(localPath),
+                HealthStatus.Unhealthy,
+                [HealthCheckTag.Readiness.Value]));
+        }
+        else if (!string.IsNullOrWhiteSpace(healthCheck.Bucket))
+        {
+            var bucketName = $"{configuration.BucketPrefix}{healthCheck.Bucket}";
+            healthChecksBuilder.Add(new HealthCheckRegistration(
+                "s3",
+                sp => new S3BucketHealthCheck(sp.GetRequiredService<IAmazonS3>(), bucketName),
                 HealthStatus.Unhealthy,
                 [HealthCheckTag.Readiness.Value]));
         }
