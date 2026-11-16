@@ -42,6 +42,9 @@ namespace Dosaic.Hosting.Abstractions.Configuration
         /// <summary>The built-in liveness health checks.</summary>
         public HostHealthChecksConfiguration HealthChecks { get; set; } = new();
 
+        /// <summary>Which proxies the forwarded headers (<c>X-Forwarded-*</c>) are accepted from.</summary>
+        public HostForwardedHeadersConfiguration ForwardedHeaders { get; set; } = new();
+
         /// <summary>
         ///     Reads the <c>host</c> section. A missing section, missing keys and explicit nulls all leave the
         ///     defaults in place.
@@ -51,8 +54,43 @@ namespace Dosaic.Hosting.Abstractions.Configuration
             var hostConfiguration = configuration.BindToSection<HostConfiguration>(SectionName);
             hostConfiguration.HealthChecks ??= new HostHealthChecksConfiguration();
             hostConfiguration.HealthChecks.Memory ??= new HostMemoryHealthCheckConfiguration();
+            hostConfiguration.ForwardedHeaders ??= new HostForwardedHeadersConfiguration();
             return hostConfiguration;
         }
+    }
+
+    public class HostForwardedHeadersConfiguration
+    {
+        /// <summary>
+        ///     Loopback and the private address ranges (RFC 1918, carrier-grade NAT, IPv6 unique local). Pod and
+        ///     node networks of Kubernetes clusters lie in these ranges, so an ingress controller in the cluster is
+        ///     trusted without configuration, while a client on a public address cannot spoof the headers.
+        /// </summary>
+        public const string DefaultKnownNetworks =
+            "127.0.0.0/8,::1/128,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,100.64.0.0/10,fc00::/7";
+
+        private string _knownNetworks;
+
+        /// <summary>
+        ///     Networks (CIDR) whose requests may set the forwarded headers, separated by <c>,</c> or <c>;</c>.
+        ///     Defaults to <see cref="DefaultKnownNetworks" />; setting it to null restores the default.
+        ///     <c>0.0.0.0/0,::/0</c> trusts every sender.
+        /// </summary>
+        public string KnownNetworks
+        {
+            get => _knownNetworks ?? DefaultKnownNetworks;
+            set => _knownNetworks = value;
+        }
+
+        /// <summary>Single proxy addresses that are trusted in addition, separated by <c>,</c> or <c>;</c>.</summary>
+        public string KnownProxies { get; set; }
+
+        /// <summary>
+        ///     Maximum number of proxy hops taken from the headers. Null (default) walks back through the
+        ///     <c>X-Forwarded-For</c> chain as long as the sender is trusted, which handles a load balancer in front
+        ///     of the ingress controller and stops at the first untrusted address.
+        /// </summary>
+        public int? ForwardLimit { get; set; }
     }
 
     public class HostHealthChecksConfiguration

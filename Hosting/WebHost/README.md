@@ -61,7 +61,7 @@ host.Run();
 | **IP rate limiting** | AspNetCoreRateLimit integration, configurable via `ipRateLimiting` section |
 | **Layered configuration** | JSON, YAML, secrets files, env vars, CLI args — ordered by specificity |
 | **YAML input/output formatters** | Controllers accept and return `application/yaml` in addition to JSON |
-| **Forwarded headers** | All forwarded headers trusted (proxy-friendly) |
+| **Forwarded headers** | All `X-Forwarded-*` headers applied when they come from loopback or a private network (Kubernetes ingress works without configuration), configurable via `host:forwardedHeaders` |
 | **Configurable Kestrel** | Listening URLs and max request body size controlled via config |
 
 ---
@@ -125,6 +125,10 @@ host:
   healthChecks:
     memory:
       maximumMegabytes: 2048     # default; liveness threshold, 0 = no memory check (see "Health Endpoints")
+  forwardedHeaders:              # see "Forwarded headers (reverse proxy, Kubernetes)"
+    knownNetworks: "127.0.0.0/8,::1/128,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,100.64.0.0/10,fc00::/7"
+    knownProxies: ""
+    forwardLimit:                # empty = no limit
 ```
 
 Environment variables (single `_` maps to `:` hierarchy):
@@ -155,8 +159,57 @@ public class MyPlugin(HostConfiguration hostConfiguration) : IPluginServiceConfi
 | `host:maxRequestSize` | `MaxRequestSize` | `8388608` |
 | `host:additionalConfigPaths` | `AdditionalConfigPaths` | `null` |
 | `host:healthChecks:memory:maximumMegabytes` | `HealthChecks.Memory.MaximumMegabytes` | `2048`, `0` = no check |
+| `host:forwardedHeaders:knownNetworks` | `ForwardedHeaders.KnownNetworks` | loopback + private ranges (see below) |
+| `host:forwardedHeaders:knownProxies` | `ForwardedHeaders.KnownProxies` | `null` |
+| `host:forwardedHeaders:forwardLimit` | `ForwardedHeaders.ForwardLimit` | `null` = no limit |
 
 A missing `host` section, missing keys and explicit `null` values all keep the defaults.
+
+### Forwarded headers (reverse proxy, Kubernetes)
+
+`UseForwardedHeaders` runs first in the pipeline and applies `X-Forwarded-For` (client IP), `X-Forwarded-Proto`
+(scheme), `X-Forwarded-Host` (host) and `X-Forwarded-Prefix` (moved into `Request.PathBase`). ASP.NET Core applies
+these headers only when the request comes from a trusted sender; by its own default that is loopback only, which
+ignores the headers of an ingress controller running in the cluster.
+
+The web host therefore trusts loopback and the private address ranges by default:
+
+| Range | Typical sender |
+|---|---|
+| `127.0.0.0/8`, `::1/128` | sidecar proxy in the same pod |
+| `10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16` | pod and node networks (ingress-nginx, Traefik, cloud load balancers in the VPC) |
+| `100.64.0.0/10` | clusters whose pod network uses the carrier-grade NAT range |
+| `fc00::/7` | IPv6 pod networks |
+
+A client on a public address cannot spoof the headers. With `forwardLimit` empty (default), the middleware walks
+the `X-Forwarded-For` chain back as long as the sender is trusted, so a cloud load balancer in front of the ingress
+controller works too, and a forged entry on the left of the chain is never reached.
+
+Configure it when the defaults don't fit:
+
+```yaml
+host:
+  forwardedHeaders:
+    knownNetworks: "10.42.0.0/16"       # replaces the defaults; only the pod network of the ingress
+    knownProxies: "198.51.100.20"       # single addresses in addition
+    forwardLimit: 2                     # at most two hops
+```
+
+```shell
+HOST_FORWARDEDHEADERS_KNOWNNETWORKS=10.42.0.0/16
+HOST_FORWARDEDHEADERS_KNOWNPROXIES=198.51.100.20
+HOST_FORWARDEDHEADERS_FORWARDLIMIT=2
+```
+
+Values are separated by `,` or `;`. `0.0.0.0/0,::/0` trusts every sender; use it only when nothing but the proxy
+can reach the pod. An invalid network, address or a limit below 1 stops the start.
+
+Anything inside the cluster that can reach the pod directly is trusted by default. If other workloads in the
+cluster are not trusted, restrict `knownNetworks` to the ingress controller's network (or use a `NetworkPolicy`).
+
+**Path prefix.** To serve the app below a prefix, let the proxy strip it and send `X-Forwarded-Prefix`. For
+ingress-nginx with a rewrite, set the annotation `nginx.ingress.kubernetes.io/x-forwarded-prefix: /p/<slug>/api`.
+Routes then match without the prefix, and links built from `PathBase` include it.
 
 ### Configuration schema (editor completion)
 

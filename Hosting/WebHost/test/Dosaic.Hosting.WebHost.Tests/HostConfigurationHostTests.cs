@@ -1,5 +1,6 @@
 using AwesomeAssertions;
 using Dosaic.Hosting.Abstractions.Configuration;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.Extensions.Configuration;
@@ -79,6 +80,30 @@ namespace Dosaic.Hosting.WebHost.Tests
             var hostConfiguration = host.Services.GetRequiredService<HostConfiguration>();
             hostConfiguration.Urls.Should().Be("http://127.0.0.1:5123,http://127.0.0.1:5124");
             hostConfiguration.HealthChecks.Memory.MaximumMegabytes.Should().Be(0);
+        }
+
+        [Test]
+        public void ForwardedHeadersTrustThePrivateNetworksByDefault()
+        {
+            using var host = BuildHost();
+
+            var options = host.Services.GetRequiredService<IOptions<ForwardedHeadersOptions>>().Value;
+            options.KnownIPNetworks.Select(x => x.ToString()).Should().Contain(["10.0.0.0/8", "172.16.0.0/12"]);
+            options.ForwardLimit.Should().BeNull();
+        }
+
+        [Test]
+        public void EnvironmentVariablesSetTheForwardedHeaders()
+        {
+            Set("HOST_FORWARDEDHEADERS_KNOWNNETWORKS", "10.42.0.0/16");
+            Set("HOST_FORWARDEDHEADERS_KNOWNPROXIES", "198.51.100.20");
+            Set("HOST_FORWARDEDHEADERS_FORWARDLIMIT", "2");
+            using var host = BuildHost();
+
+            var options = host.Services.GetRequiredService<IOptions<ForwardedHeadersOptions>>().Value;
+            options.KnownIPNetworks.Select(x => x.ToString()).Should().BeEquivalentTo("10.42.0.0/16");
+            options.KnownProxies.Select(x => x.ToString()).Should().BeEquivalentTo("198.51.100.20");
+            options.ForwardLimit.Should().Be(2);
         }
 
         [Test]

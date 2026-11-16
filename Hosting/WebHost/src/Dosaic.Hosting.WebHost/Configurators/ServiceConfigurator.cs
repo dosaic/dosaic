@@ -18,7 +18,6 @@ using Dosaic.Hosting.WebHost.Formatters;
 using Dosaic.Hosting.WebHost.Logging;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Cors.Infrastructure;
-using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.ResponseCompression;
@@ -280,7 +279,9 @@ namespace Dosaic.Hosting.WebHost.Configurators
                         pluginKeyPair.Key);
                     pluginKeyPair.Value.ConfigureControllers(mvcBuilder);
                 });
-            _serviceCollection.Configure<ForwardedHeadersOptions>(options => options.ForwardedHeaders = ForwardedHeaders.All);
+            // parsed here, so an invalid network stops the start instead of the first request
+            var forwardedHeaders = new ForwardedHeadersConfigurator(_hostConfiguration.ForwardedHeaders);
+            _serviceCollection.Configure<ForwardedHeadersOptions>(forwardedHeaders.Configure);
         }
 
         private void ConfigureDefaultServices()
