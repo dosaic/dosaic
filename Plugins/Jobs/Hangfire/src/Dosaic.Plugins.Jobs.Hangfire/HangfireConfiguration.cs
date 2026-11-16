@@ -175,9 +175,9 @@ namespace Dosaic.Plugins.Jobs.Hangfire
         public string Role { get; set; }
 
         /// <summary>
-        ///     True answers 404 with an empty body instead of 401/403 when an authorization filter of the dashboard
-        ///     refuses the request, on every path below <c>/hangfire</c>. The dashboard is then invisible to callers
-        ///     without access. False (default) keeps Hangfire's 401/403.
+        ///     True answers 404 instead of 401/403 when an authorization filter of the dashboard refuses the request,
+        ///     on every path below <c>/hangfire</c>. The response is the same as for any unknown path, so the
+        ///     dashboard is invisible to callers without access. False (default) keeps Hangfire's 401/403.
         /// </summary>
         public bool HideWhenDenied { get; set; }
     }

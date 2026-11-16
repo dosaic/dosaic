@@ -5,9 +5,11 @@ using Microsoft.AspNetCore.Http;
 namespace Dosaic.Plugins.Jobs.Hangfire
 {
     /// <summary>
-    ///     Runs the authorization filters of the dashboard in front of Hangfire and answers 404 with an empty body
-    ///     when one of them refuses, so the dashboard is invisible to the caller. Hangfire itself only knows 401 and
-    ///     403. The gate takes the filters out of the options, so Hangfire does not run them a second time.
+    ///     Runs the authorization filters of the dashboard in front of Hangfire and answers 404 when one of them
+    ///     refuses, so the dashboard is invisible to the caller. Hangfire itself only knows 401 and 403. The gate
+    ///     only sets the status code, like a request that matches no endpoint, so outer middlewares (the
+    ///     <c>ExceptionMiddleware</c>) answer it like any other unknown path. The gate takes the filters out of the
+    ///     options, so Hangfire does not run them a second time.
     /// </summary>
     internal sealed class HangfireDashboardGate
     {
@@ -35,7 +37,6 @@ namespace Dosaic.Plugins.Jobs.Hangfire
             }
 
             httpContext.Response.StatusCode = StatusCodes.Status404NotFound;
-            httpContext.Response.ContentLength = 0;
         };
 
         internal async Task<bool> IsAllowedAsync(HttpContext httpContext)
