@@ -17,6 +17,8 @@ namespace Dosaic.Plugins.Authorization.Zitadel
     {
         public void ConfigureServices(IServiceCollection serviceCollection)
         {
+            // built here, so a broken cookie configuration stops the start instead of the first request
+            var tokenRetriever = ZitadelTokenRetrieval.Create(config.CookieToken);
             serviceCollection
                 .AddAuthorization()
                 .AddAuthentication(ZitadelDefaults.AuthenticationScheme)
@@ -43,6 +45,18 @@ namespace Dosaic.Plugins.Authorization.Zitadel
                     opts.CacheKeyPrefix = config.CacheKeyPrefix;
                     opts.Events.OnAuthenticationFailed += OnAuthenticationFailed;
                 });
+            // post-configure runs after AddZitadelIntrospection has set its own retriever and events
+            serviceCollection.PostConfigure<OAuth2IntrospectionOptions>(ZitadelDefaults.AuthenticationScheme, opts =>
+            {
+                opts.TokenRetriever = tokenRetriever;
+                if (!config.MapProjectRoles) return;
+                var onTokenValidated = opts.Events.OnTokenValidated;
+                opts.Events.OnTokenValidated = async context =>
+                {
+                    if (onTokenValidated is not null) await onTokenValidated(context);
+                    ZitadelProjectRoles.MapToRoleClaims(context.Principal, config.ProjectId);
+                };
+            });
 
             serviceCollection.AddTransient<IManagementService, ManagementService>();
         }
