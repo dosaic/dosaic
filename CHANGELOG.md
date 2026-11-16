@@ -2,6 +2,55 @@
 
 All Dosaic packages are released together under one version.
 
+## Unreleased (next: 1.2.52)
+
+An application that sets none of the new keys and implements no `ConfigureDashboard` behaves as in 1.2.51, with
+the exceptions listed under "Behaviour changes".
+
+### Behaviour changes
+
+- **`Dosaic.Hosting.WebHost` — forwarded headers from private networks are applied.** The web host enabled all
+  forwarded headers but kept ASP.NET Core's trust list, which only accepts them from loopback. Behind an
+  ingress controller in Kubernetes they were silently ignored: `RemoteIpAddress` was the ingress pod, `Scheme`
+  stayed `http`, and `X-Forwarded-Prefix` never reached `PathBase`. Now they are accepted from loopback and the
+  private ranges (`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`, `100.64.0.0/10`, `fc00::/7`) and the
+  `X-Forwarded-For` chain is walked back through trusted proxies (`ForwardLimit` was 1). Visible effects
+  behind a proxy: the client IP is the real client (IP rate limiting and request logs count per client instead
+  of per ingress pod), `Request.Scheme` is `https`, and generated links carry the forwarded prefix. Restrict
+  `host:forwardedHeaders:knownNetworks` when other workloads in the cluster can reach the pod and must not set
+  these headers.
+
+- **`Dosaic.Plugins.Jobs.Hangfire` — the dashboard is an endpoint.** `/hangfire` is mapped with
+  `MapHangfireDashboard` in `ConfigureEndpoints` instead of `UseHangfireDashboard` in `ConfigureApplication`.
+  Endpoints execute after every middleware, so the dashboard now always runs after `UseAuthentication` and
+  `UseAuthorization`; before, the order depended on the undefined order of the Dosaic plugins. The endpoint
+  allows anonymous access, so a fallback authorization policy no longer challenges dashboard requests; the
+  dashboard's own filters decide, as before. Middlewares that plugins add after the Hangfire plugin now also see
+  dashboard requests. Path, filters, status codes and pages are unchanged.
+
+### New configuration keys
+
+| Key | Default | Effect |
+|---|---|---|
+| `hangfire:dashboard:auth` | `host` | `host` checks `allowedDashboardHost` (as before); `role` lets authenticated users in `hangfire:dashboard:role` in, on any host. |
+| `hangfire:dashboard:role` | `""` | Role for `auth: role`; required in that mode. |
+| `host:forwardedHeaders:knownNetworks` | loopback + private ranges | CIDR networks whose forwarded headers are applied, separated by `,` or `;`. |
+| `host:forwardedHeaders:knownProxies` | `""` | Single trusted proxy addresses in addition. |
+| `host:forwardedHeaders:forwardLimit` | `null` | Maximum proxy hops; `null` walks back through trusted proxies. |
+| `hangfire:dashboard:hideWhenDenied` | `false` | `true` answers 404 with an empty body instead of 401/403 when a dashboard authorization filter refuses, on every path below `/hangfire`. |
+| `zitadel:cookieToken:name` | `""` | Cookie the "ZITADEL" scheme reads the access token from when a request has no `Authorization` header. |
+| `zitadel:cookieToken:paths` | `[]` | Paths (after `PathBase`, per segment) on which the cookie is read; ignored everywhere else. Required with `name`, `/` is refused. |
+| `zitadel:mapProjectRoles` | `false` | `true` adds a `ClaimTypes.Role` claim per key of `urn:zitadel:iam:org:project:roles` and `urn:zitadel:iam:org:project:<projectId>:roles`. |
+
+### New API
+
+- `Dosaic.Plugins.Jobs.Hangfire`: `IHangfireConfigurator.ConfigureDashboard(DashboardOptions)`, a default
+  interface method called after the plugin's defaults. It can replace `Authorization` / `AsyncAuthorization`
+  (and so drop the `allowedDashboardHost` check), set `IgnoreAntiforgeryToken`, `AppPath` and similar.
+  `HangFirePlugin.DashboardPath` (`/hangfire`) and `HangfireConfiguration.Dashboard`.
+- `Dosaic.Plugins.Authorization.Zitadel`: `ZitadelConfiguration.CookieToken`
+  (`ZitadelCookieTokenConfiguration`) and `ZitadelConfiguration.MapProjectRoles`.
+
 ## Unreleased (next: 1.2.50)
 
 An application that sets `telemetry:endpoint` and valid `npgsql` connection keys behaves as in 1.2.49, with
