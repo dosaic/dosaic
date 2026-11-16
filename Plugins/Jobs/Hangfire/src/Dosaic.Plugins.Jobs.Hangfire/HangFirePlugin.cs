@@ -16,6 +16,7 @@ using Hangfire.PostgreSql.Factories;
 using Hangfire.States;
 using Hangfire.Storage;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.FeatureManagement;
@@ -27,7 +28,7 @@ using BindingFlags = System.Reflection.BindingFlags;
 namespace Dosaic.Plugins.Jobs.Hangfire
 {
     public class HangFirePlugin : IPluginServiceConfiguration, IPluginApplicationConfiguration,
-        IPluginHealthChecksConfiguration
+        IPluginEndpointsConfiguration, IPluginHealthChecksConfiguration
     {
         private readonly IImplementationResolver _implementationResolver;
         private readonly IHangfireConfigurator[] _configurators;
@@ -50,6 +51,11 @@ namespace Dosaic.Plugins.Jobs.Hangfire
         private static readonly Regex _queueName = new("^[a-z0-9_-]+$", RegexOptions.Compiled);
 
         internal const string ServerQueuesKey = "hangfire:server:queues";
+        internal const string DashboardAuthKey = "hangfire:dashboard:auth";
+        internal const string DashboardRoleKey = "hangfire:dashboard:role";
+
+        /// <summary>Path the dashboard is mapped at, relative to the request's <c>PathBase</c>.</summary>
+        public const string DashboardPath = "/hangfire";
 
         public HangFirePlugin(HangfireConfiguration configuration, IImplementationResolver implementationResolver,
             IHangfireConfigurator[] configurators)
@@ -61,6 +67,9 @@ namespace Dosaic.Plugins.Jobs.Hangfire
         }
 
         private HangfireServerConfiguration ServerConfig => _hangfireConfig.Server ?? new HangfireServerConfiguration();
+
+        private HangfireDashboardConfiguration DashboardConfig =>
+            _hangfireConfig.Dashboard ?? new HangfireDashboardConfiguration();
 
         private HangfireHealthCheckConfiguration HealthCheckConfig =>
             _hangfireConfig.HealthCheck ?? new HangfireHealthCheckConfiguration();
@@ -255,11 +264,6 @@ namespace Dosaic.Plugins.Jobs.Hangfire
 
             RegisterUniquenessStore(applicationBuilder.ApplicationServices.GetRequiredService<JobStorage>());
 
-            var urlAuthFilter = new HostAuthorizationFilter(_hangfireConfig.AllowedDashboardHost);
-            applicationBuilder.UseHangfireDashboard(options: new()
-            {
-                Authorization = new List<IDashboardAuthorizationFilter> { urlAuthFilter }
-            });
             if (!_hangfireConfig.RegisterRecurringJobs) return;
             var jobRegister = applicationBuilder.ApplicationServices.GetRequiredService<IJobManager>();
             var jobOptions = applicationBuilder.ApplicationServices.GetService<JobOptions>();
@@ -273,6 +277,50 @@ namespace Dosaic.Plugins.Jobs.Hangfire
                 var recurringJobDetails = job.GetAttribute<RecurringJobAttribute>()!;
                 var genericMethod = registerJobMethod.MakeGenericMethod(job);
                 genericMethod.Invoke(jobRegister, [recurringJobDetails.CronPattern, recurringJobDetails.Queue, ""]);
+            }
+        }
+
+        /// <summary>
+        ///     Maps the dashboard as an endpoint. Endpoints run at the end of the pipeline, after every middleware
+        ///     and therefore after <c>UseAuthentication</c> and <c>UseAuthorization</c>, no matter in which order the
+        ///     plugins configured the application. The endpoint allows anonymous access, so a fallback authorization
+        ///     policy does not challenge the request: the dashboard's own filters decide.
+        /// </summary>
+        public void ConfigureEndpoints(IEndpointRouteBuilder endpointRouteBuilder, IServiceProvider serviceProvider)
+        {
+            var storage = serviceProvider.GetRequiredService<JobStorage>();
+            var options = CreateDashboardOptions();
+            var gate = DashboardConfig.HideWhenDenied ? new HangfireDashboardGate(storage, options) : null;
+            var endpoint = endpointRouteBuilder.MapHangfireDashboard(DashboardPath, options, storage).AllowAnonymous();
+            if (gate is not null)
+                endpoint.Add(builder => builder.RequestDelegate = gate.Wrap(builder.RequestDelegate));
+        }
+
+        /// <summary>The plugin's defaults, then every <see cref="IHangfireConfigurator.ConfigureDashboard" />.</summary>
+        internal DashboardOptions CreateDashboardOptions()
+        {
+            var options = new DashboardOptions
+            {
+                Authorization = new List<IDashboardAuthorizationFilter> { CreateDashboardAuthorizationFilter() }
+            };
+            _configurators.ForEach(x => x.ConfigureDashboard(options));
+            return options;
+        }
+
+        private IDashboardAuthorizationFilter CreateDashboardAuthorizationFilter()
+        {
+            switch (DashboardConfig.Auth)
+            {
+                case HangfireDashboardAuth.Host:
+                    return new HostAuthorizationFilter(_hangfireConfig.AllowedDashboardHost);
+                case HangfireDashboardAuth.Role:
+                    if (string.IsNullOrWhiteSpace(DashboardConfig.Role))
+                        throw new InvalidOperationException(
+                            $"Configuration: {DashboardRoleKey} must name a role when {DashboardAuthKey} is 'role'.");
+                    return new RoleAuthorizationFilter(DashboardConfig.Role.Trim());
+                default:
+                    throw new InvalidOperationException(
+                        $"Configuration: {DashboardAuthKey} must be 'host' or 'role', but is '{DashboardConfig.Auth}'.");
             }
         }
 
@@ -319,6 +367,18 @@ namespace Dosaic.Plugins.Jobs.Hangfire
         /// </summary>
         internal int? GetMinimumAvailableServers() =>
             HealthCheckConfig.MinimumAvailableServers ?? (GetServerLayout().Count > 0 ? 1 : null);
+
+        /// <summary>Lets an authenticated user in the role through. Runs after <c>UseAuthentication</c>.</summary>
+        internal class RoleAuthorizationFilter(string role) : IDashboardAuthorizationFilter
+        {
+            public string Role { get; } = role;
+
+            public bool Authorize(DashboardContext context)
+            {
+                var user = context.GetHttpContext().User;
+                return user?.Identity?.IsAuthenticated == true && user.IsInRole(Role);
+            }
+        }
 
         internal class HostAuthorizationFilter : IDashboardAuthorizationFilter
         {

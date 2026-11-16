@@ -104,6 +104,9 @@ namespace Dosaic.Plugins.Jobs.Hangfire
         /// </summary>
         public bool RegisterRecurringJobs { get; set; } = true;
 
+        /// <summary>The dashboard at <c>/hangfire</c>.</summary>
+        public HangfireDashboardConfiguration Dashboard { get; set; } = new();
+
         /// <summary>The readiness health check of this plugin.</summary>
         public HangfireHealthCheckConfiguration HealthCheck { get; set; } = new();
 
@@ -153,6 +156,39 @@ namespace Dosaic.Plugins.Jobs.Hangfire
         ///     How long a server waits for running jobs when the host stops. Null (default) keeps Hangfire's default.
         /// </summary>
         public int? ShutdownTimeoutInSeconds { get; set; }
+    }
+
+    public class HangfireDashboardConfiguration
+    {
+        /// <summary>
+        ///     Who may open the dashboard. <see cref="HangfireDashboardAuth.Host" /> (default) compares the request
+        ///     host with <see cref="HangfireConfiguration.AllowedDashboardHost" />. <see cref="HangfireDashboardAuth.Role" />
+        ///     requires an authenticated user in <see cref="Role" /> and ignores the host. An
+        ///     <see cref="IHangfireConfigurator" /> can still replace the filter in <c>ConfigureDashboard</c>.
+        /// </summary>
+        public HangfireDashboardAuth Auth { get; set; } = HangfireDashboardAuth.Host;
+
+        /// <summary>
+        ///     Role the user needs (<c>HttpContext.User.IsInRole</c>) when <see cref="Auth" /> is
+        ///     <see cref="HangfireDashboardAuth.Role" />. Required in that mode, ignored otherwise.
+        /// </summary>
+        public string Role { get; set; }
+
+        /// <summary>
+        ///     True answers 404 with an empty body instead of 401/403 when an authorization filter of the dashboard
+        ///     refuses the request, on every path below <c>/hangfire</c>. The dashboard is then invisible to callers
+        ///     without access. False (default) keeps Hangfire's 401/403.
+        /// </summary>
+        public bool HideWhenDenied { get; set; }
+    }
+
+    public enum HangfireDashboardAuth
+    {
+        /// <summary>The request host must equal <c>hangfire:allowedDashboardHost</c>.</summary>
+        Host,
+
+        /// <summary>The user must be in the role <c>hangfire:dashboard:role</c>.</summary>
+        Role
     }
 
     public class HangfireHealthCheckConfiguration

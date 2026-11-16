@@ -32,7 +32,16 @@ hangfire:
 
   # Hostname from which the Hangfire dashboard is accessible.
   # Leave empty to disable dashboard access entirely.
+  # An IHangfireConfigurator can replace this check, see "Dashboard".
   allowedDashboardHost: localhost
+
+  dashboard:
+    # who may open the dashboard: host (default, uses allowedDashboardHost) or role
+    auth: host
+    # role the user needs when auth is role
+    role: ""
+    # true answers 404 instead of 401/403 when the dashboard refuses a request
+    hideWhenDenied: false
 
   # Enable Microsoft Feature Management integration to toggle jobs via config
   enableJobsByFeatureManagementConfig: false
@@ -115,6 +124,7 @@ public class HangfireConfiguration
     public HangfireServerConfiguration Server { get; set; } = new();
     public bool PrepareSchemaIfNecessary { get; set; } = true;
     public bool RegisterRecurringJobs { get; set; } = true;
+    public HangfireDashboardConfiguration Dashboard { get; set; } = new();
     public HangfireHealthCheckConfiguration HealthCheck { get; set; } = new();
     public HangfireStatisticsMetricsConfiguration StatisticsMetrics { get; set; } = new();
     public string ConnectionString { get; }   // built with NpgsqlConnectionStringBuilder
@@ -125,6 +135,13 @@ public class HangfireServerConfiguration
     public bool Enabled { get; set; } = true;
     public Dictionary<string, int> Queues { get; set; } = [];
     public int? ShutdownTimeoutInSeconds { get; set; }
+}
+
+public class HangfireDashboardConfiguration
+{
+    public HangfireDashboardAuth Auth { get; set; } = HangfireDashboardAuth.Host;   // Host | Role
+    public string Role { get; set; }           // required when Auth is Role
+    public bool HideWhenDenied { get; set; }   // 404 instead of 401/403 on a refused dashboard request
 }
 
 public class HangfireHealthCheckConfiguration
@@ -520,7 +537,128 @@ jobManager.Delete(backgroundJobId);
 
 ### Dashboard
 
-The Hangfire dashboard is mounted at `/hangfire`. Access is restricted to the host configured in `allowedDashboardHost`. If the value is empty or not set, access is denied for all hosts.
+The Hangfire dashboard is mapped at `/hangfire` (relative to the request's `PathBase`). A refused request gets
+Hangfire's 401 (no user) or 403 (user without access), or 404 with `hideWhenDenied`.
+
+#### Access (`hangfire:dashboard:auth`)
+
+| `auth` | Who gets in |
+|---|---|
+| `host` (default) | Requests whose host equals `allowedDashboardHost`. If that is empty or not set, nobody. |
+| `role` | Authenticated users in the role `hangfire:dashboard:role` (`User.IsInRole`), on any host. `allowedDashboardHost` is ignored. A missing `role` stops the start. |
+
+```yaml
+hangfire:
+  dashboard:
+    auth: role
+    role: hangfire-admin
+```
+
+`role` needs an authentication plugin that puts the roles on `HttpContext.User`, for example
+`Dosaic.Plugins.Authorization.Zitadel` with `mapProjectRoles: true`. Behind a reverse proxy the host is the public
+host (see the web host's "Forwarded headers"), so `role` is the mode to use there.
+
+#### Pipeline order
+
+The dashboard is mapped as an endpoint (`MapHangfireDashboard`), not as a middleware. Endpoints execute at the
+end of the request pipeline, after every middleware, so the dashboard always runs after `UseAuthentication` and
+`UseAuthorization` (for example those of `Dosaic.Plugins.Authorization.Zitadel`), no matter in which order the
+plugins configure the application. Its authorization filters can therefore use `HttpContext.User` and
+`IAuthorizationService`.
+
+The endpoint allows anonymous access. A fallback authorization policy of the application does not challenge
+dashboard requests; the dashboard's own authorization filters decide.
+
+#### Changing the dashboard options
+
+`IHangfireConfigurator.ConfigureDashboard(DashboardOptions)` is called after the plugin has set its defaults (the
+filter chosen by `auth`) and before the dashboard is mapped. `auth` covers the common cases; use the hook for
+anything else. It is a default interface method, existing configurators need no change. Use it
+to replace `Authorization` / `AsyncAuthorization`, to drop or replace the host check, or to set
+`IgnoreAntiforgeryToken`, `AppPath`, `DashboardTitle` and similar:
+
+```csharp
+public class DashboardConfigurator(DashboardSettings settings) : IHangfireConfigurator
+{
+    public bool IncludesStorage => false;
+    public void Configure(IGlobalConfiguration config) { }
+    public void ConfigureServer(BackgroundJobServerOptions options) { }
+
+    public void ConfigureDashboard(DashboardOptions options)
+    {
+        options.Authorization = [];                 // drops the allowedDashboardHost check
+        options.AsyncAuthorization = [new RoleDashboardAuthorizationFilter(settings.Role)];
+        options.IgnoreAntiforgeryToken = true;      // see "Antiforgery" below
+    }
+}
+
+public class RoleDashboardAuthorizationFilter(string role) : IDashboardAsyncAuthorizationFilter
+{
+    public Task<bool> AuthorizeAsync(DashboardContext context) =>
+        Task.FromResult(context.GetHttpContext().User.IsInRole(role));
+}
+```
+
+To allow several hosts instead of one, replace the default filter with your own `IDashboardAuthorizationFilter`
+that compares `context.GetHttpContext().Request.Host.Host` against your list.
+
+#### Hiding the dashboard (`hangfire:dashboard:hideWhenDenied`)
+
+```yaml
+hangfire:
+  dashboard:
+    hideWhenDenied: true
+```
+
+With `true`, a request that one of the authorization filters refuses gets 404 with an empty body instead of
+401/403, so the dashboard is invisible to callers without access. This holds for every path below `/hangfire`:
+pages, `/hangfire/stats`, `/hangfire/js…` / `/hangfire/css…` resources and all POST actions. The filters run
+once per request, in front of Hangfire. The default `false` keeps Hangfire's 401/403.
+
+#### Role-gated dashboard behind a reverse proxy
+
+Goal: the dashboard is reachable through the public reverse proxy, for example at
+`https://app.example.com/p/<slug>/api/hangfire`, only users with a Zitadel project role open it, and every other
+request gets 404.
+
+1. **Path base.** The proxy strips the prefix and sends `X-Forwarded-Prefix: /p/<slug>/api`. The web host applies
+   forwarded headers from loopback and the private networks by default (an ingress controller in a Kubernetes
+   cluster is trusted without configuration, see `host:forwardedHeaders` in the web host README) and moves the
+   prefix into `Request.PathBase`. The dashboard is matched on `Request.Path` (after `PathBase`) and renders its
+   links with the `PathBase`, so they point to `/p/<slug>/api/hangfire/...`.
+2. **Token.** A browser navigation sends no `Authorization` header. The SPA posts the user's access token once to
+   an endpoint of the app, which stores it in an `HttpOnly`, `Secure`, `SameSite=Strict` cookie whose `Path` is
+   the public dashboard path (`/p/<slug>/api/hangfire`). Configure the Zitadel plugin to read that cookie on
+   `/hangfire` only, and to map project roles (see the Zitadel plugin's "Token from a cookie" section):
+
+   ```yaml
+   hangfire:
+     dashboard:
+       auth: role
+       role: hangfire-admin
+       hideWhenDenied: true
+   zitadel:
+     cookieToken:
+       name: hangfire-token
+       paths: ["/hangfire"]   # after PathBase
+     mapProjectRoles: true
+   ```
+
+3. **Access rule.** `auth: role` replaces the host check with the role check; `allowedDashboardHost` is then
+   ignored. Behind a proxy the host is the public host, and the role is the real gate. For POST actions across
+   several pods, set `IgnoreAntiforgeryToken` through `ConfigureDashboard` (see "Antiforgery").
+
+Result: a user with the role opens the dashboard; a user without it, and a request without a token, get 404 on
+every dashboard path. The cookie never authenticates the API, because the Zitadel scheme ignores it outside
+`/hangfire`.
+
+#### Antiforgery
+
+Hangfire validates an antiforgery token on POST actions when `IAntiforgery` is registered. The token depends
+on the DataProtection keys, so several pods without shared keys reject each other's tokens. With a
+`SameSite=Strict` cookie as the only credential, browsers do not send it on cross-site requests, which is what
+the antiforgery token protects against; `IgnoreAntiforgeryToken = true` is then an acceptable trade-off. Keep
+the antiforgery check when the dashboard credential can be sent cross-site.
 
 ## Attributes
 

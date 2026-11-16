@@ -9,6 +9,8 @@
 - **Discovery policy control** — configure whether HTTPS is required for the discovery endpoint, and whether issuer/endpoint validation is enforced
 - **`IManagementService`** — injectable service to list service accounts, create service accounts (with JWT keys), create human user accounts, and obtain Bearer tokens for service accounts
 - **Authentication failure logging** — all authentication failures are logged automatically via the plugin's `ILogger`
+- **Token from a cookie on given paths** — optional, for server-rendered pages such as the Hangfire dashboard that a browser opens without an `Authorization` header
+- **Project roles as role claims** — optional, so `User.IsInRole("<role>")` also works for the project-scoped roles claim
 
 ## Installation
 
@@ -64,6 +66,21 @@ public class ZitadelConfiguration
 
     // JSON string of the Zitadel Service Account JWT profile used by IManagementService
     public string ServiceAccount { get; set; }
+
+    // Read the access token from a cookie on the configured paths only (default: null = header only)
+    public ZitadelCookieTokenConfiguration CookieToken { get; set; }
+
+    // Add a ClaimTypes.Role claim per project role (default: false)
+    public bool MapProjectRoles { get; set; }
+}
+
+public class ZitadelCookieTokenConfiguration
+{
+    // Name of the cookie that holds the access token
+    public string Name { get; set; }
+
+    // Request paths (after PathBase) on which the cookie is read; required when Name is set
+    public string[] Paths { get; set; } = [];
 }
 ```
 
@@ -152,11 +169,62 @@ public class ItemsController : ControllerBase
 
 ### How token validation works
 
-1. The `Authorization: Bearer <token>` header is extracted from the incoming request.
+1. The `Authorization: Bearer <token>` header is extracted from the incoming request (or, with `cookieToken`, the
+   cookie on the configured paths, see below).
 2. The token is sent to Zitadel's introspection endpoint (`<host>/oauth/v2/introspect`) together with the Application JWT profile loaded from `JwtProfile`.
 3. Zitadel returns the token metadata (active, subject, scopes, roles, etc.) which is mapped to the `ClaimsPrincipal`.
 4. If `EnableCaching = true`, the introspection result is stored in the distributed cache under `<CacheKeyPrefix><token-hash>` for `CacheDurationInMinutes` to avoid repeated network calls.
 5. On any authentication failure the error is logged at `Error` level by the plugin's `ILogger<ZitadelPlugin>`.
+
+## Token from a cookie (`zitadel:cookieToken`)
+
+A server-rendered page, such as the Hangfire dashboard, is opened by a browser navigation, which carries no
+`Authorization` header. The application can store the user's access token in a cookie instead and let the
+"ZITADEL" scheme read it, but only on the paths that need it:
+
+```yaml
+zitadel:
+  cookieToken:
+    name: hangfire-token
+    paths: ["/hangfire"]
+```
+
+- On a request whose `Request.Path` (after `PathBase`) lies below one of `paths`, and that has **no**
+  `Authorization` header at all, the token is taken from the cookie. Paths match per segment and ignore case:
+  `/hangfire` matches `/hangfire` and `/hangfire/stats`, not `/hangfirex`.
+- On every other path the cookie is ignored. This is a CSRF guard: a browser attaches the cookie on its own, so it
+  must never authenticate the GraphQL or REST API. A GraphQL POST that carries only the cookie stays 401.
+- An `Authorization` header always wins, a cookie is never combined with it.
+- `paths` is required when `name` is set, and `/` is refused because it would cover every path. Both stop the start
+  with an `InvalidConfigurationException`.
+- The cookie is only read; issuing it is the application's job. Use `HttpOnly`, `Secure`, `SameSite=Strict` and
+  set its `Path` to the public path of the page (with the reverse proxy prefix, e.g. `/p/<slug>/api/hangfire`).
+
+Behind a reverse proxy that strips a prefix and sends `X-Forwarded-Prefix`, the web host moves that prefix into
+`Request.PathBase`; `paths` are matched against the rest, so `/hangfire` stays correct for every prefix. See the
+Hangfire plugin's "Role-gated dashboard behind a reverse proxy" section for the full setup.
+
+## Project roles as role claims (`zitadel:mapProjectRoles`)
+
+Zitadel returns the roles of a user as JSON objects whose keys are the role names, in
+`urn:zitadel:iam:org:project:roles` and in the project-scoped `urn:zitadel:iam:org:project:<projectId>:roles`:
+
+```json
+{ "urn:zitadel:iam:org:project:123:roles": { "hangfire-admin": { "456": "org.example.com" } } }
+```
+
+The Zitadel library maps the first claim to `ClaimTypes.Role` claims, not the project-scoped one. With
+
+```yaml
+zitadel:
+  mapProjectRoles: true
+```
+
+the plugin adds one `ClaimTypes.Role` claim per key of both claims after the token was introspected, so
+`User.IsInRole("hangfire-admin")`, `[Authorize(Roles = "hangfire-admin")]` and `RequireRole("hangfire-admin")`
+work whichever shape the token carries. Only the project-scoped claim of the configured `projectId` is mapped, roles
+of other projects are ignored. A role the user already has is not added twice. The default `false` leaves the
+claims as they are.
 
 ## Management service
 
