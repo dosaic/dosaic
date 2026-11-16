@@ -1,9 +1,14 @@
 using System.Diagnostics;
+using System.Net;
+using System.Net.Http;
 using System.Security.Claims;
 using System.Text;
 using System.Text.Encodings.Web;
 using AwesomeAssertions;
+using Chronos.Abstractions;
+using Dosaic.Hosting.Abstractions;
 using Dosaic.Hosting.Abstractions.Extensions;
+using Dosaic.Hosting.Abstractions.Middlewares;
 using Dosaic.Hosting.Abstractions.Services;
 using Dosaic.Testing.NUnit;
 using Hangfire;
@@ -11,6 +16,7 @@ using Hangfire.Dashboard;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -29,6 +35,7 @@ namespace Dosaic.Plugins.Jobs.Hangfire.Tests
         private const string Role = "hangfire-admin";
         private const string UserHeader = "X-Test-User";
         private const string RolesHeader = "X-Test-Roles";
+        private const string NotFoundMessage = "\"message\":\"Not Found\"";
 
         private static readonly string[] _dashboardPaths =
         [
@@ -80,6 +87,78 @@ namespace Dosaic.Plugins.Jobs.Hangfire.Tests
             app.UseAuthorization();
             app.UseEndpoints(endpoints => plugin.ConfigureEndpoints(endpoints, serviceProvider));
             return new TestDashboard(app.Build(), serviceProvider);
+        }
+
+        /// <summary>
+        ///     A real Kestrel host with the default <see cref="ExceptionMiddleware" /> in front of the dashboard, so
+        ///     the response is checked the way a client receives it.
+        /// </summary>
+        private async Task<(WebApplication App, HttpClient Client)> StartKestrelDashboardAsync()
+        {
+            var plugin = GetPlugin();
+            var builder = WebApplication.CreateSlimBuilder();
+            builder.WebHost.UseUrls("http://127.0.0.1:0");
+            builder.Logging.ClearProviders();
+            builder.Services.AddSingleton<GlobalStatusCodeOptions>();
+            builder.Services.AddSingleton(Substitute.For<IDateTimeProvider>());
+            builder.Services.AddAuthentication(TestAuthenticationHandler.SchemeName)
+                .AddScheme<AuthenticationSchemeOptions, TestAuthenticationHandler>(TestAuthenticationHandler.SchemeName,
+                    _ => { });
+            builder.Services.AddAuthorization();
+            plugin.ConfigureServices(builder.Services);
+            var app = builder.Build();
+            app.UseMiddleware<ExceptionMiddleware>();
+            app.UseRouting();
+            app.UseAuthentication();
+            app.UseAuthorization();
+            plugin.ConfigureEndpoints(app, app.Services);
+            await app.StartAsync();
+            var client = new HttpClient { BaseAddress = new Uri(app.Urls.First()) };
+            return (app, client);
+        }
+
+        private static async Task<(HttpStatusCode StatusCode, string Body)> SendOverHttpAsync(HttpClient client,
+            string path, HttpMethod method, string user = null, string roles = null)
+        {
+            using var request = new HttpRequestMessage(method, path);
+            if (user is not null) request.Headers.Add(UserHeader, user);
+            if (roles is not null) request.Headers.Add(RolesHeader, roles);
+            if (method == HttpMethod.Post) request.Content = new FormUrlEncodedContent([]);
+            using var response = await client.SendAsync(request);
+            return (response.StatusCode, await response.Content.ReadAsStringAsync());
+        }
+
+        [Test]
+        public async Task HiddenDashboardAnswersLikeAnUnknownPathBehindTheExceptionMiddleware()
+        {
+            _configuration.Dashboard.Auth = HangfireDashboardAuth.Role;
+            _configuration.Dashboard.Role = Role;
+            _configuration.Dashboard.HideWhenDenied = true;
+            var (app, client) = await StartKestrelDashboardAsync();
+            await using var _ = app;
+            using var __ = client;
+
+            foreach (var path in _dashboardPaths.Append("/hangfire/stats"))
+            {
+                foreach (var method in new[] { HttpMethod.Get, HttpMethod.Post })
+                {
+                    var anonymous = await SendOverHttpAsync(client, path, method);
+                    anonymous.StatusCode.Should().Be(HttpStatusCode.NotFound, $"{method} {path} anonymous");
+                    anonymous.Body.Should().Contain(NotFoundMessage, $"{method} {path} anonymous");
+
+                    var otherRole = await SendOverHttpAsync(client, path, method, "jane", "viewer");
+                    otherRole.StatusCode.Should().Be(HttpStatusCode.NotFound, $"{method} {path} without role");
+                    otherRole.Body.Should().Contain(NotFoundMessage, $"{method} {path} without role");
+                }
+            }
+
+            var allowed = await SendOverHttpAsync(client, "/hangfire", HttpMethod.Get, "jane", Role);
+            allowed.StatusCode.Should().Be(HttpStatusCode.OK);
+            allowed.Body.Should().Contain("Hangfire");
+
+            var outside = await SendOverHttpAsync(client, "/hangfirex", HttpMethod.Get);
+            outside.StatusCode.Should().Be(HttpStatusCode.NotFound);
+            outside.Body.Should().Contain(NotFoundMessage);
         }
 
         [Test]

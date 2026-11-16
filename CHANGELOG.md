@@ -2,6 +2,17 @@
 
 All Dosaic packages are released together under one version.
 
+## Unreleased (next: 1.2.53)
+
+### Fixes
+
+- **`Dosaic.Plugins.Jobs.Hangfire` — a hidden dashboard answers 404 instead of 500.** With
+  `hangfire:dashboard:hideWhenDenied: true`, a denied request set 404 and `Content-Length: 0` without starting the
+  response. The `ExceptionMiddleware` then wrote its `ErrorResponse` body for the 404, Kestrel refused the write
+  (`Response Content-Length mismatch: too many bytes written`) and the client got 500. The gate now only sets
+  the status code, like a request that matches no endpoint. A denied request gets the same 404 as any unknown
+  path: with the default `ExceptionMiddleware` that is the `ErrorResponse` JSON body, without it an empty body.
+
 ## Unreleased (next: 1.2.52)
 
 An application that sets none of the new keys and implements no `ConfigureDashboard` behaves as in 1.2.51, with

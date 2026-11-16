@@ -610,8 +610,10 @@ hangfire:
     hideWhenDenied: true
 ```
 
-With `true`, a request that one of the authorization filters refuses gets 404 with an empty body instead of
-401/403, so the dashboard is invisible to callers without access. This holds for every path below `/hangfire`:
+With `true`, a request that one of the authorization filters refuses gets 404 instead of 401/403, so the
+dashboard is invisible to callers without access. The gate only sets the status code, so the response is the same
+as for any unknown path: with the default `ExceptionMiddleware` of the web host it carries the usual
+`ErrorResponse` JSON body. This holds for every path below `/hangfire`:
 pages, `/hangfire/stats`, `/hangfire/js…` / `/hangfire/css…` resources and all POST actions. The filters run
 once per request, in front of Hangfire. The default `false` keeps Hangfire's 401/403.
 
