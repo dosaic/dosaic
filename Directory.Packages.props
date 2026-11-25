@@ -2,8 +2,8 @@
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
-    <MicrosoftExtensionsVersion>10.0.14</MicrosoftExtensionsVersion>
-    <MicrosoftAspNetCoreVersion>10.0.14</MicrosoftAspNetCoreVersion>
+    <MicrosoftExtensionsVersion>11.0.0</MicrosoftExtensionsVersion>
+    <MicrosoftAspNetCoreVersion>11.0.0</MicrosoftAspNetCoreVersion>
     <MicrosoftEfCoreVersion>10.0.14</MicrosoftEfCoreVersion>
   </PropertyGroup>
   <ItemGroup>
