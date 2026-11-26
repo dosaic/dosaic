@@ -96,10 +96,10 @@ activity?.SetTag("filter", filter.Serialize());   // Dosaic's System.Text.Json s
 
 Never tag secrets, tokens, personal data or large payloads.
 
-## Migrating from 1.2.52 and earlier (Metalama)
+## Migrating from 1.2.x (Metalama)
 
-Versions up to 1.2.52 wove spans into methods at build time with Metalama. That is gone: the package no longer
-references Metalama and no longer traces anything on its own. See the changelog entry for 1.2.53 for the full
+Versions 1.2.x wove spans into methods at build time with Metalama. That is gone: the package no longer
+references Metalama and no longer traces anything on its own. See the changelog entry for 11.0.0 for the full
 list; in short:
 
 1. Remove the `DosaicTracing*` MSBuild properties (`DosaicTracingMode`, `DosaicTracingCaptureArgs`,

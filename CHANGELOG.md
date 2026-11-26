@@ -2,7 +2,10 @@
 
 All Dosaic packages are released together under one version.
 
-## Unreleased (next: 1.2.53)
+## Unreleased (next: 11.0.0)
+
+Dosaic now follows the .NET major version: 11.0.0 is the first release for .NET 11. Upgrading from 1.2.x
+needs the steps listed below.
 
 ### Breaking changes
 
@@ -69,6 +72,8 @@ All Dosaic packages are released together under one version.
 
   An application that upgrades without changes still builds if it used only the default automatic mode, but
   emits no method spans anymore; request, HTTP client, database, cache and job spans are unaffected.
+
+## 1.2.53
 
 ### Fixes
 
