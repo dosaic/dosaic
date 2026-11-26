@@ -4,6 +4,34 @@ All Dosaic packages are released together under one version.
 
 ## Unreleased (next: 1.2.53)
 
+### Breaking changes
+
+- **`Dosaic.Extensions.Tracing` — Metalama removed, spans are opt-in.** The package no longer references
+  `Metalama.Framework` and no longer weaves spans into methods at build time. Reasons: Metalama's license, the
+  build time it adds to every project that references the package, and the wait for a Metalama release that
+  supports .NET 11 and C# 15. Neither C# nor OpenTelemetry for .NET has a built-in way to wrap the body of an
+  existing method, and the useful spans (HTTP in and out, EF Core, MongoDB, Redis, Hangfire) already come from
+  the OpenTelemetry instrumentations that Dosaic registers.
+
+  Removed: `[Trace]`, `[NoTrace]`, `[NoCapture]`, `TracingMode`, `ArgCaptureMode`, the transitive project fabric,
+  and the MSBuild properties `DosaicTracingMode`, `DosaicTracingCaptureArgs`, `DosaicTracingCaptureArgsOnError`,
+  `DosaicTracingInclude` and `DosaicTracingExclude`. Automatic argument capture, on the happy path and on
+  error, is gone.
+
+  Added: `Tracing.StartSpan(this)` / `Tracing.StartSpan<TOwner>()` start a span named `TypeName.MethodName`
+  on the shared `Dosaic` source, and `Tracing.Trace(this, ...)` / `Tracing.TraceAsync(this, ...)` also mark the
+  span as error and re-throw when the body throws. `Tracing.Tag/Event/Error/Link/Current` are unchanged.
+
+  What consumers have to do:
+  1. Delete the `DosaicTracing*` properties and any `Metalama.Framework` reference kept only for this package.
+  2. Delete `[Trace]`, `[NoTrace]` and `[NoCapture]` (they no longer compile).
+  3. Add `using var activity = Tracing.StartSpan(this);` or `Tracing.TraceAsync(this, async activity => ...)`
+     to the business operations whose spans you use. Span names are unchanged for the methods you instrument.
+  4. Tag the arguments you need with `activity?.SetTag(...)`.
+
+  An application that upgrades without changes still builds if it used only the default automatic mode, but
+  emits no method spans anymore; request, HTTP client, database, cache and job spans are unaffected.
+
 ### Fixes
 
 - **`Dosaic.Plugins.Jobs.Hangfire` — a hidden dashboard answers 404 instead of 500.** With
