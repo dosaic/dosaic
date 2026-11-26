@@ -6,6 +6,33 @@ All Dosaic packages are released together under one version.
 
 ### Breaking changes
 
+- **All packages — .NET 11.** Every package targets `net11.0` only (SDK `11.0.100`, C# 15). Applications must
+  target `net11.0` and run on the .NET 11 runtime. The framework-aligned dependencies move with it:
+  `Microsoft.Extensions.*`, ASP.NET Core and EF Core `11.0.0`, `Microsoft.Extensions.Http.Resilience` `11.0.1`,
+  `Npgsql` / `Npgsql.EntityFrameworkCore.PostgreSQL` `11.0.0`, `LinqKit.Microsoft.EntityFrameworkCore`
+  `11.0.2`, `Serilog.AspNetCore` `11.0.0`. Effects that reach Dosaic applications:
+  - **EF Core 11 throws when no migrations exist.** `Database.Migrate()` / `MigrateAsync()`, and with them
+    `MigrateEfContexts<T>()` and the background migrator services, now throw
+    `MigrationsNotFound` for a context whose assembly contains no migrations, instead of logging and doing
+    nothing. Usually this points to a wrong migrations assembly. For a context that has no migrations on
+    purpose, add `options.ConfigureWarnings(w => w.Log(RelationalEventId.MigrationsNotFound))` or stop
+    migrating it. See the
+    [EF Core 11 breaking changes](https://learn.microsoft.com/ef/core/what-is-new/ef-core-11.0/breaking-changes).
+  - **`float`/`double` to `decimal` is exact.** `Convert.ToDecimal(0.1f)` and `(decimal)0.1f` return
+    `0.100000001490116119384765625` on .NET 11, where .NET 10 rounded to `0.1`. Dosaic's configuration schema
+    export now writes float/double defaults from their shortest round-trip text, so the schema still shows
+    `0.1`. Check your own code that converts `float`/`double` to `decimal`, and assertions that compare a
+    `decimal` with a `double` literal.
+  - **Some `Microsoft.Extensions.*` packages are part of the shared framework.** NuGet reports `NU1510` for
+    explicit references to `Microsoft.Extensions.Caching.Abstractions`, `DependencyInjection.Abstractions`,
+    `Logging.Abstractions` and `Options`; `Dosaic.Extensions.RestEase` dropped them. Remove them from your
+    projects as well when NuGet reports them.
+  - **Runtime async is on.** All Dosaic assemblies (except the source generators) are compiled with
+    `<Features>$(Features);runtime-async=on</Features>`: async methods are suspended and resumed by the
+    runtime instead of compiler-generated state machines. Fewer allocations, shorter stack traces in logs and
+    exceptions. Behaviour is the same; profilers and tools that look for `<Method>d__N` state-machine types no
+    longer find them in Dosaic assemblies. Applications can opt in the same way for their own code.
+
 - **`Dosaic.Extensions.Tracing` — Metalama removed, spans are opt-in.** The package no longer references
   `Metalama.Framework` and no longer weaves spans into methods at build time. Reasons: Metalama's license, the
   build time it adds to every project that references the package, and the wait for a Metalama release that
