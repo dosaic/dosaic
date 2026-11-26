@@ -103,6 +103,92 @@ namespace Dosaic.Plugins.Jobs.Hangfire.Tests.Fetching
             prefetcher.Fetch(["bulk"], CancellationToken.None).JobId.Should().Be("101");
         }
 
+        private static PrefetchSettings Polling(int prefetchCount, TimeSpan pollInterval) => new()
+        {
+            PrefetchCount = prefetchCount,
+            PollInterval = pollInterval,
+            InvisibilityTimeout = TimeSpan.FromMinutes(5)
+        };
+
+        // a dedicated thread per worker like Hangfire's, so blocked workers cannot starve the thread pool
+        private static Task<Exception> FetchInBackground(JobQueuePrefetcher prefetcher, CancellationToken token) =>
+            Task.Factory.StartNew(() =>
+            {
+                try
+                {
+                    prefetcher.Fetch(["bulk"], token);
+                    return null;
+                }
+                catch (Exception ex)
+                {
+                    return ex;
+                }
+            }, CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default);
+
+        [Test]
+        public async Task AnIdleQueueIsAskedOncePerIntervalNoMatterHowManyWorkersWait()
+        {
+            _client.Fetch(Arg.Any<string[]>(), Arg.Any<int>(), Arg.Any<TimeSpan>()).Returns([]);
+            using var prefetcher = new JobQueuePrefetcher(_client, Polling(1, TimeSpan.FromMilliseconds(300)));
+            using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(1000));
+            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+
+            var workers = Enumerable.Range(0, 20).Select(_ => FetchInBackground(prefetcher, cts.Token)).ToArray();
+            var results = await Task.WhenAll(workers);
+
+            results.Should().AllBeAssignableTo<OperationCanceledException>();
+            // one round trip per started interval; 20 workers polling on their own would ask 20 times as often
+            var intervals = (int)(stopwatch.ElapsedMilliseconds / 300) + 1;
+            _client.ReceivedCalls().Count(x => x.GetMethodInfo().Name == nameof(IJobQueueClient.Fetch))
+                .Should().BeInRange(1, intervals + 1);
+        }
+
+        [Test]
+        public void ABacklogIsDrainedWithoutWaitingForTheInterval()
+        {
+            _client.Fetch(Arg.Any<string[]>(), 1, Arg.Any<TimeSpan>())
+                .Returns([Entry(10, 100)], [Entry(11, 101)], [Entry(12, 102)], []);
+            using var prefetcher = new JobQueuePrefetcher(_client, Polling(1, TimeSpan.FromSeconds(30)));
+            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+
+            var jobIds = Enumerable.Range(0, 3)
+                .Select(_ => prefetcher.Fetch(["bulk"], CancellationToken.None).JobId).ToList();
+
+            jobIds.Should().Equal("100", "101", "102");
+            stopwatch.Elapsed.Should().BeLessThan(TimeSpan.FromSeconds(5));
+        }
+
+        [Test]
+        public async Task WaitingWorkersAreWokenWhenARoundTripFindsJobs()
+        {
+            _client.Fetch(Arg.Any<string[]>(), 3, Arg.Any<TimeSpan>())
+                .Returns([], [Entry(10, 100), Entry(11, 101), Entry(12, 102)], []);
+            using var prefetcher = new JobQueuePrefetcher(_client, Polling(3, TimeSpan.FromMilliseconds(200)));
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+
+            var workers = Enumerable.Range(0, 3).Select(_ => FetchInBackground(prefetcher, cts.Token)).ToArray();
+            var results = await Task.WhenAll(workers);
+
+            results.Should().AllSatisfy(x => x.Should().BeNull());
+            _client.Received(2).Fetch(Arg.Any<string[]>(), 3, Arg.Any<TimeSpan>());
+        }
+
+        [Test]
+        public async Task AFailingRoundTripIsNotRepeatedByEveryWaitingWorker()
+        {
+            _client.Fetch(Arg.Any<string[]>(), Arg.Any<int>(), Arg.Any<TimeSpan>())
+                .Returns(_ => throw new InvalidOperationException("database down"));
+            using var prefetcher = new JobQueuePrefetcher(_client, Polling(1, TimeSpan.FromSeconds(30)));
+            using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(300));
+
+            var workers = Enumerable.Range(0, 5).Select(_ => FetchInBackground(prefetcher, cts.Token)).ToArray();
+            var results = await Task.WhenAll(workers);
+
+            results.Count(x => x is InvalidOperationException).Should().Be(1);
+            results.Count(x => x is OperationCanceledException).Should().Be(4);
+            _client.ReceivedWithAnyArgs(1).Fetch(default, default, default);
+        }
+
         [Test]
         public void CancelledTokensNeverHitTheDatabase()
         {

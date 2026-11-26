@@ -511,6 +511,26 @@ Prefetched jobs are marked as fetched immediately, so they are invisible to othe
 `prefetchCount - 1` jobs are ever buffered; size the prefetch to what your workers can drain quickly
 and enable `useSlidingInvisibilityTimeout` when jobs run longer than the invisibility window.
 
+### Idle polling
+
+An idle queue is asked for the next job every `queuePollIntervalInMs`. Busy queues are not limited by the
+interval: a fetch that finds a job is followed by the next one right away, so a backlog is drained at full
+speed and only the first job after an idle period waits up to one interval.
+
+How many workers ask depends on the fetch path:
+
+- **The plugin's fetch** (used for every queue as soon as one queue has `prefetchCount` greater than 1): the
+  workers of a server share one poll schedule. After an empty fetch nobody asks again before the interval has
+  passed, and a fetch that finds jobs wakes the waiting workers. An idle queue costs one fetch per interval and
+  server, whatever its `workerCount`.
+- **Hangfire's fetch** (no queue prefetches): every worker polls on its own, so an idle installation runs about
+  `workers × pods / interval` fetch queries — 88 workers at the 1000 ms default are 88 queries per second while
+  nothing happens.
+
+Further ways to lower the idle load: start job servers only where jobs should run (`server.enabled: false` on
+API pods; every server also runs its own heartbeat and schedulers), size `workerCount` to the concurrency a
+queue really needs, and raise `queuePollIntervalInMs` where a few seconds of pickup latency do not matter.
+
 ### Querying job state via `IJobManager`
 
 `IJobManager` exposes monitoring APIs to inspect the current state of the job store:

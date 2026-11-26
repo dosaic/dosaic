@@ -2,7 +2,25 @@
 
 All Dosaic packages are released together under one version.
 
-## Unreleased (next: 1.2.53)
+## Unreleased (next: 1.2.54)
+
+### Features
+
+- **`Dosaic.Plugins.Jobs.Hangfire` — idle workers share one poll.** On the plugin's own fetch path (every queue
+  as soon as one queue has `prefetchCount` greater than 1), the workers of a server no longer poll an empty
+  queue each on their own. After an empty fetch nobody asks again before `queuePollIntervalInMs` has passed;
+  a fetch that finds jobs wakes the waiting workers, so backlogs drain as fast as before. An idle queue costs
+  one fetch per interval and server instead of one per worker: 20 idle workers at 500 ms ran 6 fetches in
+  3 s instead of about 120. A failing fetch is also not repeated by every waiting worker at once.
+
+### Behaviour changes
+
+- **`Dosaic.Plugins.Jobs.Hangfire` — first job after an idle period.** On the plugin's fetch path, the first
+  job enqueued into an idle queue waits up to one `queuePollIntervalInMs` (1000 ms by default, about half on
+  average). Before, with many workers polling on their own, one of them usually asked within a fraction of
+  the interval. Backlogs are not affected. Lower `queuePollIntervalInMs` for a queue that needs faster pickup.
+
+## 1.2.53
 
 ### Fixes
 
