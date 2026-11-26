@@ -50,6 +50,19 @@ namespace Dosaic.Plugins.Jobs.Hangfire
         public bool UseSlidingInvisibilityTimeout { get; set; }
 
         /// <summary>
+        ///     Wakes idle workers with PostgreSQL <c>LISTEN</c>/<c>NOTIFY</c> instead of waiting for the next poll
+        ///     (Hangfire.PostgreSql <c>EnableLongPolling</c>). New jobs are picked up right away, so
+        ///     <see cref="QueuePollIntervalInMs" /> only acts as a fallback and can be raised. Off by default.
+        ///     <para>
+        ///         Every waiting worker holds one extra connection for <c>LISTEN</c> while its queue is empty.
+        ///         <c>LISTEN</c> needs a session: it does not work through PgBouncer in transaction mode, and in
+        ///         session mode each listener pins a server connection. Queues with a <c>prefetchCount</c> greater
+        ///         than 1 keep polling.
+        ///     </para>
+        /// </summary>
+        public bool EnableLongPolling { get; set; }
+
+        /// <summary>
         ///     Maximum number of jobs written per statement by the batch API.
         ///     0 (default) means "no limit" — the whole batch is written in exactly one round trip.
         ///     Set it to a positive number to trade round trips for smaller statements/parameter arrays.

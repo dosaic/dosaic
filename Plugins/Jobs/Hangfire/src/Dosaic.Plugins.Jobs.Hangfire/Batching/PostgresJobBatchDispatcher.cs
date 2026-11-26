@@ -16,13 +16,23 @@ namespace Dosaic.Plugins.Jobs.Hangfire.Batching
         private readonly Func<NpgsqlConnection> _connectionFactory;
         private readonly string _sql;
         private readonly int _chunkSize;
+        private readonly bool _notifyNewJobs;
 
-        public PostgresJobBatchDispatcher(Func<NpgsqlConnection> connectionFactory, string schema, int chunkSize)
+        /// <param name="notifyNewJobs">
+        ///     Sends <c>NOTIFY new_job</c> with the batch, which wakes workers that wait with Hangfire.PostgreSql
+        ///     long polling. PostgreSQL delivers it on commit.
+        /// </param>
+        public PostgresJobBatchDispatcher(Func<NpgsqlConnection> connectionFactory, string schema, int chunkSize,
+            bool notifyNewJobs = false)
         {
             _connectionFactory = connectionFactory;
             _sql = BuildSql(PostgresSchemaGuard.ValidateName(schema));
             _chunkSize = chunkSize;
+            _notifyNewJobs = notifyNewJobs;
         }
+
+        // the channel Hangfire.PostgreSql listens on when EnableLongPolling is set
+        internal const string NewJobNotificationChannel = "new_job";
 
         public async Task<IReadOnlyList<string>> DispatchAsync(IReadOnlyList<BatchJobEntry> entries,
             CancellationToken cancellationToken = default)
@@ -37,6 +47,12 @@ namespace Dosaic.Plugins.Jobs.Hangfire.Batching
                 .ConfigureAwait(false);
             foreach (var chunk in BatchChunker.Chunk(entries, _chunkSize))
                 await WriteAsync(connection, transaction, chunk, ids, cancellationToken).ConfigureAwait(false);
+            if (_notifyNewJobs)
+            {
+                await using var notify = new NpgsqlCommand($"NOTIFY {NewJobNotificationChannel}", connection, transaction);
+                await notify.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+            }
+
             await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
             return ids;
         }

@@ -73,6 +73,16 @@ needs the steps listed below.
   An application that upgrades without changes still builds if it used only the default automatic mode, but
   emits no method spans anymore; request, HTTP client, database, cache and job spans are unaffected.
 
+### Features
+
+- **`Dosaic.Plugins.Jobs.Hangfire` — `enableLongPolling`.** Off by default. Turns on Hangfire.PostgreSql
+  long polling: idle workers wait on PostgreSQL `LISTEN new_job` and are woken by the `NOTIFY` of every
+  enqueue, so new jobs start immediately and `queuePollIntervalInMs` only acts as a fallback. The batch API
+  sends the `NOTIFY` as well, and queues without prefetching use Hangfire's own fetch while it is on, because
+  that is the fetch that listens. Each waiting worker holds one extra connection; `LISTEN` does not work
+  through PgBouncer in transaction mode and pins a server connection in session mode. See "Polling and long
+  polling" in the plugin README.
+
 ## 1.2.53
 
 ### Fixes
