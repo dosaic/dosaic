@@ -5,6 +5,7 @@ using Dosaic.Testing.NUnit;
 using Dosaic.Testing.NUnit.Assertions;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -71,6 +72,8 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests
         {
             var opts = new DbContextOptionsBuilder<EfCoreDbContext>();
             opts.UseSqlite($"Data Source=./test-${Guid.NewGuid():N}.db");
+            // EF Core 11 throws when an assembly has no migrations; these contexts have none on purpose.
+            opts.ConfigureWarnings(w => w.Log(RelationalEventId.MigrationsNotFound));
             DbContext context = new TestEfCoreDb(opts.Options);
             context.Invoking(x => x.Database.Migrate()).Should().NotThrow();
         }
@@ -81,6 +84,8 @@ namespace Dosaic.Plugins.Persistence.EfCore.Abstractions.Tests
             var sp = Substitute.For<IServiceProvider>();
             var opts = new DbContextOptionsBuilder<EfCoreDbContext>();
             opts.UseSqlite($"Data Source=./test-${Guid.NewGuid():N}.db");
+            // EF Core 11 throws when an assembly has no migrations; these contexts have none on purpose.
+            opts.ConfigureWarnings(w => w.Log(RelationalEventId.MigrationsNotFound));
             DbContext dbContext = new TestEfCoreDb(opts.Options);
             sp.GetService(typeof(IEnumerable<DbContext>)).Returns(new List<DbContext> { dbContext });
             var fakeLogger = new FakeLogger<EfCorePlugin>();

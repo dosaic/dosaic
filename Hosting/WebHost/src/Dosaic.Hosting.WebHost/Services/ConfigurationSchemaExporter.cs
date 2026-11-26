@@ -320,13 +320,16 @@ namespace Dosaic.Hosting.WebHost.Services
 
         /// <summary>
         ///     JSON has no NaN or infinity, so such a default is left out. Within the range of decimal the value is
-        ///     written as one, which keeps <c>0.1f</c> from turning into <c>0.100000001490116</c>.
+        ///     written as one, parsed from the shortest round-trip text of the float/double, which keeps <c>0.1f</c>
+        ///     from turning into <c>0.100000001490116</c>. <see cref="Convert.ToDecimal(float)" /> is exact since
+        ///     .NET 11 and would write the full binary value.
         /// </summary>
         private static JsonNode ToJsonNumber(double number, object value)
         {
             if (!double.IsFinite(number)) return null;
             return Math.Abs(number) < 7.9e28
-                ? JsonValue.Create(Convert.ToDecimal(value, CultureInfo.InvariantCulture))
+                ? JsonValue.Create(decimal.Parse(((IFormattable)value).ToString(null, CultureInfo.InvariantCulture),
+                    NumberStyles.Float, CultureInfo.InvariantCulture))
                 : JsonValue.Create(number);
         }
 
