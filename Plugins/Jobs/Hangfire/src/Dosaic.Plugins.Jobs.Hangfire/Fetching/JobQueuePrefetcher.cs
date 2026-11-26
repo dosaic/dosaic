@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Hangfire.Storage;
 
 namespace Dosaic.Plugins.Jobs.Hangfire.Fetching
@@ -13,8 +14,16 @@ namespace Dosaic.Plugins.Jobs.Hangfire.Fetching
         private readonly PrefetchSettings _settings;
         private readonly Queue<PrefetchedQueueEntry> _buffer = new();
 
-        /// <summary>Guards <see cref="_buffer" /> against the workers and the keep-alive timer.</summary>
+        private static readonly TimeSpan _minimumWait = TimeSpan.FromMilliseconds(1);
+
+        /// <summary>
+        ///     Guards <see cref="_buffer" /> and <see cref="_nextPollAt" /> against the workers and the keep-alive
+        ///     timer. Waiting workers sleep on it with <see cref="Monitor.Wait(object, TimeSpan)" />.
+        /// </summary>
         private readonly object _gate = new();
+
+        /// <summary><see cref="Stopwatch" /> timestamp before which the queue is not asked again; 0 = ask now.</summary>
+        private long _nextPollAt;
 
         /// <summary>
         ///     Buffered entries are already marked as fetched but not yet owned by a
@@ -33,18 +42,20 @@ namespace Dosaic.Plugins.Jobs.Hangfire.Fetching
                     settings.SlidingKeepAliveInterval.Value, settings.SlidingKeepAliveInterval.Value);
         }
 
+        /// <summary>
+        ///     Hands out the next job. The workers of a queue share one poll schedule: after a round trip came
+        ///     back empty, nobody asks the database again before <see cref="PrefetchSettings.PollInterval" /> has
+        ///     passed, so an idle queue costs one query per interval and server instead of one per worker. A round
+        ///     trip that found jobs reopens the schedule and wakes the waiting workers, so a backlog is drained
+        ///     as fast as before.
+        /// </summary>
         public IFetchedJob Fetch(string[] queues, CancellationToken cancellationToken)
         {
             try
             {
-                while (true)
-                {
-                    cancellationToken.ThrowIfCancellationRequested();
-                    if (TryDequeue(out var buffered))
-                        return new PrefetchedJob(_client, buffered, _settings.SlidingKeepAliveInterval);
-                    if (FillBuffer(queues)) continue;
-                    cancellationToken.WaitHandle.WaitOne(_settings.PollInterval);
-                }
+                cancellationToken.ThrowIfCancellationRequested();
+                using var wakeOnCancel = cancellationToken.Register(WakeWaitingWorkers);
+                return new PrefetchedJob(_client, Next(queues, cancellationToken), _settings.SlidingKeepAliveInterval);
             }
             catch (OperationCanceledException)
             {
@@ -52,6 +63,62 @@ namespace Dosaic.Plugins.Jobs.Hangfire.Fetching
                 ReleaseBuffer();
                 throw;
             }
+        }
+
+        private PrefetchedQueueEntry Next(string[] queues, CancellationToken cancellationToken)
+        {
+            lock (_gate)
+            {
+                while (true)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    if (_buffer.TryDequeue(out var buffered)) return buffered;
+                    var now = Stopwatch.GetTimestamp();
+                    if (!_disposed && now >= _nextPollAt)
+                    {
+                        if (FillBuffer(queues, now)) continue;
+                        now = Stopwatch.GetTimestamp();
+                    }
+
+                    var wait = _disposed ? _settings.PollInterval : Stopwatch.GetElapsedTime(now, _nextPollAt);
+                    Monitor.Wait(_gate, wait < _minimumWait ? _minimumWait : wait);
+                }
+            }
+        }
+
+        /// <summary>Runs under <see cref="_gate" />, so at most one round trip per prefetcher is in flight.</summary>
+        private bool FillBuffer(string[] queues, long now)
+        {
+            IReadOnlyList<PrefetchedQueueEntry> entries;
+            try
+            {
+                entries = _client.Fetch(queues, _settings.PrefetchCount, _settings.InvisibilityTimeout);
+            }
+            catch
+            {
+                // a failing database is not asked again by every waiting worker at once either
+                _nextPollAt = now + PollIntervalTicks;
+                throw;
+            }
+
+            if (entries.Count == 0)
+            {
+                _nextPollAt = now + PollIntervalTicks;
+                return false;
+            }
+
+            foreach (var entry in entries) _buffer.Enqueue(entry);
+            // the queue had work, so there may be more: let the next free worker ask right away
+            _nextPollAt = 0;
+            Monitor.PulseAll(_gate);
+            return true;
+        }
+
+        private long PollIntervalTicks => (long)(_settings.PollInterval.TotalSeconds * Stopwatch.Frequency);
+
+        private void WakeWaitingWorkers()
+        {
+            lock (_gate) Monitor.PulseAll(_gate);
         }
 
         public void Dispose()
@@ -64,23 +131,6 @@ namespace Dosaic.Plugins.Jobs.Hangfire.Fetching
 
             StopTimer();
             ReleaseBuffer();
-        }
-
-        private bool TryDequeue(out PrefetchedQueueEntry entry)
-        {
-            lock (_gate) return _buffer.TryDequeue(out entry);
-        }
-
-        private bool FillBuffer(string[] queues)
-        {
-            lock (_gate)
-            {
-                if (_buffer.Count > 0) return true;
-                if (_disposed) return false;
-                var entries = _client.Fetch(queues, _settings.PrefetchCount, _settings.InvisibilityTimeout);
-                foreach (var entry in entries) _buffer.Enqueue(entry);
-                return entries.Count > 0;
-            }
         }
 
         private void KeepBufferAlive()

@@ -174,5 +174,40 @@ namespace Dosaic.Plugins.Jobs.Hangfire.Tests.Integration
             Storage.GetMonitoringApi().EnqueuedCount("prefetch-e2e").Should().Be(0);
             Storage.GetMonitoringApi().FetchedCount("prefetch-e2e").Should().Be(0);
         }
+
+        [Test]
+        public async Task IdleWorkersShareOnePollPerIntervalAndStillPickUpNewJobs()
+        {
+            var settings = new PrefetchSettings
+            {
+                PrefetchCount = 1,
+                PollInterval = TimeSpan.FromMilliseconds(500),
+                InvisibilityTimeout = TimeSpan.FromMinutes(30)
+            };
+            var storage = new PrefetchJobStorage(Storage, QueueClient(),
+                new Dictionary<string, PrefetchSettings>(), settings);
+
+            using (StartServer(storage, "idle-poll", 20))
+            {
+                // let all 20 workers start and run into the empty queue
+                await Task.Delay(TimeSpan.FromSeconds(1));
+                await ResetStatementCountsAsync();
+                await Task.Delay(TimeSpan.FromSeconds(3));
+                var idleFetches = await CountExecutedStatementsAsync(@"FOR UPDATE SKIP LOCKED\s+LIMIT");
+                await TestContext.Out.WriteLineAsync($"idle fetch statements in 3 s with 20 workers: {idleFetches}");
+
+                // 3 s / 500 ms; 20 workers polling on their own would have run about 120 fetches
+                idleFetches.Should().BeInRange(1, 10);
+
+                var batch = NewBatch();
+                for (var i = 0; i < 30; i++)
+                    batch.Enqueue<RecordingJob, string>($"idle-poll-{i}", "idle-poll");
+                await batch.SaveAsync();
+                await WaitUntilAsync(() => ExecutedWithPrefix("idle-poll-").Count >= 30, _timeout,
+                    "all 30 jobs ran after the idle period");
+            }
+
+            ExecutedWithPrefix("idle-poll-").Should().HaveCount(30).And.OnlyHaveUniqueItems();
+        }
     }
 }

@@ -515,11 +515,19 @@ and enable `useSlidingInvisibilityTimeout` when jobs run longer than the invisib
 
 ### Polling and long polling
 
-An idle worker asks PostgreSQL for the next job every `queuePollIntervalInMs`. Every worker polls on its
-own, so an idle installation runs about `workers × pods / interval` fetch queries — 88 workers at the
-1000 ms default are 88 queries per second while nothing happens. Busy queues are not limited by the
-interval: a worker that finds a job fetches again right away, so a backlog is drained at full speed and only
-the first job after an idle period waits up to one interval.
+An idle queue is asked for the next job every `queuePollIntervalInMs`. Busy queues are not limited by the
+interval: a fetch that finds a job is followed by the next one right away, so a backlog is drained at full
+speed and only the first job after an idle period waits up to one interval.
+
+How many workers ask depends on the fetch path:
+
+- **The plugin's fetch** (used for every queue as soon as one queue has `prefetchCount` greater than 1, see
+  below): the workers of a server share one poll schedule. After an empty fetch nobody asks again before the
+  interval has passed, and a fetch that finds jobs wakes the waiting workers. An idle queue costs one fetch
+  per interval and server, whatever its `workerCount`.
+- **Hangfire's fetch** (no queue prefetches, or `enableLongPolling` for the queues without prefetching):
+  every worker polls on its own, so an idle installation runs about `workers × pods / interval` fetch
+  queries — 88 workers at the 1000 ms default are 88 queries per second while nothing happens.
 
 Ways to lower the idle load, cheapest first:
 

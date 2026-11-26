@@ -75,6 +75,14 @@ needs the steps listed below.
 
 ### Features
 
+- **`Dosaic.Plugins.Jobs.Hangfire` — idle workers share one poll.** On the plugin's own fetch path (every queue
+  as soon as one queue has `prefetchCount` greater than 1), the workers of a server no longer poll an empty
+  queue each on their own. After an empty fetch nobody asks again before `queuePollIntervalInMs` has passed;
+  a fetch that finds jobs wakes the waiting workers, so backlogs drain as fast as before. An idle queue costs
+  one fetch per interval and server instead of one per worker: 20 idle workers at 500 ms ran 6 fetches in
+  3 s instead of about 120. A failing fetch is also not repeated by every waiting worker at once. The first
+  job after an idle period still waits up to one interval.
+
 - **`Dosaic.Plugins.Jobs.Hangfire` — `enableLongPolling`.** Off by default. Turns on Hangfire.PostgreSql
   long polling: idle workers wait on PostgreSQL `LISTEN new_job` and are woken by the `NOTIFY` of every
   enqueue, so new jobs start immediately and `queuePollIntervalInMs` only acts as a fallback. The batch API
