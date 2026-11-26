@@ -23,6 +23,17 @@ All Dosaic packages are released together under one version.
     export now writes float/double defaults from their shortest round-trip text, so the schema still shows
     `0.1`. Check your own code that converts `float`/`double` to `decimal`, and assertions that compare a
     `decimal` with a `double` literal.
+  - **Npgsql 11.** Relevant for `Dosaic.Plugins.Persistence.EfCore.NpgSql` and `Dosaic.Plugins.Jobs.Hangfire`
+    (see the [Npgsql 11.0 release notes](https://www.npgsql.org/doc/release-notes/11.0.html)):
+    - Multiplexing is removed. Remove `Multiplexing` and `Write Coalescing Buffer Threshold Bytes` from
+      `connectionParameters` and any other connection string, even when set to off; Npgsql 11 rejects them.
+    - With `Application Name` in the connection string (e.g. `connectionParameters: "Application Name=api"`),
+      the pool metric tag `db.client.connection.pool.name` is now the application name instead of the
+      connection string. Update dashboards that filter on the old value, or name the data source with
+      `WithDataSource(b => b.Name = "...")`.
+    - `Npgsql.DependencyInjection` is merged into `Npgsql`: remove a separate package reference.
+    - `NpgsqlLargeObjectManager` / `NpgsqlLargeObjectStream` are removed; use `lo_get` / `lo_put`.
+
   - **Some `Microsoft.Extensions.*` packages are part of the shared framework.** NuGet reports `NU1510` for
     explicit references to `Microsoft.Extensions.Caching.Abstractions`, `DependencyInjection.Abstractions`,
     `Logging.Abstractions` and `Options`; `Dosaic.Extensions.RestEase` dropped them. Remove them from your
