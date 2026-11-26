@@ -60,6 +60,7 @@ hangfire:
   schemaName: hangfire            # PostgreSQL schema holding the Hangfire tables
   queuePollIntervalInMs: 1000     # how often an idle worker asks the queue for work
   useSlidingInvisibilityTimeout: false
+  enableLongPolling: false        # wake idle workers with LISTEN/NOTIFY, see "Polling and long polling"
   batchChunkSize: 0               # 0 = write a whole batch in exactly one round trip
 
   # Per queue tuning - every entry gets its own background job server
@@ -114,6 +115,7 @@ public class HangfireConfiguration
     public string SchemaName { get; set; } = "hangfire";
     public int QueuePollIntervalInMs { get; set; } = 1000;
     public bool UseSlidingInvisibilityTimeout { get; set; }
+    public bool EnableLongPolling { get; set; }
     public int BatchChunkSize { get; set; }
     public QueueConfiguration[] QueueConfigurations { get; set; } = [];
     public string SslMode { get; set; }
@@ -510,6 +512,36 @@ Prefetched jobs are marked as fetched immediately, so they are invisible to othe
 `invisibilityTimeoutInMinutes`. A worker only asks for a job when it is free, so at most
 `prefetchCount - 1` jobs are ever buffered; size the prefetch to what your workers can drain quickly
 and enable `useSlidingInvisibilityTimeout` when jobs run longer than the invisibility window.
+
+### Polling and long polling
+
+An idle worker asks PostgreSQL for the next job every `queuePollIntervalInMs`. Every worker polls on its
+own, so an idle installation runs about `workers × pods / interval` fetch queries — 88 workers at the
+1000 ms default are 88 queries per second while nothing happens. Busy queues are not limited by the
+interval: a worker that finds a job fetches again right away, so a backlog is drained at full speed and only
+the first job after an idle period waits up to one interval.
+
+Ways to lower the idle load, cheapest first:
+
+- Start job servers only where jobs should run (`server.enabled: false` on API pods). Every server also runs
+  its own heartbeat and schedulers.
+- Size `workerCount` / `queueConfigurations[].workerCount` to the concurrency a queue really needs.
+- Raise `queuePollIntervalInMs` for queues where a few seconds of pickup latency do not matter.
+- `enableLongPolling: true` (Hangfire.PostgreSql `EnableLongPolling`): a waiting worker listens on the
+  PostgreSQL channel `new_job` and is woken by the `NOTIFY` that every enqueue sends, including the batch API.
+  Jobs are picked up immediately and `queuePollIntervalInMs` becomes a fallback that can be raised to
+  15–30 seconds.
+
+Check these before switching long polling on:
+
+- **One extra connection per waiting worker.** Each worker that waits on an empty queue holds a dedicated
+  connection for `LISTEN`. Size `Maximum Pool Size` and the database's connection limit for it.
+- **PgBouncer.** `LISTEN` needs a session. In transaction mode notifications never arrive (workers fall back
+  to polling); in session mode every listener pins a server connection. Point Hangfire at PostgreSQL
+  directly, or keep long polling off.
+- **Prefetching queues keep polling.** Queues with `prefetchCount` greater than 1 use the plugin's own fetch,
+  which does not listen. With long polling on, all other queues use Hangfire's fetch so that they can listen;
+  with it off, every queue goes through the plugin's fetch as soon as one queue prefetches.
 
 ### Querying job state via `IJobManager`
 

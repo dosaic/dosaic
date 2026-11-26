@@ -1,3 +1,0 @@
-<Project>
-  <Import Project="../build/Dosaic.Extensions.Tracing.props" />
-</Project>

@@ -7,7 +7,7 @@
 **Dosaic** is a plugin-first .NET framework for rapidly building anything hosted in the web.
 The name is a play on "mosaic" — Dotnet Orchestration Services Abstraction Integration Configuration.
 
-- **Target framework:** net10.0 (SDK 10.0.403 via `global.json`)
+- **Target framework:** net11.0 (SDK 11.0.100 via `global.json`), runtime-async on
 - **License:** MIT
 - **NuGet packages:** published as `Dosaic.*`
 
@@ -279,7 +279,7 @@ bash packages.sh -n   # Dump package names
 
 ### CI Pipeline (GitHub Actions)
 
-All workflows target **.NET 10.0.x** on **ubuntu-latest**.
+All workflows target **.NET 11.0.x** on **ubuntu-latest**.
 
 | Workflow | Trigger | Steps |
 |---|---|---|

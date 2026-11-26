@@ -102,7 +102,7 @@ namespace Dosaic.Plugins.Jobs.Hangfire
                 var ownsStorage = _managedStorage is not null && ReferenceEquals(storage, _managedStorage);
                 return ownsStorage
                     ? new PostgresJobBatchDispatcher(CreateConnection, _hangfireConfig.SchemaName,
-                        _hangfireConfig.BatchChunkSize)
+                        _hangfireConfig.BatchChunkSize, _hangfireConfig.EnableLongPolling)
                     : new BackgroundJobClientBatchDispatcher(sp.GetRequiredService<IBackgroundJobClient>());
             });
             serviceCollection.AddSingleton<IJobManager>(sp =>
@@ -131,7 +131,8 @@ namespace Dosaic.Plugins.Jobs.Hangfire
             SchemaName = _hangfireConfig.SchemaName,
             QueuePollInterval = TimeSpan.FromMilliseconds(_hangfireConfig.QueuePollIntervalInMs),
             UseSlidingInvisibilityTimeout = _hangfireConfig.UseSlidingInvisibilityTimeout,
-            PrepareSchemaIfNecessary = _hangfireConfig.PrepareSchemaIfNecessary
+            PrepareSchemaIfNecessary = _hangfireConfig.PrepareSchemaIfNecessary,
+            EnableLongPolling = _hangfireConfig.EnableLongPolling
         };
 
         private JobStorage CreatePostgresStorage()
@@ -161,8 +162,10 @@ namespace Dosaic.Plugins.Jobs.Hangfire
                 InvisibilityTimeout = invisibilityTimeout,
                 SlidingKeepAliveInterval = slidingInterval
             });
+            // with long polling, queues without prefetching keep Hangfire's own fetch, which is the one that listens
             return _managedStorage = new PrefetchJobStorage(storage,
-                new PostgresJobQueueClient(CreateConnection, _hangfireConfig.SchemaName), perQueue, defaults);
+                new PostgresJobQueueClient(CreateConnection, _hangfireConfig.SchemaName), perQueue, defaults,
+                _hangfireConfig.EnableLongPolling);
         }
 
         private QueueConfiguration[] GetQueueConfigurations() =>

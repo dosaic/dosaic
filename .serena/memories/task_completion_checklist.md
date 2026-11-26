@@ -24,6 +24,6 @@ When completing a coding task in the Dosaic repository:
 - Ensure backward compatibility or update all references (`find_referencing_symbols`)
 
 ## CI Expectations
-- .NET 10.0.x on Ubuntu
+- .NET 11.0.x on Ubuntu
 - Format → Build → Test → Coverage pipeline
 - NuGet packages published on GitHub release

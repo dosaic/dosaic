@@ -60,7 +60,7 @@ public class ChangeSetTests
         parsed["IsValid"].New.Should().Be(true);
         parsed["IsNotValid"].New.Should().Be(false);
         parsed["Count"].New.Should().Be(123);
-        parsed["Price"].New.Should().Be(123.123);
+        parsed["Price"].New.Should().Be(123.123m);
         (parsed["Object"].New as IDictionary<string, object>)!["x"].Should().Be(1);
         ((parsed["Array"].New as object[])![0] as IDictionary<string, object>)!["y"].Should().Be(2);
     }

@@ -17,15 +17,18 @@ namespace Dosaic.Plugins.Jobs.Hangfire.Fetching
         private readonly IJobQueueClient _client;
         private readonly IReadOnlyDictionary<string, PrefetchSettings> _settingsPerQueue;
         private readonly PrefetchSettings _defaultSettings;
+        private readonly bool _unconfiguredQueuesUseInnerFetch;
         private readonly ConcurrentDictionary<string, JobQueuePrefetcher> _prefetchers = new();
 
         public PrefetchJobStorage(JobStorage inner, IJobQueueClient client,
-            IReadOnlyDictionary<string, PrefetchSettings> settingsPerQueue, PrefetchSettings defaultSettings)
+            IReadOnlyDictionary<string, PrefetchSettings> settingsPerQueue, PrefetchSettings defaultSettings,
+            bool unconfiguredQueuesUseInnerFetch = false)
         {
             _inner = inner;
             _client = client;
             _settingsPerQueue = settingsPerQueue;
             _defaultSettings = defaultSettings;
+            _unconfiguredQueuesUseInnerFetch = unconfiguredQueuesUseInnerFetch;
             JobExpirationTimeout = inner.JobExpirationTimeout;
         }
 
@@ -34,9 +37,11 @@ namespace Dosaic.Plugins.Jobs.Hangfire.Fetching
         public override IStorageConnection GetConnection()
         {
             var connection = _inner.GetConnection();
-            return connection is JobStorageConnection storageConnection
-                ? new PrefetchStorageConnection(storageConnection, Fetch)
-                : connection;
+            if (connection is not JobStorageConnection storageConnection) return connection;
+            return new PrefetchStorageConnection(storageConnection,
+                (queues, cancellationToken) => _unconfiguredQueuesUseInnerFetch && !queues.Any(_settingsPerQueue.ContainsKey)
+                    ? storageConnection.FetchNextJob(queues, cancellationToken)
+                    : Fetch(queues, cancellationToken));
         }
 
         public override IStorageConnection GetReadOnlyConnection() => _inner.GetReadOnlyConnection();

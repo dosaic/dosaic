@@ -2,7 +2,88 @@
 
 All Dosaic packages are released together under one version.
 
-## Unreleased (next: 1.2.53)
+## Unreleased (next: 11.0.0)
+
+Dosaic now follows the .NET major version: 11.0.0 is the first release for .NET 11. Upgrading from 1.2.x
+needs the steps listed below.
+
+### Breaking changes
+
+- **All packages — .NET 11.** Every package targets `net11.0` only (SDK `11.0.100`, C# 15). Applications must
+  target `net11.0` and run on the .NET 11 runtime. The framework-aligned dependencies move with it:
+  `Microsoft.Extensions.*`, ASP.NET Core and EF Core `11.0.0`, `Microsoft.Extensions.Http.Resilience` `11.0.1`,
+  `Npgsql` / `Npgsql.EntityFrameworkCore.PostgreSQL` `11.0.0`, `LinqKit.Microsoft.EntityFrameworkCore`
+  `11.0.2`, `Serilog.AspNetCore` `11.0.0`. Effects that reach Dosaic applications:
+  - **EF Core 11 throws when no migrations exist.** `Database.Migrate()` / `MigrateAsync()`, and with them
+    `MigrateEfContexts<T>()` and the background migrator services, now throw
+    `MigrationsNotFound` for a context whose assembly contains no migrations, instead of logging and doing
+    nothing. Usually this points to a wrong migrations assembly. For a context that has no migrations on
+    purpose, add `options.ConfigureWarnings(w => w.Log(RelationalEventId.MigrationsNotFound))` or stop
+    migrating it. See the
+    [EF Core 11 breaking changes](https://learn.microsoft.com/ef/core/what-is-new/ef-core-11.0/breaking-changes).
+  - **`float`/`double` to `decimal` is exact.** `Convert.ToDecimal(0.1f)` and `(decimal)0.1f` return
+    `0.100000001490116119384765625` on .NET 11, where .NET 10 rounded to `0.1`. Dosaic's configuration schema
+    export now writes float/double defaults from their shortest round-trip text, so the schema still shows
+    `0.1`. Check your own code that converts `float`/`double` to `decimal`, and assertions that compare a
+    `decimal` with a `double` literal.
+  - **Npgsql 11.** Relevant for `Dosaic.Plugins.Persistence.EfCore.NpgSql` and `Dosaic.Plugins.Jobs.Hangfire`
+    (see the [Npgsql 11.0 release notes](https://www.npgsql.org/doc/release-notes/11.0.html)):
+    - Multiplexing is removed. Remove `Multiplexing` and `Write Coalescing Buffer Threshold Bytes` from
+      `connectionParameters` and any other connection string, even when set to off; Npgsql 11 rejects them.
+    - With `Application Name` in the connection string (e.g. `connectionParameters: "Application Name=api"`),
+      the pool metric tag `db.client.connection.pool.name` is now the application name instead of the
+      connection string. Update dashboards that filter on the old value, or name the data source with
+      `WithDataSource(b => b.Name = "...")`.
+    - `Npgsql.DependencyInjection` is merged into `Npgsql`: remove a separate package reference.
+    - `NpgsqlLargeObjectManager` / `NpgsqlLargeObjectStream` are removed; use `lo_get` / `lo_put`.
+
+  - **Some `Microsoft.Extensions.*` packages are part of the shared framework.** NuGet reports `NU1510` for
+    explicit references to `Microsoft.Extensions.Caching.Abstractions`, `DependencyInjection.Abstractions`,
+    `Logging.Abstractions` and `Options`; `Dosaic.Extensions.RestEase` dropped them. Remove them from your
+    projects as well when NuGet reports them.
+  - **Runtime async is on.** All Dosaic assemblies (except the source generators) are compiled with
+    `<Features>$(Features);runtime-async=on</Features>`: async methods are suspended and resumed by the
+    runtime instead of compiler-generated state machines. Fewer allocations, shorter stack traces in logs and
+    exceptions. Behaviour is the same; profilers and tools that look for `<Method>d__N` state-machine types no
+    longer find them in Dosaic assemblies. Applications can opt in the same way for their own code.
+
+- **`Dosaic.Extensions.Tracing` — Metalama removed, spans are opt-in.** The package no longer references
+  `Metalama.Framework` and no longer weaves spans into methods at build time. Reasons: Metalama's license, the
+  build time it adds to every project that references the package, and the wait for a Metalama release that
+  supports .NET 11 and C# 15. Neither C# nor OpenTelemetry for .NET has a built-in way to wrap the body of an
+  existing method, and the useful spans (HTTP in and out, EF Core, MongoDB, Redis, Hangfire) already come from
+  the OpenTelemetry instrumentations that Dosaic registers.
+
+  Removed: `[Trace]`, `[NoTrace]`, `[NoCapture]`, `TracingMode`, `ArgCaptureMode`, the transitive project fabric,
+  and the MSBuild properties `DosaicTracingMode`, `DosaicTracingCaptureArgs`, `DosaicTracingCaptureArgsOnError`,
+  `DosaicTracingInclude` and `DosaicTracingExclude`. Automatic argument capture, on the happy path and on
+  error, is gone.
+
+  Added: `Tracing.StartSpan(this)` / `Tracing.StartSpan<TOwner>()` start a span named `TypeName.MethodName`
+  on the shared `Dosaic` source, and `Tracing.Trace(this, ...)` / `Tracing.TraceAsync(this, ...)` also mark the
+  span as error and re-throw when the body throws. `Tracing.Tag/Event/Error/Link/Current` are unchanged.
+
+  What consumers have to do:
+  1. Delete the `DosaicTracing*` properties and any `Metalama.Framework` reference kept only for this package.
+  2. Delete `[Trace]`, `[NoTrace]` and `[NoCapture]` (they no longer compile).
+  3. Add `using var activity = Tracing.StartSpan(this);` or `Tracing.TraceAsync(this, async activity => ...)`
+     to the business operations whose spans you use. Span names are unchanged for the methods you instrument.
+  4. Tag the arguments you need with `activity?.SetTag(...)`.
+
+  An application that upgrades without changes still builds if it used only the default automatic mode, but
+  emits no method spans anymore; request, HTTP client, database, cache and job spans are unaffected.
+
+### Features
+
+- **`Dosaic.Plugins.Jobs.Hangfire` — `enableLongPolling`.** Off by default. Turns on Hangfire.PostgreSql
+  long polling: idle workers wait on PostgreSQL `LISTEN new_job` and are woken by the `NOTIFY` of every
+  enqueue, so new jobs start immediately and `queuePollIntervalInMs` only acts as a fallback. The batch API
+  sends the `NOTIFY` as well, and queues without prefetching use Hangfire's own fetch while it is on, because
+  that is the fetch that listens. Each waiting worker holds one extra connection; `LISTEN` does not work
+  through PgBouncer in transaction mode and pins a server connection in session mode. See "Polling and long
+  polling" in the plugin README.
+
+## 1.2.53
 
 ### Fixes
 

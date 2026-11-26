@@ -470,6 +470,21 @@ namespace Dosaic.Plugins.Jobs.Hangfire.Tests
             options.SchemaName.Should().Be("jobs");
         }
 
+        [TestCase(true)]
+        [TestCase(false)]
+        public void EnableLongPollingIsPassedToTheStorageOptions(bool enabled)
+        {
+            _hangfireConfiguration.EnableLongPolling = enabled;
+
+            GetPlugin().CreateStorageOptions().EnableLongPolling.Should().Be(enabled);
+        }
+
+        [Test]
+        public void LongPollingIsOffByDefault()
+        {
+            new HangfireConfiguration().EnableLongPolling.Should().BeFalse();
+        }
+
         [Test]
         public void RecurringJobRegistrationCanBeSwitchedOff()
         {

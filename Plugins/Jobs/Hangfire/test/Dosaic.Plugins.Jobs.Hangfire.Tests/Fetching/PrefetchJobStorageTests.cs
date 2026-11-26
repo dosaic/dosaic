@@ -13,13 +13,18 @@ namespace Dosaic.Plugins.Jobs.Hangfire.Tests.Fetching
         private IJobQueueClient _client;
 
         private PrefetchJobStorage GetStorage(params (string Queue, int Prefetch)[] queues) =>
+            GetStorage(false, queues);
+
+        private PrefetchJobStorage GetStorage(bool unconfiguredQueuesUseInnerFetch,
+            params (string Queue, int Prefetch)[] queues) =>
             new(_inner, _client,
                 queues.ToDictionary(x => x.Queue, x => new PrefetchSettings
                 {
                     PrefetchCount = x.Prefetch,
                     PollInterval = TimeSpan.FromMilliseconds(1)
                 }),
-                new PrefetchSettings { PrefetchCount = 1, PollInterval = TimeSpan.FromMilliseconds(1) });
+                new PrefetchSettings { PrefetchCount = 1, PollInterval = TimeSpan.FromMilliseconds(1) },
+                unconfiguredQueuesUseInnerFetch);
 
         [SetUp]
         public void Up()
@@ -50,6 +55,32 @@ namespace Dosaic.Plugins.Jobs.Hangfire.Tests.Fetching
 
             GetStorage(("bulk", 25)).GetConnection().FetchNextJob(["default"], CancellationToken.None)
                 .JobId.Should().Be("9");
+        }
+
+        [Test]
+        public void WithInnerFetchUnconfiguredQueuesUseTheWrappedStoragesFetch()
+        {
+            var innerConnection = Substitute.For<JobStorageConnection>();
+            var innerJob = Substitute.For<IFetchedJob>();
+            innerConnection.FetchNextJob(Arg.Any<string[]>(), Arg.Any<CancellationToken>()).Returns(innerJob);
+            _inner.GetConnection().Returns(innerConnection);
+
+            GetStorage(true, ("bulk", 25)).GetConnection().FetchNextJob(["default"], CancellationToken.None)
+                .Should().BeSameAs(innerJob);
+            _client.DidNotReceiveWithAnyArgs().Fetch(default, default, default);
+        }
+
+        [Test]
+        public void WithInnerFetchConfiguredQueuesStillGoThroughThePrefetcher()
+        {
+            var innerConnection = Substitute.For<JobStorageConnection>();
+            _inner.GetConnection().Returns(innerConnection);
+            _client.Fetch(Arg.Any<string[]>(), 25, Arg.Any<TimeSpan>())
+                .Returns([new PrefetchedQueueEntry(1, 7, DateTime.UtcNow)]);
+
+            GetStorage(true, ("bulk", 25)).GetConnection().FetchNextJob(["bulk"], CancellationToken.None)
+                .JobId.Should().Be("7");
+            innerConnection.DidNotReceiveWithAnyArgs().FetchNextJob(default, default);
         }
 
         [Test]
